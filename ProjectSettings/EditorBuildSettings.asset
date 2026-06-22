@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1045 &1
+EditorBuildSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Scenes:
+  - enabled: 1
+    path: Assets/_Game/Scenes/00_Bootstrap.unity
+    guid: 15b751abc85ed8d45807a94ac74d3566
+  - enabled: 1
+    path: Assets/_Game/Scenes/01_TOSSZONE_Main.unity
+    guid: 1d09bfba5ef609e4cbf04e1deeea66ac
+  - enabled: 1
+    path: Assets/_Game/Scenes/02_Arena.unity
+    guid: 9153a07b6acf6d4439f59b6cdaf949f0
+  m_configObjects:
+    com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+    com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 6563273bae7f79249946a68387ce747b, type: 2}
+    com.unity.xr.openxr.settings4: {fileID: 11400000, guid: 96a68476fb9f78c4ea1bf0d6c5be403b, type: 2}
+  m_UseUCBPForAssetBundles: 0
