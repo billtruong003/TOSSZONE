@@ -13,6 +13,7 @@
     "com.besty.unity-skills": "https://github.com/Besty0728/Unity-Skills.git?path=/SkillsForUnity",
     "com.coplaydev.unity-mcp": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
     "com.meta.xr.sdk.core": "74.0.0",
+    "com.meta.xr.simulator": "74.0.0",
     "com.unity.ai.navigation": "2.0.10",
     "com.unity.cinemachine": "3.1.7",
     "com.unity.collab-proxy": "2.11.3",

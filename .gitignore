@@ -61,3 +61,7 @@ Thumbs.db
 # Paid Asset Store assets — NOT redistributed publicly (re-import from the Asset Store after cloning)
 /[Aa]ssets/AutoHand/
 /[Aa]ssets/AutoHand.meta
+
+# Unity auto-generated crash/scene recovery (local only)
+/[Aa]ssets/_Recovery/
+/[Aa]ssets/_Recovery.meta

@@ -16,14 +16,25 @@ Auto-bootstrap via `[RuntimeInitializeOnLoadMethod]` → `BillBootstrapConfig` (
 `00_Bootstrap (0)` → BillStartup splash → `01_TOSSZONE_Main (1)` = **Main / social hub** (walk around, buttons, ring/portal) → walk through ring → `02_Arena (2)` = combat.
 
 ## ✅ Done so far
+
+### 2026-06-23 — Section 1.1 complete + M2/M3 scaffolded + PC test sim
+- **Section 1.1 (setup) DONE:** `_Game/Scripts/{Core,Network,Player,Throwing,UI}` + `ScriptableObjects`/`Materials` folders; tags `TeamA/TeamB/Projectile/Throwable` + layers (slots 10–13).
+- **M2 (scene flow / matchmaking) — code + wiring done, compiles clean:** `PortalMatchmaker` on `[ArenaPortal]` (walk-through → `FusionNet.StartShared("TOSSZONE_DEMO", 2)` → load Arena; 30s `Bill.Timer` timeout; detects player via `LocalPlayerRig` not layers) + `MatchmakingStatusEvent`.
+- **M3 (player presence) — code + prefab + wiring done, compiles clean:** prefab `NetworkPlayer` (NetworkObject + Body/Head/HandL/HandR, 4× NetworkTransform, label `FusionPrefab` → auto-registered); `NetworkPlayerAvatar` (`FixedUpdateNetwork` copies rig pose when state-authority, hides own visuals); `NetworkPlayerSpawner` (Arena: spawns local avatar at team spawn by `LocalPlayerId%2`); `LocalPlayerRig` (AutoHand decouple). Arena dressed: `[Floor]`, `[SpawnA/B]`, `[Spawner]`, Directional Light.
+- **AutoHand re-imported** → `XRPlayer` rig restored; `LocalPlayerRig` wired (head=`Camera (head)`, hands=`RobotHand (L/R)`) in **both** Main + Arena.
+- **Smoke test boot→Main PASS** (0 error); build settings `00/01/02` confirmed; `NetworkPlayer` Fusion-registered.
+- **Meta XR Simulator installed** (`com.meta.xr.simulator@74.0.0`) for PC testing without Quest Link. ⚠️ Still needs one-click **Meta ▸ Meta XR Simulator ▸ Activate** in the TOSSZONE editor (couldn't auto-toggle — a 2nd Unity editor was open, MCP routing ambiguous).
+- Design doc `Docs/M2_M3_Design.md`; task tracking synced (`TOSSZONE_TaskBreakdown.md` + `tasks.meta.json` + `tasks.json`).
+
+### Earlier (M0 + scaffold)
 - **M0 (activation):** `PHOTON_FUSION` define (Android), build settings 00/01/02, `BillBootstrapConfig.defaultNetworkMode=FusionShared`, `defaultGameScene` cleared (BillStartup owns boot→Main). Fusion module verified-compiled (reflection: types + INetworkRunnerCallbacks). Smoke-tested.
 - **BillStartup splash** in `00_Bootstrap` (Camera + EventSystem + SplashCanvas[Background/Logo/Status/ProgressSlider] + `[BillStartup]`, nextScene=`01_TOSSZONE_Main`). Boot→splash→Main verified, 0 errors.
 - **Main scene scaffold (`01_TOSSZONE_Main`):** Directional Light, `[Floor]` (20×20 + collider), **AutoHand `XRPlayer` rig** (`Assets/AutoHand/Examples/Scenes/XR/Prefabs/XRPlayer.prefab`), `[ArenaPortal]` placeholder (emissive disc + trigger). Play-tested: boots + loads + no errors (without HMD the rig doesn't track — that's expected).
 - **Framework updated** to latest from `github.com/billtruong003/MythFall-Suvivor` (hash-diff verified: only 5 editor-tooling files changed; runtime/public APIs byte-identical → skill docs still accurate; Fusion module preserved).
 
-## ▶️ Next (not started)
-- **M2 — scene flow:** ring/portal trigger → `FusionNet.Instance.StartShared("TOSSZONE_DEMO", arenaSceneIndex)` → load `02_Arena`; matchmaking UI reacts to `NetworkPhaseChangedEvent`; 30s timeout via `Bill.Timer`.
-- **M1 — player presence:** `NetworkPlayer` prefab (capsule + 2 hands + head + `NetworkObject`/`NetworkTransform`); local AutoHand rig copies poses → networked avatar; team A/B + spawn sides; simple leg IK.
+## ▶️ Next
+- **Verify M2/M3 (device/sim):** Activate Meta XR Simulator (or build to Quest) → walk into `[ArenaPortal]` → connect → Arena → spawn avatar; 2 clients see each other. Editor flow-only test: Play → right-click `PortalMatchmaker` → `DEV ▸ Start Match (no VR)`.
+- **M3 pass 2:** team color (`[Networked]` byte) + procedural leg IK; move Arena rig to team spawn side on join (both rigs currently start at `(0,0,-2)` → overlap until they walk apart).
 - **M4 — throw:** behind-head grab + haptic → `Bill.Pool.Spawn("projectile")` flying via `BillTween.Float(0,1,t=>arc.Evaluate(t))` (1–2 bounces, NOT physics); Shared-mode authority.
 - **VR splash:** make the boot splash world-space (currently screen-space → not visible in headset).
 

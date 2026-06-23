@@ -3,7 +3,11 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 3
-  tags: []
+  tags:
+  - TeamA
+  - TeamB
+  - Projectile
+  - Throwable
   layers:
   - Default
   - TransparentFX
@@ -15,10 +19,10 @@ TagManager:
   - Grabbable
   - Hand
   - HandPlayer
-  - 
-  - 
-  - 
-  - 
+  - TeamA
+  - TeamB
+  - Projectile
+  - Throwable
   - 
   - 
   - 

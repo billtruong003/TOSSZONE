@@ -1,3 +1,92 @@
 {
-    "entries": []
+    "entries": [
+        {
+            "id": "1.1.1",
+            "verify": "manage_asset list `Assets/Photon/Fusion` → Fusion 2.0.12 present; reflection: FusionNet/FusionNetworkAdapter compiled trong Assembly-CSharp dưới define PHOTON_FUSION",
+            "evidence": "",
+            "verifiedAt": "2026-06-22",
+            "result": "Pass",
+            "notes": "Fusion 2.0.12 cài tại Assets/Photon/Fusion. Module BillGameCore Fusion compile sạch (0 error) khi bật PHOTON_FUSION."
+        },
+        {
+            "id": "1.1.2",
+            "verify": "Đọc PhotonAppSettings → field AppIdFusion đã set (non-empty)",
+            "evidence": "",
+            "verifiedAt": "2026-06-22",
+            "result": "Pass",
+            "notes": "AppIdFusion đã set trong PhotonAppSettings; matchmaking chạy được ngay khi gọi StartShared (M2)."
+        },
+        {
+            "id": "1.1.3",
+            "verify": "manage_asset create_folder → _Game/Scripts/{Core,Network,Player,Throwing,UI} + _Game/{ScriptableObjects,Materials} tạo thành công",
+            "evidence": "",
+            "verifiedAt": "2026-06-23",
+            "result": "Pass",
+            "notes": "Đã tạo qua MCP: Scripts/{Core,Network,Player,Throwing,UI} + ScriptableObjects + Materials. (_Game/{Prefabs,Audio,Scenes} có sẵn từ trước.)"
+        },
+        {
+            "id": "1.1.4",
+            "verify": "Reflection: FusionNetworkAdapter implements INetworkRunnerCallbacks (19 callback Fusion 2.0.12); FusionNet wraps NetworkRunner; Play smoke-test → Bill.Net resolve = FusionNetworkAdapter (idle)",
+            "evidence": "",
+            "verifiedAt": "2026-06-22",
+            "result": "Pass",
+            "notes": "Runner bootstrap + callbacks handler do module BillGameCore Fusion cung cấp (FusionNet + FusionNetworkAdapter), KHÔNG phải _Game/RunnerBootstrap.cs riêng. Idle / không auto-connect — matchmaking flow (StartShared) thuộc M2."
+        },
+        {
+            "id": "1.1.5",
+            "verify": "Quyết định kiến trúc — chốt trong doc (mục 5 Open Questions #1)",
+            "evidence": "",
+            "verifiedAt": "2026-06-22",
+            "result": "Pass",
+            "notes": "Chốt Fusion topology = Shared Mode (ưu tiên nhanh cho demo). Anti-cheat/validation để Phase 3."
+        },
+        {
+            "id": "1.2.1",
+            "verify": "manage_editor play từ 00_Bootstrap → read_console: log '[Bill] Ready. 14 services' → BillStartup splash → auto-load 01_TOSSZONE_Main; 0 compile/runtime error",
+            "evidence": "",
+            "verifiedAt": "2026-06-22",
+            "result": "Pass",
+            "notes": "Boot → splash → Main verified, 0 error. LƯU Ý: splash đang screen-space → không thấy trong headset; cần chuyển world-space cho VR (TODO trước build device)."
+        },
+        {
+            "id": "1.1.6",
+            "verify": "manage_editor add_tag/add_layer → đọc project/tags + project/layers xác nhận",
+            "evidence": "",
+            "verifiedAt": "2026-06-23",
+            "result": "Pass",
+            "notes": "Tags: TeamA, TeamB, Projectile, Throwable. Layers: TeamA(10), TeamB(11), Projectile(12), Throwable(13). Collision matrix sẽ tune khi có projectile/physics (M4); đạn bay bằng tween nên ưu tiên dùng layer cho trigger-detection filtering."
+        },
+        {
+            "id": "1.2.2",
+            "verify": "Play từ 00→Main, cho player collider (layer HandPlayer) đi vào [ArenaPortal] → PortalMatchmaker.OnTriggerEnter fire → log [Matchmaking] Connecting",
+            "evidence": "",
+            "verifiedAt": "",
+            "result": "",
+            "notes": "SETUP xong (2026-06-23): PortalMatchmaker gắn lên [ArenaPortal] (collider isTrigger=true). Thay nút FIND MATCH bằng walk-through portal. CHỜ VERIFY: cần AutoHand rig (XRPlayer) có collider+rigidbody để chạm trigger — AutoHand hiện thiếu trên đĩa."
+        },
+        {
+            "id": "1.2.6",
+            "verify": "Đi vào portal khi không có người khác → sau 30s log [Matchmaking] TimedOut + FusionNet.Shutdown, IsBusy=false (đi lại vào portal thử lại được)",
+            "evidence": "",
+            "verifiedAt": "",
+            "result": "",
+            "notes": "SETUP: Bill.Timer.Delay(30s) trong PortalMatchmaker.StartMatch; OnTimeout shutdown+reset. Code xong, chờ verify."
+        },
+        {
+            "id": "1.3.1",
+            "verify": "Mở prefab Assets/_Game/Prefabs/NetworkPlayer.prefab → root có NetworkObject + NetworkTransform + NetworkPlayerAvatar; child Head/HandL/HandR mỗi cái 1 NetworkTransform; avatar refs non-null",
+            "evidence": "",
+            "verifiedAt": "2026-06-23",
+            "result": "Pass",
+            "notes": "Prefab NetworkPlayer tạo qua MCP: 5 component root + 4 child, refs _head/_handLeft/_handRight đã gán, collider visual đã bỏ. Pose-binding tới rig CHỜ AutoHand (LocalPlayerRig.Instance null đến khi gắn rig)."
+        },
+        {
+            "id": "1.3.5",
+            "verify": "2 client cùng session: A thấy avatar B (capsule+đầu+2 tay) di chuyển realtime; NetworkTransform nội suy mượt",
+            "evidence": "",
+            "verifiedAt": "",
+            "result": "",
+            "notes": "SETUP: NetworkPlayerAvatar.FixedUpdateNetwork copy pose khi HasStateAuthority → NetworkTransform replicate; NetworkPlayerSpawner spawn local avatar ở Arena (team = LocalPlayerId%2 → SpawnA/SpawnB). CHỜ VERIFY: 2 device (AutoHand). Team color + leg IK = pass 2."
+        }
+    ]
 }
