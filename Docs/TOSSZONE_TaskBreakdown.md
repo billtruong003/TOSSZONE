@@ -18,8 +18,8 @@
 | Cơ chế ném | **KHÔNG grab/nhặt vật**. Đưa tay ra sau đầu + bấm grab → haptic → "nạp" vật vào tay. Khi ném: **inactive vật trong tay**, **spawn projectile** riêng bay ra | Xem mục Phase 1.4 |
 | Đường bay đạn | **Tween** (DOTween), **không dùng physics** | Để control lực/số lần nảy chính xác |
 
-### Trạng thái project hiện tại — cập nhật 2026-06-23 (sau M0)
-> **Milestone Phase 1:** M0 (Foundation) ✅ xong & verified · M1/M2/M3/M4 (gameplay) ❌ chưa bắt đầu. Chi tiết milestone: [`PHASE1_BUILD_PLAN.md`](PHASE1_BUILD_PLAN.md).
+### Trạng thái project hiện tại — cập nhật 2026-06-24 (unified player refactor)
+> **Milestone Phase 1:** M0 ✅ · M1 (network layer) ✅ · **M2 (scene flow) + M3 (player presence) = đã gộp thành UNIFIED PLAYER (Gorilla-Tag), ĐANG LÀM — code xong, compile sạch, CHƯA test runtime 2 người** · M4 (ném) chưa bắt đầu. Chi tiết đầy đủ: [`HANDOFF.md`](../HANDOFF.md) (mục 2026-06-24), [`PHASE1_BUILD_PLAN.md`](PHASE1_BUILD_PLAN.md).
 - ✅ Unity project `d:\Projects\TOSSZONE` (Unity 6000.3.10f1), URP + AutoHand + Meta XR core + OpenXR đã có.
 - ✅ **Photon Fusion 2.0.12 đã cài** (`Assets/Photon/Fusion`) + **App ID đã set** (`AppIdFusion`).
 - ✅ **M0 done**: define `PHOTON_FUSION` (Android); Build Settings `0=00_Bootstrap · 1=01_TOSSZONE_Main · 2=02_Arena`; `BillBootstrapConfig.defaultNetworkMode=FusionShared`; smoke-test `[Bill] Ready. 14 services`, `Bill.Net` = `FusionNetworkAdapter` (idle, 0 error).
@@ -27,12 +27,18 @@
 - ✅ **00_Bootstrap**: BillStartup splash (screen-space — cần đổi world-space cho VR). **01_TOSSZONE_Main**: Floor + AutoHand `XRPlayer` rig + `[ArenaPortal]` placeholder. **02_Arena**: scaffold tối thiểu.
 - ✅ `BillGameCore/BillInspector` — framework attribute/inspector kiểu Odin (author data weapon/buff sau).
 - ⚠️ **Chưa có gameplay script nào trong `_Game/Scripts`** (chỉ có Editor tooling: TaskBoard). Thư mục `Scripts/{Core,Network,Player,Throwing,UI}` chưa tạo.
-- 🔧 **M2/M3 đã SETUP (2026-06-23)** — code + prefab + scene wiring xong, compile 0 lỗi. Chi tiết: [`M2_M3_Design.md`](M2_M3_Design.md). Scripts: `PortalMatchmaker`, `MatchmakingStatusEvent`, `LocalPlayerRig`, `NetworkPlayerAvatar`, `NetworkPlayerSpawner`. Prefab `NetworkPlayer` (NetworkObject + 4×NetworkTransform). Wire: `[ArenaPortal]`←PortalMatchmaker (Main); `[Spawner]`+`[SpawnA/B]` (Arena). Trạng thái `[/]`.
-- ✅ **AutoHand đã re-import (2026-06-23)** → `XRPlayer` rig hết Missing. Đã gắn `LocalPlayerRig` lên XRPlayer **cả Main + Arena**, wire `_head`=Camera(head), `_handLeft`=RobotHand(L), `_handRight`=RobotHand(R). Arena cũng đã có 1 XRPlayer instance (scene load single).
-- ✅ **Smoke test boot→Main PASS**: `[Bill] Ready. 14 services`, `None→Boot`, auto-load `01_TOSSZONE_Main`, AutoHand `Creating Dynamic Timestepper`, MetaXR/OpenXR init — **0 error** (chỉ warning engine vô hại).
-- ✅ **Sẵn sàng test (2026-06-23)**: build settings `00/01/02` ✅; prefab `NetworkPlayer` có label `FusionPrefab` → Fusion auto-register, spawn được ✅. Portal detect player qua component `LocalPlayerRig` (không phụ thuộc layer). Avatar tự ẩn visual cho owner (không che mặt).
-- ▶️ **Còn lại để verify M2/M3 (cần device/VR)**: đi vào `[ArenaPortal]` → connect Photon → load Arena → spawn avatar → 2 người thấy nhau. Test = Quest Link + Play (solo: verify flow) hoặc build Android 2 máy (mutual visibility). Lưu ý pass-2: cả 2 rig Arena khởi tạo cùng vị trí (0,0,-2) → ban đầu trùng nhau, đi ra mới tách (team-spawn-side per join = pass 2).
-- ▶️ **Next gameplay**: M4 (cơ chế ném) + pass 2 M3 (team color `[Networked]` + leg IK).
+- ⚠️ **M2/M3 (2026-06-23) kiểu avatar TÁCH RỜI đã BỎ.** Scripts cũ `LocalPlayerRig`/`NetworkPlayerAvatar`/`NetworkPlayerSpawner` đã xóa, thay bằng kiến trúc **UNIFIED** (dưới). AutoHand đã re-import (rig OK).
+- 🔧 **UNIFIED PLAYER refactor (Gorilla-Tag) — ĐANG LÀM (2026-06-24), compile sạch, CHƯA test 2 người:**
+  - Prefab **`NetworkPlayer`** = AutoHand rig + `NetworkObject` + `NetworkTransform`(root/Camera(head)/RobotHand L/R) + `HeadVisual` sphere + `Body` capsule → **Fusion spawn 1/người** (rig nằm trong player, không đặt sẵn scene).
+  - Scripts: **`NetworkPlayerRig`** (local giữ rig + ẩn head; remote tắt AutoHand/camera/physics; `[Networked] ColorIndex` 8 màu), **`PlayerSpawnManager`** (connect `TOSSZONE_DEMO` **khi vào Main/hub** + spawn nếu chưa có, guard `Bill.IsReady`), **`PortalMatchmaker`** (rig local chạm portal → `FusionNet.LoadScene(Arena)`).
+  - Scenes: `[PlayerSpawnManager]` trong Main (origin) + Arena (0,0,-2); **đã bỏ XRPlayer rig khỏi cả 2 scene**.
+  - Smoke test: boot OK, fix early-access; **connect/spawn/thấy-nhau chưa verify** (bridge MCP rớt khi Play với 3 editor).
+- ✅ **Tooling cài thêm (2026-06-24)**: ParrelSync (test 2 người local), Meta XR Simulator (đang BẬT), XR Device Simulator XRI (đang TẮT), Stylized Toon World Kit (art). Xem `HANDOFF.md` mục "Local testing & tooling".
+- ▶️ **ĐANG CHỜ — resume tại đây:**
+  1. **Test 2 người (ParrelSync)**: 2 editor Play từ `00_Bootstrap` → mỗi bên connect + spawn `NetworkPlayer` → **thấy nhau ở hub Main** (capsule+đầu+tay, khác màu) → đi vào `[ArenaPortal]` → cùng sang Arena. Console: `[PlayerSpawn] Spawned local player`. **⚠️ Xem kỹ rủi ro AutoHand spawn-runtime** (đầu/tay/joystick-locomotion có nhúc nhích + sync root NetworkTransform không) → tinh chỉnh.
+  2. Verify **player persist** Main→Arena (không trùng / không mất player).
+  3. **M4 — cơ chế ném** (gameplay TOSSZONE, trong Arena).
+  4. Polish hub Main (community space; sau thêm nhiều portal = nhiều game).
 
 ### Quyết định cần chốt trước khi code (xem mục 5 — Open Questions)
 1. ✅ **CHỐT — Fusion topology = Shared Mode** (ưu tiên nhanh cho demo). Mỗi client giữ State Authority cho player + projectile của mình. Đánh đổi: khi lên economy/hit-detection (Phase 3) cần thêm validation chống cheat — chấp nhận cho demo.
@@ -63,19 +69,19 @@
 - [/] Bấm nút → gọi `StartMatchmaking()`: *(M2: `PortalMatchmaker.StartMatch()` → `FusionNet.StartShared`)*
   - [/] Fusion `StartGame()` với SessionName random / matchmaking pool (Phase 1 chưa làm room code — auto-join session đang thiếu slot). *(dùng session cố định `"TOSSZONE_DEMO"` qua `StartShared`)*
   - [/] Hiện UI "Đang tìm người chơi..." + đồng hồ đếm. *(plumbing: fire `MatchmakingStatusEvent` + Debug.Log; UI world-space chưa dựng)*
-- [/] **Timeout ~30s**: nếu sau 30s không đủ người: *(M2: `Bill.Timer.Delay(30s)` → Shutdown + reset cho đi lại vào cổng)*
+- [ ] **Timeout ~30s**: nếu sau 30s không đủ người: *(BỎ trong luồng unified — connect ở hub ngay khi vào Main, không có bước chờ-match/timeout. Thêm lại nếu cần.)*
   - [ ] Xử lý fallback (chọn 1 trong: hủy về menu / chờ tiếp / spawn 1 mình để test). → Demo: cho hủy về menu + có nút "test 1 mình".
-- [ ] Khi **2 người match** → cùng vào 1 Fusion session → load `01_TOSSZONE_Main` → spawn 2 player ở 2 phía → **nhìn thấy nhau**.
+- [/] Khi **2 người match** → cùng vào 1 Fusion session → load `01_TOSSZONE_Main` → spawn 2 player ở 2 phía → **nhìn thấy nhau**. *(UNIFIED: connect `TOSSZONE_DEMO` ngay khi vào hub Main → `PlayerSpawnManager` spawn `NetworkPlayer` mỗi người → thấy nhau từ hub. Code xong, **chưa test 2 người**.)*
 - [ ] Loading transition (fade 1-2s) giữa menu → arena.
 
 **Acceptance:** 2 build/2 headset bấm Find Match trong cửa sổ 30s → vào chung phòng, thấy nhau di chuyển.
 
 ### 1.3 — VR Rig & Hiện diện Player (network-synced)
-- [/] Player prefab (NetworkObject) gồm: AutoHand rig (head + 2 hands), **không** model full body. *(M3: prefab `NetworkPlayer` = NetworkObject + Body(capsule) + Head + HandL/R, mỗi phần NetworkTransform; pose copy từ rig qua `LocalPlayerRig` — chờ AutoHand để bind)*
+- [/] Player prefab (NetworkObject) gồm: AutoHand rig (head + 2 hands), **không** model full body. *(UNIFIED 2026-06-24: prefab `NetworkPlayer` = AutoHand rig + NetworkObject + NetworkTransform(root/camera/2 tay) + HeadVisual + Body capsule; rig NẰM TRONG player, Fusion spawn. `NetworkPlayerRig` lo local/remote + màu. Chưa test runtime.)*
 - [ ] **Joystick locomotion** (smooth locomotion từ Input System / AutoHand mover) — di chuyển trong giới hạn sân.
 - [ ] **Capsule body**: capsule đặt dưới head, follow head theo trục ngang (XZ), cao theo head Y → đại diện thân để đối thủ thấy.
 - [ ] **Leg IK đơn giản**: 2 chân procedural (foot IK theo capsule + locomotion) để body trông có chân, không phải capsule trơn. (Có thể dùng simple two-bone IK hoặc placeholder animation.)
-- [/] **Network sync qua Fusion** (NetworkTransform cho từng phần): *(M3: 4×NetworkTransform trên prefab; `NetworkPlayerAvatar.FixedUpdateNetwork` copy pose khi HasStateAuthority; remote nội suy. Spawn qua `NetworkPlayerSpawner` ở Arena, team theo LocalPlayerId%2)*
+- [/] **Network sync qua Fusion** (NetworkTransform cho từng phần): *(UNIFIED: NetworkTransform trên chính root(locomotion)+Camera(head)+RobotHand L/R của rig; local rig lái → sync ra remote; remote tắt AutoHand, NetworkTransform lái mesh. **Chưa test sync 2 máy** — rủi ro AutoHand spawn-runtime.)*
   - [ ] Head pose, Left hand pose, Right hand pose, Capsule body, locomotion position.
   - [ ] Input authority cho local player; remote player render từ synced transforms.
   - [ ] Interpolation cho remote (mượt, không giật).

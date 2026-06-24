@@ -6,18 +6,29 @@ using UnityEngine;
 namespace TossZone.DevTools
 {
     /// <summary>
-    /// Editor helper to force-install a UPM package via Client.Add (resolves immediately and reports
-    /// errors to the console, instead of waiting for the editor to regain focus). Dev-only utility.
+    /// Editor helpers to force-install UPM packages via Client.Add (resolves immediately and reports
+    /// errors to the console instead of waiting for the editor to regain focus). Dev-only utility.
     /// </summary>
     public static class PackageInstaller
     {
         private static AddRequest _request;
 
         [MenuItem("Tools/TOSSZONE/Install Meta XR Simulator")]
-        public static void InstallMetaXrSimulator()
+        public static void InstallMetaXrSimulator() => Add("com.meta.xr.simulator@74.0.0");
+
+        [MenuItem("Tools/TOSSZONE/Install ParrelSync")]
+        public static void InstallParrelSync() => Add("https://github.com/VeriorPies/ParrelSync.git?path=/ParrelSync");
+
+        [MenuItem("Tools/TOSSZONE/Install Stylized Toon World Kit")]
+        public static void InstallToonKit() => Add("https://github.com/billtruong003/stylized-toon-world-kit.git");
+
+        [MenuItem("Tools/TOSSZONE/Install XR Interaction Toolkit")]
+        public static void InstallXri() => Add("com.unity.xr.interaction.toolkit@3.3.1");
+
+        private static void Add(string id)
         {
-            Debug.Log("[PackageInstaller] Adding com.meta.xr.simulator@74.0.0 ...");
-            _request = Client.Add("com.meta.xr.simulator@74.0.0");
+            Debug.Log("[PackageInstaller] Adding " + id + " ...");
+            _request = Client.Add(id);
             EditorApplication.update += OnProgress;
         }
 
@@ -25,13 +36,10 @@ namespace TossZone.DevTools
         {
             if (_request == null || !_request.IsCompleted) return;
             EditorApplication.update -= OnProgress;
-
             if (_request.Status == StatusCode.Success)
                 Debug.Log("[PackageInstaller] Installed OK: " + _request.Result.packageId);
             else
-                Debug.LogError("[PackageInstaller] FAILED: " +
-                    (_request.Error != null ? _request.Error.message : "unknown error"));
-
+                Debug.LogError("[PackageInstaller] FAILED: " + (_request.Error != null ? _request.Error.message : "unknown error"));
             _request = null;
         }
     }

@@ -65,3 +65,7 @@ Thumbs.db
 # Unity auto-generated crash/scene recovery (local only)
 /[Aa]ssets/_Recovery/
 /[Aa]ssets/_Recovery.meta
+
+# Owner's proprietary asset (for sale) — not redistributed; re-copy from the stylized-toon-world-kit repo
+/[Aa]ssets/StylizedToonWorldKit/
+/[Aa]ssets/StylizedToonWorldKit.meta
