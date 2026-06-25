@@ -20,11 +20,12 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: New Material
-  m_Shader: {fileID: 4800000, guid: 5c4c2777e8261ca40902cb6597046d5f, type: 3}
+  m_Name: New Material 1
+  m_Shader: {fileID: 4800000, guid: 130124f5d13a8ef4088291c73f96546a, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
+  m_ValidKeywords:
+  - _RIM_ALIGN
   m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -129,6 +130,8 @@ Material:
     - _RampSteps: 2
     - _RampTexToggle: 0
     - _ReceiveShadows: 1
+    - _RimAlign: 1
+    - _RimAlignBias: 0.5
     - _RimPower: 3
     - _RimStrength: 1
     - _RimToggle: 0
@@ -150,6 +153,7 @@ Material:
     - _Emission: {r: 0, g: 0, b: 0, a: 0}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _RimColor: {r: 1, g: 1, b: 1, a: 1}
+    - _RimColorOut: {r: 0.4, g: 0.7, b: 1, a: 1}
     - _ShadowTint: {r: 0.45, g: 0.5, b: 0.6, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
