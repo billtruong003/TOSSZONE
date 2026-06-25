@@ -66,9 +66,9 @@ Thumbs.db
 /[Aa]ssets/_Recovery/
 /[Aa]ssets/_Recovery.meta
 
-# Owner's proprietary shader kit (com.billtruong.stylized-toon-world-kit) — embedded under Packages/ for in-place shader/material editing.
-# Gitignored like AutoHand (proprietary; not redistributed). If a fresh clone is missing it, re-embed from
-# github.com/billtruong003/stylized-toon-world-kit (or Tools ▸ TOSSZONE ▸ Install Stylized Toon World Kit for a read-only git fallback).
+# Owner's proprietary shader kit — resolved via the UPM git dependency in manifest.json (self-heals on clone).
+# This ignore only covers an OPTIONAL local embed of the same package under Packages/ (for in-place shader editing);
+# the embedded copy is never committed (proprietary; this repo is public). Fresh clones get it from the git dependency.
 /[Pp]ackages/com.billtruong.stylized-toon-world-kit/
 /[Aa]ssets/StylizedToonWorldKit/
 /[Aa]ssets/StylizedToonWorldKit.meta
