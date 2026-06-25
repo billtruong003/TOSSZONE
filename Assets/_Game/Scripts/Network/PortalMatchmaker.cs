@@ -21,9 +21,10 @@ namespace TossZone.Network
         {
             if (_used) return;
 #if PHOTON_FUSION
-            // Only react to the player object we own (Shared Mode: our own rig has state authority).
-            NetworkPlayerRig rig = other.GetComponentInParent<NetworkPlayerRig>();
-            if (rig == null || !rig.HasStateAuthority) return;
+            // Only react to OUR local rig. PlayerRig is local-only, so any PlayerRig found on the entering
+            // collider's parents is ours (remotes are thin NetworkAvatars with no PlayerRig).
+            PlayerRig rig = other.GetComponentInParent<PlayerRig>();
+            if (rig == null || rig != PlayerRig.Local) return;
 
             FusionNet net = FusionNet.Instance;
             if (net == null || !net.IsRunning) return;

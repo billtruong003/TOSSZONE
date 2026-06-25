@@ -189,7 +189,7 @@ namespace BillGameCore
             if (_runner == null || _isShuttingDown) return;
             _isShuttingDown = true;
             Bill.Net?.Cycle?.SetPhase(NetworkPhase.Disconnecting);
-            _ = _runner.Shutdown(shutdownReason: reason);   // destroys the child runner GO; OnShutdown resets state
+            _ = _runner.Shutdown(shutdownReason: reason);   // destroys the runner GO; OnShutdown resets state
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -291,7 +291,7 @@ namespace BillGameCore
             Log($"Shutdown: {shutdownReason}.");
             _isShuttingDown = false;
             _isConnecting = false;
-            _runner = null;   // child runner GO is destroyed; recreate on next connect
+            _runner = null;   // runner GO is destroyed; recreate on next connect
             Bill.Net?.Cycle?.SetPhase(NetworkPhase.Disconnected);
             Bill.Events?.Fire(new FusionShutdownEvent { Reason = shutdownReason.ToString() });
             DidShutdown?.Invoke(shutdownReason);
@@ -348,8 +348,11 @@ namespace BillGameCore
         void EnsureRunner()
         {
             if (_runner != null) return;
+            // The runner must be a ROOT DontDestroyOnLoad object: Fusion calls DontDestroyOnLoad on it
+            // internally, which warns (and can misbehave on Single-mode scene loads, e.g. Main -> Arena) if
+            // it is parented under [FusionNet]. Keep it root and DDOL it ourselves.
             var go = new GameObject("Runner");
-            go.transform.SetParent(transform);
+            DontDestroyOnLoad(go);
             _runner = go.AddComponent<NetworkRunner>();
             _runner.ProvideInput = true;
             _runner.AddCallbacks(this);

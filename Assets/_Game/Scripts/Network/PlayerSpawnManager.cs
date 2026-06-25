@@ -7,14 +7,17 @@ using UnityEngine;
 namespace TossZone.Network
 {
     /// <summary>
-    /// Gorilla-Tag-style join: once BillGameCore is ready, connects to the shared session and spawns
-    /// the LOCAL player (a unified NetworkPlayer rig) if one doesn't already exist. Put one in each
-    /// scene the player should appear in (lobby + arena) and position it at the desired spawn spot.
-    /// If the player persisted from a previous scene, it is reused (no duplicate).
+    /// Gorilla-Tag-style join: once BillGameCore is ready, connects to the shared session and spawns the
+    /// LOCAL player's thin <see cref="NetworkAvatar"/> if one doesn't already exist. The heavy AutoHand rig
+    /// (camera + toon hands) is a SEPARATE local-only <see cref="PlayerRig"/> in the scene that the spawned
+    /// avatar follows; it is never networked. Put one PlayerSpawnManager in each scene the player should
+    /// appear in (lobby + arena), positioned at the desired spawn spot. A player that persisted from a
+    /// previous scene is reused (no duplicate).
     /// </summary>
     public class PlayerSpawnManager : MonoBehaviour
     {
-        [SerializeField] private NetworkObject _playerPrefab;
+        [Tooltip("Thin NetworkAvatar prefab (NOT the local AutoHand rig).")]
+        [SerializeField] private NetworkObject _avatarPrefab;
         [SerializeField] private string _sessionName = "TOSSZONE_DEMO";
 
         private bool _initialized;
@@ -61,21 +64,25 @@ namespace TossZone.Network
         private void TrySpawn()
         {
             FusionNet net = FusionNet.Instance;
-            if (net == null || !net.IsRunning || _playerPrefab == null) return;
+            if (net == null || !net.IsRunning || _avatarPrefab == null) return;
             if (net.TryGetPlayerObject(net.LocalPlayer, out _)) return; // already have a player
 
+            if (PlayerRig.Local == null)
+                Debug.LogWarning("[PlayerSpawn] No local PlayerRig found — the avatar will spawn but won't follow you. " +
+                                 "Add an AutoHand rig with a PlayerRig component to the scene.");
+
             NetworkObject obj = net.Spawn(
-                _playerPrefab, transform.position, transform.rotation, net.LocalPlayer, OnBeforeSpawned);
+                _avatarPrefab, transform.position, transform.rotation, net.LocalPlayer, OnBeforeSpawned);
             if (obj == null) return;
 
             net.SetPlayerObject(net.LocalPlayer, obj);
-            Debug.Log("[PlayerSpawn] Spawned local player at " + transform.position);
+            Debug.Log("[PlayerSpawn] Spawned local avatar at " + transform.position);
         }
 
         private static void OnBeforeSpawned(NetworkRunner runner, NetworkObject obj)
         {
-            NetworkPlayerRig rig = obj.GetComponent<NetworkPlayerRig>();
-            if (rig != null) rig.ColorIndex = Random.Range(0, NetworkPlayerRig.ColorCount);
+            NetworkAvatar avatar = obj.GetComponent<NetworkAvatar>();
+            if (avatar != null) avatar.ColorIndex = Random.Range(0, NetworkAvatar.ColorCount);
         }
     }
 }

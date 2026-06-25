@@ -66,6 +66,12 @@ Thumbs.db
 /[Aa]ssets/_Recovery/
 /[Aa]ssets/_Recovery.meta
 
-# Owner's proprietary asset (for sale) — not redistributed; re-copy from the stylized-toon-world-kit repo
+# Owner's proprietary shader kit (com.billtruong.stylized-toon-world-kit) — embedded under Packages/ for in-place shader/material editing.
+# Gitignored like AutoHand (proprietary; not redistributed). If a fresh clone is missing it, re-embed from
+# github.com/billtruong003/stylized-toon-world-kit (or Tools ▸ TOSSZONE ▸ Install Stylized Toon World Kit for a read-only git fallback).
+/[Pp]ackages/com.billtruong.stylized-toon-world-kit/
 /[Aa]ssets/StylizedToonWorldKit/
 /[Aa]ssets/StylizedToonWorldKit.meta
+
+# Claude Code Unity MCP config — machine-specific absolute uvx path; recreate per machine (template in HANDOFF).
+/.mcp.json

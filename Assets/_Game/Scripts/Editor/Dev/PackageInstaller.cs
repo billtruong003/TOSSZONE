@@ -13,14 +13,11 @@ namespace TossZone.DevTools
     {
         private static AddRequest _request;
 
-        [MenuItem("Tools/TOSSZONE/Install Meta XR Simulator")]
-        public static void InstallMetaXrSimulator() => Add("com.meta.xr.simulator@74.0.0");
-
         [MenuItem("Tools/TOSSZONE/Install ParrelSync")]
         public static void InstallParrelSync() => Add("https://github.com/VeriorPies/ParrelSync.git?path=/ParrelSync");
 
         [MenuItem("Tools/TOSSZONE/Install Stylized Toon World Kit")]
-        public static void InstallToonKit() => Add("https://github.com/billtruong003/stylized-toon-world-kit.git");
+        public static void InstallToonKit() => Add("https://github.com/billtruong003/stylized-toon-world-kit.git?path=/Assets/StylizedToonWorldKit");
 
         [MenuItem("Tools/TOSSZONE/Install XR Interaction Toolkit")]
         public static void InstallXri() => Add("com.unity.xr.interaction.toolkit@3.3.1");

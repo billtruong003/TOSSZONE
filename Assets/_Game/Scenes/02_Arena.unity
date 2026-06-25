@@ -291,7 +291,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 76be11155f3cff4449bbaa0b19e5fe5a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TossZone.Network.PlayerSpawnManager
-  _playerPrefab: {fileID: 4011703924218518900, guid: 9184db33415f33a4fb582fbc8e94431c, type: 3}
+  _avatarPrefab: {fileID: 4303279452157685385, guid: 150c6b13f59d19e4fa4b99e866c9ebe3, type: 3}
   _sessionName: TOSSZONE_DEMO
 --- !u!4 &1666443864
 Transform:

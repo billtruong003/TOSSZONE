@@ -33,7 +33,7 @@
   - Scripts: **`NetworkPlayerRig`** (local giữ rig + ẩn head; remote tắt AutoHand/camera/physics; `[Networked] ColorIndex` 8 màu), **`PlayerSpawnManager`** (connect `TOSSZONE_DEMO` **khi vào Main/hub** + spawn nếu chưa có, guard `Bill.IsReady`), **`PortalMatchmaker`** (rig local chạm portal → `FusionNet.LoadScene(Arena)`).
   - Scenes: `[PlayerSpawnManager]` trong Main (origin) + Arena (0,0,-2); **đã bỏ XRPlayer rig khỏi cả 2 scene**.
   - Smoke test: boot OK, fix early-access; **connect/spawn/thấy-nhau chưa verify** (bridge MCP rớt khi Play với 3 editor).
-- ✅ **Tooling cài thêm (2026-06-24)**: ParrelSync (test 2 người local), Meta XR Simulator (đang BẬT), XR Device Simulator XRI (đang TẮT), Stylized Toon World Kit (art). Xem `HANDOFF.md` mục "Local testing & tooling".
+- ✅ **Tooling cài thêm (2026-06-24)**: ParrelSync (test 2 người local), XR Device Simulator XRI (test PC VR — Meta XR Simulator đã bỏ vì lệch Meta XR Core 203), Stylized Toon World Kit (UPM git, art). Xem `HANDOFF.md` mục "Local testing & tooling".
 - ▶️ **ĐANG CHỜ — resume tại đây:**
   1. **Test 2 người (ParrelSync)**: 2 editor Play từ `00_Bootstrap` → mỗi bên connect + spawn `NetworkPlayer` → **thấy nhau ở hub Main** (capsule+đầu+tay, khác màu) → đi vào `[ArenaPortal]` → cùng sang Arena. Console: `[PlayerSpawn] Spawned local player`. **⚠️ Xem kỹ rủi ro AutoHand spawn-runtime** (đầu/tay/joystick-locomotion có nhúc nhích + sync root NetworkTransform không) → tinh chỉnh.
   2. Verify **player persist** Main→Arena (không trùng / không mất player).
