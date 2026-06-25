@@ -17,6 +17,12 @@ namespace TossZone.Player
     {
         public const int ColorCount = 8;
 
+        /// <summary>The local player's own avatar (the one we hold state authority over). Null until spawned;
+        /// stays valid across scene loads so exactly ONE local avatar carries Main -> Arena. Mirrors
+        /// <see cref="PlayerRig.Local"/>; the spawn manager guards on it because Fusion's player-object
+        /// registry is NOT preserved across a Single-mode networked scene load.</summary>
+        public static NetworkAvatar Local { get; private set; }
+
         [Header("Synced nodes (each carries its own NetworkTransform)")]
         [SerializeField] private Transform _headNode;
         [SerializeField] private Transform _wristLNode;
@@ -50,10 +56,27 @@ namespace TossZone.Player
 
         public override void Spawned()
         {
+            if (HasStateAuthority)
+            {
+                // Claim the local-avatar slot so the spawn manager won't spawn a second one after a scene load.
+                Local = this;
+                gameObject.name = "Avatar (Local)";
+                // D1 — first-person: the owner sees only their local toon hands, so hide their own networked
+                // visuals. Disable the RENDERERS (not the GameObjects) so the synced NetworkTransform nodes keep ticking.
+                SetVisualsEnabled(false);
+            }
+            else
+            {
+                gameObject.name = "Avatar (Remote #" + Object.InputAuthority.PlayerId + ")";
+            }
             ApplyColor();
-            // D1 — first-person: the owner sees only their local toon hands, so hide their own networked
-            // visuals. Disable the RENDERERS (not the GameObjects) so the synced NetworkTransform nodes keep ticking.
-            if (HasStateAuthority) SetVisualsEnabled(false);
+        }
+
+        public override void Despawned(NetworkRunner runner, bool hasState)
+        {
+            // Released only when this avatar is genuinely despawned (session end / explicit despawn) — NOT on a
+            // scene load, so the surviving avatar keeps the slot and is reused. Self-heals if it ever is removed.
+            if (Local == this) Local = null;
         }
 
         public override void FixedUpdateNetwork()

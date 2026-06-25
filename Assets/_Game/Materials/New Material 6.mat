@@ -21,7 +21,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: New Material 6
-  m_Shader: {fileID: 4800000, guid: 0e3abdc7c07dd914fa4861d87636ad98, type: 3}
+  m_Shader: {fileID: 4800000, guid: 38aad05786d3ec46827bd0f559899dfd, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -40,8 +40,8 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BaseMap:
-        m_Texture: {fileID: 2800000, guid: 336f4b30b46f138479c8fa485efbe4c4, type: 3}
-        m_Scale: {x: 1, y: 1}
+        m_Texture: {fileID: 2800000, guid: 7d844af2f5730a5459486699bf0d3956, type: 3}
+        m_Scale: {x: 5, y: 5}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
         m_Texture: {fileID: 0}
@@ -189,7 +189,7 @@ Material:
     - _ZTestBack: 4
     - _ZWrite: 1
     m_Colors:
-    - _BaseColor: {r: 1, g: 0, b: 0, a: 1}
+    - _BaseColor: {r: 0.24528301, g: 0.24528301, b: 0.24528301, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EdgeColor: {r: 4, g: 1.4, b: 0.2, a: 1}
     - _Emission: {r: 0, g: 0, b: 0, a: 0}

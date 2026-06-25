@@ -65,6 +65,17 @@ namespace TossZone.Network
         {
             FusionNet net = FusionNet.Instance;
             if (net == null || !net.IsRunning || _avatarPrefab == null) return;
+
+            // The local avatar persists across a Single-mode networked scene load (it follows the
+            // DontDestroyOnLoad PlayerRig), so a single avatar carries Main -> Arena. Fusion's player-object
+            // registry does NOT survive that load, so guarding only on TryGetPlayerObject would spawn a second
+            // avatar in the new scene. Guard on the live avatar instead, and re-register it if the registry lost it.
+            if (NetworkAvatar.Local != null)
+            {
+                if (!net.TryGetPlayerObject(net.LocalPlayer, out _))
+                    net.SetPlayerObject(net.LocalPlayer, NetworkAvatar.Local.Object);
+                return;
+            }
             if (net.TryGetPlayerObject(net.LocalPlayer, out _)) return; // already have a player
 
             if (PlayerRig.Local == null)

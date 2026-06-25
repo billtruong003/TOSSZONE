@@ -73,5 +73,16 @@ Thumbs.db
 /[Aa]ssets/StylizedToonWorldKit/
 /[Aa]ssets/StylizedToonWorldKit.meta
 
+# Local Meta XR embeds (downloaded as tarballs to work around UnityTls failing the Oculus registry).
+# Pinned to 81.0.1 so the Meta XR Simulator works; not committed (large native libs, machine-local workaround).
+/[Pp]ackages/com.meta.xr.sdk.core/
+/[Pp]ackages/com.meta.xr.simulator/
+
 # Claude Code Unity MCP config — machine-specific absolute uvx path; recreate per machine (template in HANDOFF).
 /.mcp.json
+
+# Meta Immersive Debugger (DevAgent) — auto-generated LAN debug token, regenerated each session (machine-local secret).
+/[Aa]ssets/[Rr]esources/DevAgentSettings.asset
+
+# Native build temp (CMake RelWithDebInfo / tools) — local build artifacts.
+/.utmp/
