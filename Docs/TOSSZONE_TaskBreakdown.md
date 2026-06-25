@@ -18,8 +18,8 @@
 | Cơ chế ném | **KHÔNG grab/nhặt vật**. Đưa tay ra sau đầu + bấm grab → haptic → "nạp" vật vào tay. Khi ném: **inactive vật trong tay**, **spawn projectile** riêng bay ra | Xem mục Phase 1.4 |
 | Đường bay đạn | **Tween** (DOTween), **không dùng physics** | Để control lực/số lần nảy chính xác |
 
-### Trạng thái project hiện tại — cập nhật 2026-06-24 (unified player refactor)
-> **Milestone Phase 1:** M0 ✅ · M1 (network layer) ✅ · **M2 (scene flow) + M3 (player presence) = đã gộp thành UNIFIED PLAYER (Gorilla-Tag), ĐANG LÀM — code xong, compile sạch, CHƯA test runtime 2 người** · M4 (ném) chưa bắt đầu. Chi tiết đầy đủ: [`HANDOFF.md`](../HANDOFF.md) (mục 2026-06-24), [`PHASE1_BUILD_PLAN.md`](PHASE1_BUILD_PLAN.md).
+### Trạng thái project hiện tại — cập nhật 2026-06-25 (avatar dup-spawn fix · build unblocked · networked balls)
+> **Milestone Phase 1:** M0 ✅ · M1 (network layer) ✅ · **M2 (scene flow) + M3 (player presence) = redesign local-rig ↔ thin-avatar (2026-06-25): code xong + compile sạch + đã FIX bug avatar đẻ 2 (Main→Arena), CHƯA test 2 người** · **M4 (ném): có bản TEST networked grab/throw bóng (`NetworkGrabbable`/`BallSpawner`/`NetworkBall.prefab`) — đây KHÔNG phải cơ chế "tay sau đầu" của GDD, chỉ là sandbox; cơ chế thật §1.4 chưa làm**. **Build Quest đã chạy được** (fix URP GlobalSettings `m_AssetVersion` 10→9). Đã commit+push (`0c88125`). Chi tiết đầy đủ: [`HANDOFF.md`](../HANDOFF.md) (mục **2026-06-25 session 2**), [`PHASE1_BUILD_PLAN.md`](PHASE1_BUILD_PLAN.md).
 - ✅ Unity project `d:\Projects\TOSSZONE` (Unity 6000.3.10f1), URP + AutoHand + Meta XR core + OpenXR đã có.
 - ✅ **Photon Fusion 2.0.12 đã cài** (`Assets/Photon/Fusion`) + **App ID đã set** (`AppIdFusion`).
 - ✅ **M0 done**: define `PHOTON_FUSION` (Android); Build Settings `0=00_Bootstrap · 1=01_TOSSZONE_Main · 2=02_Arena`; `BillBootstrapConfig.defaultNetworkMode=FusionShared`; smoke-test `[Bill] Ready. 14 services`, `Bill.Net` = `FusionNetworkAdapter` (idle, 0 error).
@@ -35,9 +35,9 @@
   - Smoke test: boot OK, fix early-access; **connect/spawn/thấy-nhau chưa verify** (bridge MCP rớt khi Play với 3 editor).
 - ✅ **Tooling cài thêm (2026-06-24)**: ParrelSync (test 2 người local), XR Device Simulator XRI (test PC VR — Meta XR Simulator đã bỏ vì lệch Meta XR Core 203), Stylized Toon World Kit (UPM git, art). Xem `HANDOFF.md` mục "Local testing & tooling".
 - ▶️ **ĐANG CHỜ — resume tại đây:**
-  1. **Test 2 người (ParrelSync)**: 2 editor Play từ `00_Bootstrap` → mỗi bên connect + spawn `NetworkPlayer` → **thấy nhau ở hub Main** (capsule+đầu+tay, khác màu) → đi vào `[ArenaPortal]` → cùng sang Arena. Console: `[PlayerSpawn] Spawned local player`. **⚠️ Xem kỹ rủi ro AutoHand spawn-runtime** (đầu/tay/joystick-locomotion có nhúc nhích + sync root NetworkTransform không) → tinh chỉnh.
-  2. Verify **player persist** Main→Arena (không trùng / không mất player).
-  3. **M4 — cơ chế ném** (gameplay TOSSZONE, trong Arena).
+  1. **Test 2 người trên Quest (build đã chạy được)**: build 2 Quest (hoặc 1 Quest + 1 editor, chung session `TOSSZONE_DEMO`) → mỗi bên spawn `NetworkAvatar` (console `[PlayerSpawn] Spawned local avatar`, giờ **đúng 1 lần** — đã fix bug đẻ 2). **Verify avatar:** thấy nhau dạng low-poly khác màu, follow đầu+tay; chỉ thấy tay toon của mình; qua `[ArenaPortal]` sang Arena vẫn thấy nhau, không trùng. **Verify bóng:** 3 quả networked trên `GrabPedestal` ở Main — cầm/ném/**bắt của nhau** (`[BallSpawner] Spawned 3 networked balls`). Tinh chỉnh: arm-stretch/first-person avatar; độ trễ ném + cảm giác cầm bóng + tranh chấp grab.
+  2. Verify **player persist** Main→Arena (không trùng / không mất player) — `PlayerRig` DDOL + `NetworkAvatar.Local` guard lo việc này.
+  3. **M4 — cơ chế ném THẬT theo GDD** (§1.4: tay ra sau đầu → haptic → spawn projectile bay bằng tween, trong Arena). Bản bóng grab/throw hiện tại chỉ là sandbox test networking.
   4. Polish hub Main (community space; sau thêm nhiều portal = nhiều game).
 
 ### Quyết định cần chốt trước khi code (xem mục 5 — Open Questions)
