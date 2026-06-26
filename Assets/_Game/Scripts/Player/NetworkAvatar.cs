@@ -36,6 +36,8 @@ namespace TossZone.Player
         [SerializeField] private Transform _armR;
         [Tooltip("Every visual renderer (body, head, both arms): tinted by colour AND hidden for the owner.")]
         [SerializeField] private Renderer[] _coloredRenderers;
+        [Tooltip("First-person: hide this avatar for its OWNER (you see only your local toon hands). Uncheck to DEBUG the IK on your own avatar in a solo / single-controller test.")]
+        [SerializeField] private bool _hideOwnVisuals = true;
 
         [Networked] public int ColorIndex { get; set; }
 
@@ -63,7 +65,8 @@ namespace TossZone.Player
                 gameObject.name = "Avatar (Local)";
                 // D1 — first-person: the owner sees only their local toon hands, so hide their own networked
                 // visuals. Disable the RENDERERS (not the GameObjects) so the synced NetworkTransform nodes keep ticking.
-                SetVisualsEnabled(false);
+                // (_hideOwnVisuals can be unchecked on the prefab to DEBUG the IK on your own avatar.)
+                if (_hideOwnVisuals) SetVisualsEnabled(false);
             }
             else
             {
@@ -86,11 +89,15 @@ namespace TossZone.Player
             if (rig == null || rig.Root == null) return;
 
             // Owner drives the synced nodes from the local rig; NetworkTransform replicates them out.
-            // Body stands at the rig root and faces the head's horizontal look direction.
-            Vector3 fwd = rig.Head != null ? rig.Head.forward : rig.Root.forward;
+            // The body must follow the PLAYER, who in VR is wherever the HEAD is (room-scale). The rig root only
+            // moves on joystick locomotion, so using it left the body frozen at spawn while the hands moved away
+            // (arms appeared to stretch out of a static body). Stand the body under the head's ground position.
+            Transform head = rig.Head != null ? rig.Head : rig.Root;
+            Vector3 bodyPos = new Vector3(head.position.x, rig.Root.position.y, head.position.z);
+            Vector3 fwd = head.forward;
             fwd.y = 0f;
             Quaternion bodyRot = fwd.sqrMagnitude > 1e-4f ? Quaternion.LookRotation(fwd, Vector3.up) : transform.rotation;
-            transform.SetPositionAndRotation(rig.Root.position, bodyRot);
+            transform.SetPositionAndRotation(bodyPos, bodyRot);
 
             CopyNode(_headNode, rig.Head);
             CopyNode(_wristLNode, rig.WristL);

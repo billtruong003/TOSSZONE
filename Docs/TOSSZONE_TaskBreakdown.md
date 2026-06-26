@@ -34,11 +34,13 @@
   - Scenes: `[PlayerSpawnManager]` trong Main (origin) + Arena (0,0,-2); **đã bỏ XRPlayer rig khỏi cả 2 scene**.
   - Smoke test: boot OK, fix early-access; **connect/spawn/thấy-nhau chưa verify** (bridge MCP rớt khi Play với 3 editor).
 - ✅ **Tooling cài thêm (2026-06-24)**: ParrelSync (test 2 người local), XR Device Simulator XRI (test PC VR — Meta XR Simulator đã bỏ vì lệch Meta XR Core 203), Stylized Toon World Kit (UPM git, art). Xem `HANDOFF.md` mục "Local testing & tooling".
-- ▶️ **ĐANG CHỜ — resume tại đây:**
-  1. **Test 2 người trên Quest (build đã chạy được)**: build 2 Quest (hoặc 1 Quest + 1 editor, chung session `TOSSZONE_DEMO`) → mỗi bên spawn `NetworkAvatar` (console `[PlayerSpawn] Spawned local avatar`, giờ **đúng 1 lần** — đã fix bug đẻ 2). **Verify avatar:** thấy nhau dạng low-poly khác màu, follow đầu+tay; chỉ thấy tay toon của mình; qua `[ArenaPortal]` sang Arena vẫn thấy nhau, không trùng. **Verify bóng:** 3 quả networked trên `GrabPedestal` ở Main — cầm/ném/**bắt của nhau** (`[BallSpawner] Spawned 3 networked balls`). Tinh chỉnh: arm-stretch/first-person avatar; độ trễ ném + cảm giác cầm bóng + tranh chấp grab.
-  2. Verify **player persist** Main→Arena (không trùng / không mất player) — `PlayerRig` DDOL + `NetworkAvatar.Local` guard lo việc này.
-  3. **M4 — cơ chế ném THẬT theo GDD** (§1.4: tay ra sau đầu → haptic → spawn projectile bay bằng tween, trong Arena). Bản bóng grab/throw hiện tại chỉ là sandbox test networking.
-  4. Polish hub Main (community space; sau thêm nhiều portal = nhiều game).
+- 🔧 **Avatar Kyle (custom IK) — ĐANG LÀM (2026-06-26 session 3), compile sạch:** thay block placeholder bằng model **SpaceRobotKyle** trong `NetworkAvatar.prefab`; `KyleAvatarPoser.cs` custom IK (giữ thay vì Animation Rigging — owner thích control): **đầu follow (capture-offset — OK)**, **tay 2-bone IK đặt-vị-trí-khuỷu + palm capture-offset (chống lật cổ tay)** — **tay CHƯA xong, đang chờ test/tune bằng mắt** (`_elbowHint`/`_handRotOffsetL/R`). Bug grab "chỉ host grab được" đã **ĐÓNG** (bật `Allow State Authority Override` trên NetworkBall + `_heldLocally`). Body-follow theo ĐẦU (room-scale). Docs mới: `Fusion_Shared_Mode_Gotchas.md`, `M4_Gameplay_Design.md`. **Chân CHƯA làm** (A-pose tĩnh); **throw thật + selector + team CHƯA làm** (mới design).
+- ▶️ **ĐANG CHỜ — resume tại đây (2026-06-26):**
+  1. **Tinh chỉnh TAY avatar (bằng mắt):** Play → bỏ tick `Hide Own Visuals` trên `NetworkAvatar` để thấy avatar của mình → vung tay → tay gập tự nhiên + palm không lật. Tune `KyleModel → KyleAvatarPoser` `_elbowHint` / `_handRotOffsetL/R` live.
+  2. **Chân procedural (§1)** bằng **custom IK** (owner muốn): raycast hông/gối xuống đất + step khi lệch ngưỡng + 2-bone leg IK trên `Hips / Left|Right_UpperLeg→LowerLeg→Foot`.
+  3. **Throw mechanic (§2)** theo `Docs/M4_Gameplay_Design.md`: grab→giữ→swing, spawn ngang body, **bóng cầm ẩn đi + tween projectile bay** (đường đạn mượt, không physics), ném liên tục (không cần thả grab).
+  4. **Ammo selector** (tay trái hologram lăn chọn) → **arm-swing run** → **team modes** (1v1/3v3/5v5 + FFA hỗn loạn).
+  5. Test 2 người (ParrelSync/Quest) cho toàn bộ; polish hub Main.
 
 ### Quyết định cần chốt trước khi code (xem mục 5 — Open Questions)
 1. ✅ **CHỐT — Fusion topology = Shared Mode** (ưu tiên nhanh cho demo). Mỗi client giữ State Authority cho player + projectile của mình. Đánh đổi: khi lên economy/hit-detection (Phase 3) cần thêm validation chống cheat — chấp nhận cho demo.

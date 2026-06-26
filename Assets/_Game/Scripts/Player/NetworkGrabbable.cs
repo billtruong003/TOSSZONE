@@ -23,6 +23,7 @@ namespace TossZone.Player
         private Rigidbody _rb;
         private Grabbable _grabbable;
         private bool _hooked;
+        private bool _heldLocally;   // our own hand is holding it right now
 
         private void Awake()
         {
@@ -55,6 +56,15 @@ namespace TossZone.Player
 
         public override void FixedUpdateNetwork()
         {
+            // While OUR hand holds it, keep it dynamic no matter what. Otherwise the per-tick authority
+            // bookkeeping below flips a freshly-grabbed ball back to kinematic for the 1-2 ticks before our
+            // RequestStateAuthority is granted — which yanked it to its network pose and broke the grab for any
+            // non-authority (non-master) player. That is why only the first/host player could grab.
+            if (_heldLocally)
+            {
+                if (_rb.isKinematic) _rb.isKinematic = false;
+                return;
+            }
             // Proxies follow the NetworkTransform (kinematic); the authority runs real physics.
             ApplyAuthorityPhysics();
         }
@@ -63,13 +73,16 @@ namespace TossZone.Player
         {
             // The local player grabbed it — take ownership so our physics/AutoHand drives it and replicates
             // out. Go dynamic immediately (optimistic) so the grab feels instant; authority confirms next tick.
+            _heldLocally = true;
             if (!HasStateAuthority) Object.RequestStateAuthority();
             _rb.isKinematic = false;
+            Debug.Log($"[NetworkGrabbable] {name} grabbed — hadAuthority={HasStateAuthority} (requested if false)");
         }
 
         private void OnReleased(Hand hand, Grabbable grab)
         {
             // Keep authority after the throw so the thrower's physics carries the arc until someone else grabs.
+            _heldLocally = false;
             ApplyAuthorityPhysics();
         }
 

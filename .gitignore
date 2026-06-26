@@ -81,6 +81,10 @@ Thumbs.db
 # Claude Code Unity MCP config — machine-specific absolute uvx path; recreate per machine (template in HANDOFF).
 /.mcp.json
 
+# Temp / regenerated (not source): IDE local history + Unity-MCP runtime logs.
+/.lh/
+/[Aa]ssets/UnityMCP/Log/
+
 # Meta Immersive Debugger (DevAgent) — auto-generated LAN debug token, regenerated each session (machine-local secret).
 /[Aa]ssets/[Rr]esources/DevAgentSettings.asset
 
