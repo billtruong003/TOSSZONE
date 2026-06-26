@@ -79,16 +79,18 @@
 **Acceptance:** 2 build/2 headset bấm Find Match trong cửa sổ 30s → vào chung phòng, thấy nhau di chuyển.
 
 ### 1.3 — VR Rig & Hiện diện Player (network-synced)
-- [/] Player prefab (NetworkObject) gồm: AutoHand rig (head + 2 hands), **không** model full body. *(UNIFIED 2026-06-24: prefab `NetworkPlayer` = AutoHand rig + NetworkObject + NetworkTransform(root/camera/2 tay) + HeadVisual + Body capsule; rig NẰM TRONG player, Fusion spawn. `NetworkPlayerRig` lo local/remote + màu. Chưa test runtime.)*
-- [ ] **Joystick locomotion** (smooth locomotion từ Input System / AutoHand mover) — di chuyển trong giới hạn sân.
-- [ ] **Capsule body**: capsule đặt dưới head, follow head theo trục ngang (XZ), cao theo head Y → đại diện thân để đối thủ thấy.
+- [x] Player prefab (NetworkObject) gồm: AutoHand rig (head + 2 hands), **không** model full body. *(UNIFIED 2026-06-24: prefab `NetworkPlayer` = AutoHand rig + NetworkObject + NetworkTransform(root/camera/2 tay) + HeadVisual + Body capsule; rig NẰM TRONG player, Fusion spawn. `NetworkPlayerRig` lo local/remote + màu. Chưa test runtime.)*
+- [x] **Joystick locomotion** (smooth locomotion từ Input System / AutoHand mover) — di chuyển trong giới hạn sân.
+- [x] **Capsule body**: capsule đặt dưới head, follow head theo trục ngang (XZ), cao theo head Y → đại diện thân để đối thủ thấy.
 - [ ] **Leg IK đơn giản**: 2 chân procedural (foot IK theo capsule + locomotion) để body trông có chân, không phải capsule trơn. (Có thể dùng simple two-bone IK hoặc placeholder animation.)
-- [/] **Network sync qua Fusion** (NetworkTransform cho từng phần): *(UNIFIED: NetworkTransform trên chính root(locomotion)+Camera(head)+RobotHand L/R của rig; local rig lái → sync ra remote; remote tắt AutoHand, NetworkTransform lái mesh. **Chưa test sync 2 máy** — rủi ro AutoHand spawn-runtime.)*
-  - [ ] Head pose, Left hand pose, Right hand pose, Capsule body, locomotion position.
-  - [ ] Input authority cho local player; remote player render từ synced transforms.
-  - [ ] Interpolation cho remote (mượt, không giật).
+- [x] **Network sync qua Fusion** (NetworkTransform cho từng phần): *(UNIFIED: NetworkTransform trên chính root(locomotion)+Camera(head)+RobotHand L/R của rig; local rig lái → sync ra remote; remote tắt AutoHand, NetworkTransform lái mesh. **Chưa test sync 2 máy** — rủi ro AutoHand spawn-runtime.)*
+  - [x] Head pose, Left hand pose, Right hand pose, Capsule body, locomotion position.
+  - [x] Input authority cho local player; remote player render từ synced transforms.
+  - [x] Interpolation cho remote (mượt, không giật).
 - [ ] **Chia 2 team**: gán Team A/B khi join (theo thứ tự / cân bằng), set màu capsule + spawn point đúng phía sân.
 - [ ] Spawn points cho 2 đội ở 2 bên (theo kích thước sân 1v1 ~6m x 5m, có khoảng hở trung tâm).
+- [/] **Avatar humanoid = SpaceRobotKyle + `KyleAvatarPoser` custom IK** (2026-06-26): head follow (capture-offset — OK) + 2-bone arm IK đặt-vị-trí-khuỷu + palm capture-offset (chống lật cổ tay). Head+tay xong, **chờ tune mắt** (`_elbowHint`/`_handRotOffset`). Chân chưa (xem Leg IK trên).
+- [ ] **Arm-swing run locomotion** (Gorilla-Tag): vung tay khi đi → chạy nhanh hơn (đo vận tốc controller → scale move speed). *[ý tưởng mới 2026-06-26]*
 
 **Acceptance:** Người A thấy người B là 1 capsule có 2 tay + chân, di chuyển/giơ tay realtime, đứng đúng phía đội mình.
 
@@ -114,6 +116,9 @@
   - Shared Mode: client ném giữ **State Authority** cho projectile của mình → chạy tween local + NetworkTransform sync sang remote. (Hoặc spawn deterministic + tick start để client tự tween — chọn khi code.)
 - [ ] Hit/Land cơ bản: projectile chạm đất → VFX nổ nhỏ + despawn. (Hit damage để Phase 2/3, demo chỉ cần thấy đạn bay & nổ.)
 - [ ] Cooldown ném cơ bản (Internal Cooldown ~0.4s như GDD).
+- [ ] **Ammo selector tay trái**: hologram carousel lăn lên/xuống chọn loại đạn → grab vào hologram để chọn (multi-ammo theo GDD). *[ý tưởng mới 2026-06-26]*
+
+> **Refined design 2026-06-26** (chi tiết: `Docs/M4_Gameplay_Design.md`): bóng cầm = networked (người khác thấy trong tay); khi swing qua điểm **ngang body** → bóng cầm **ẩn đi** + spawn **projectile networked + BillTween** bay (arc mượt, không physics); **giữ grab ném liên tục**, không cần thả grab. Ném nhẹ vẫn bay mạnh; trúng người = số nảy lên (dmg sau, feel + haptics trước).
 
 **Acceptance:** Đưa tay ra sau đầu → rung tay → có vật trong tay → vẩy tay ném → vật trong tay biến mất, 1 projectile bay theo cung tween, nảy & nổ; đối thủ thấy projectile bay qua network.
 
@@ -121,6 +126,9 @@
 - [ ] Sân demo tối giản (1 map, floor + khoảng hở giữa + ranh giới 2 đội).
 - [ ] Build & test 2 device thực tế (matchmaking → ném nhau).
 - [ ] Fix sync lag / jitter / sai lệch trajectory giữa 2 client.
+- [x] **Fix grab "chỉ host grab được"** (2026-06-26): bật `Allow State Authority Override` trên NetworkBall (Shared Mode cần để chuyển authority) + `NetworkGrabbable._heldLocally` giữ dynamic qua cửa sổ transfer. Verified vs Fusion docs.
+- [x] **Networked-ball grab/throw sandbox** (`NetworkGrabbable`+`BallSpawner`+`NetworkBall`) — tiền đề cho throw thật 1.4.
+- [x] **Build Quest unblocked** (URP GlobalSettings version 10→9) + `FusionNet.EnsureRunner` = root DontDestroyOnLoad.
 
 ---
 
@@ -129,8 +137,8 @@
 > **Mục tiêu:** Nâng cấp avatar player thật + dựng hệ thống Vòng Buff cốt lõi của gameplay.
 
 ### 2.1 — Thay Player (avatar thật)
-- [ ] Thay capsule placeholder bằng **avatar body thật** (rig sẵn sàng gắn skin sau).
-- [ ] Full-body IK xịn hơn (head + 2 hands + 2 feet IK, hip/spine), giữ network sync.
+- [x] Thay capsule placeholder bằng **avatar body thật** (rig sẵn sàng gắn skin sau). *(2026-06-26: SpaceRobotKyle trong NetworkAvatar.prefab, strip StarterAssets controller)*
+- [/] Full-body IK xịn hơn (head + 2 hands + 2 feet IK, hip/spine), giữ network sync. *(head + 2 hands xong qua KyleAvatarPoser custom IK; **2 feet/legs chưa** — làm bằng custom IK: raycast chân + step)*
 - [ ] Chuẩn bị socket gắn skin (mũ, kính, găng) cho Phase 3.
 
 ### 2.2 — Hệ thống Vòng Buff (Master Config)
