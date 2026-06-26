@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: d1133e9cc3994f047a4add7014844202
+timeCreated: 1580692115
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 43116180128051200
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 115950
+  packageName: POLYGON - Sci-Fi City Pack - Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/Synty/PolygonSciFiCity/Models/Collision/Convex/SM_Prop_WoodenPath_01_Convex.asset
+  uploadId: 939484

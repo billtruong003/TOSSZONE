@@ -3,7 +3,7 @@
 **Status:** DESIGN — capturing the owner's 2026-06-26 vision dump for review BEFORE coding (architect-first).
 Order of implementation is the owner's stated sequence. Each section lists open questions to lock first.
 
-> Context: avatar is 3-point networked (head + 2 wrists → `NetworkAvatar` nodes, posed by `KyleAvatarPoser`).
+> Context: avatar is 3-point networked (head + 2 wrists → `NetworkAvatar` nodes, posed by `AvatarArmPoser`).
 > Arena = `02_Arena`; hub = `01_TOSSZONE_Main`. No Fusion Physics Addon (see `Docs/Fusion_Shared_Mode_Gotchas.md`).
 
 ---
@@ -17,17 +17,19 @@ Approach (standard procedural foot IK, per the owner's "raycast from knee/hip do
 - **Stepping:** when a foot's planted target drifts past a **step threshold** from its desired spot, play a quick
   **step** (lerp the planted target to the new desired spot over ~0.15s, with a small arc up). Alternate feet;
   don't step both at once.
-- **Leg IK:** two-bone IK `UpperLeg → LowerLeg → Foot` toward the planted target (reuse the `KyleAvatarPoser`
+- **Leg IK:** two-bone IK `UpperLeg → LowerLeg → Foot` toward the planted target (reuse the `AvatarArmPoser`
   solver). Bend the knee toward a forward hint.
 - **Hips:** lower the hips slightly so knees bend; optionally bob/rotate hips toward the move direction.
 - Standing still → feet stay planted (no sliding). Moving → feet step to follow. Turning → feet re-plant.
-- **Component:** extend `KyleAvatarPoser` (or a sibling `KyleLegPoser`) running in the same LateUpdate, after the
+- **Component:** extend `AvatarArmPoser` (or a sibling `AvatarLegPoser`) running in the same LateUpdate, after the
   body root is placed. Bones available on Kyle: `Hips`, `Left_UpperLeg?/LowerLeg?/Foot?` — **VERIFY leg bone
   names** (we only confirmed arms/spine/head; need to inspect Kyle's leg bones).
 - **Open Q:** (a) leg bone names on Kyle? (b) is the avatar root's horizontal velocity available to drive step
   direction (owner-only, from the rig) — or derive from the synced root delta on proxies?
 
 ## 2. Throw mechanic (core gameplay) — the meat
+> 🔒 **LOCKED SPEC (mechanic + feel/juice + build order) → [`Docs/Throw_Mechanic_Spec.md`](Throw_Mechanic_Spec.md)** · tasks `1.4.s1..s9`. The prose below is the original vision; the spec doc supersedes it.
+
 **Entering the Arena gives the LOCAL player a thrower/selector component** (only active in `02_Arena`).
 
 ### Grab → ball in hand

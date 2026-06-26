@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 41bd131f003d8da439dd229aa2c850f4
+timeCreated: 1522967655
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 115950
+  packageName: POLYGON - Sci-Fi City Pack - Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/Synty/PolygonSciFiCity/Prefabs/Props/SM_Prop_Cables_02.prefab
+  uploadId: 939484

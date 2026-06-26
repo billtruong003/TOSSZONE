@@ -21,13 +21,11 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: New Material 6
-  m_Shader: {fileID: 4800000, guid: 5c4c2777e8261ca40902cb6597046d5f, type: 3}
+  m_Shader: {fileID: 4800000, guid: 38aad05786d3ec46827bd0f559899dfd, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords:
-  - _DISPERSION
-  - _RIM_ALIGN
+  m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -72,8 +70,8 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
+        m_Texture: {fileID: 2800000, guid: 7d844af2f5730a5459486699bf0d3956, type: 3}
+        m_Scale: {x: 5, y: 5}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
         m_Texture: {fileID: 0}
@@ -144,6 +142,7 @@ Material:
     - _GIStrength: 2
     - _GlossMapScale: 0
     - _Glossiness: 0
+    - _GlossinessSource: 0
     - _GlossyReflections: 0
     - _HighlightSize: 0.045
     - _ILMToggle: 0
@@ -173,9 +172,12 @@ Material:
     - _RimToggle: 0
     - _Saturation: 1
     - _ShadowThresh: 0.5
+    - _Shininess: 0
     - _Smoothness: 0.5
+    - _SmoothnessSource: 0
     - _SmoothnessTextureChannel: 0
     - _SpecSize: 0.325
+    - _SpecSource: 0
     - _SpecStrength: 0.68
     - _SpecularHighlights: 1
     - _SrcBlend: 1
@@ -189,11 +191,11 @@ Material:
     - _ZTestBack: 4
     - _ZWrite: 1
     m_Colors:
-    - _BaseColor: {r: 0.24528301, g: 0.24528301, b: 0.24528301, a: 1}
-    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _BaseColor: {r: 0.30037382, g: 0.35931572, b: 0.509434, a: 1}
+    - _Color: {r: 0.3003738, g: 0.3593157, b: 0.509434, a: 1}
     - _EdgeColor: {r: 4, g: 1.4, b: 0.2, a: 1}
     - _Emission: {r: 0, g: 0, b: 0, a: 0}
-    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 0}
     - _FresnelColor: {r: 0.7, g: 0.9, b: 1, a: 1}
     - _HighlightColor: {r: 1, g: 1, b: 1, a: 1}
     - _HighlightPos: {r: 0.41, g: 0.62, b: 0, a: 0}

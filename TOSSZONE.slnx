@@ -16,6 +16,7 @@
   <Project Path="Autohand.XR.csproj" />
   <Project Path="StylizedToonWorldKit.Runtime.csproj" />
   <Project Path="BillGameCore.BillSceneSwitcher.csproj" />
+  <Project Path="URPWizard.csproj" />
   <Project Path="Unity.Fusion.CodeGen.csproj" />
   <Project Path="Autohand.XR.Editor.csproj" />
 </Solution>

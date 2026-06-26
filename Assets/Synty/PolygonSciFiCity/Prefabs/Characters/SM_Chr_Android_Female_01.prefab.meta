@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 35b2f23f35e445a4ab2e58c5310d87bd
+timeCreated: 1545087914
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 115950
+  packageName: POLYGON - Sci-Fi City Pack - Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/Synty/PolygonSciFiCity/Prefabs/Characters/SM_Chr_Android_Female_01.prefab
+  uploadId: 939484

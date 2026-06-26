@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 394fb5e1504cafb4d9098d79210042f1
+timeCreated: 1580692256
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 43392285387326196
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 115950
+  packageName: POLYGON - Sci-Fi City Pack - Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/Synty/PolygonSciFiCity/Models/Collision/Convex/SM_Prop_WallAttach_Electronics_05_Convex.asset
+  uploadId: 939484

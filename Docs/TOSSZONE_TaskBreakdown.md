@@ -34,9 +34,9 @@
   - Scenes: `[PlayerSpawnManager]` trong Main (origin) + Arena (0,0,-2); **đã bỏ XRPlayer rig khỏi cả 2 scene**.
   - Smoke test: boot OK, fix early-access; **connect/spawn/thấy-nhau chưa verify** (bridge MCP rớt khi Play với 3 editor).
 - ✅ **Tooling cài thêm (2026-06-24)**: ParrelSync (test 2 người local), XR Device Simulator XRI (test PC VR — Meta XR Simulator đã bỏ vì lệch Meta XR Core 203), Stylized Toon World Kit (UPM git, art). Xem `HANDOFF.md` mục "Local testing & tooling".
-- 🔧 **Avatar Kyle (custom IK) — ĐANG LÀM (2026-06-26 session 3), compile sạch:** thay block placeholder bằng model **SpaceRobotKyle** trong `NetworkAvatar.prefab`; `KyleAvatarPoser.cs` custom IK (giữ thay vì Animation Rigging — owner thích control): **đầu follow (capture-offset — OK)**, **tay 2-bone IK đặt-vị-trí-khuỷu + palm capture-offset (chống lật cổ tay)** — **tay CHƯA xong, đang chờ test/tune bằng mắt** (`_elbowHint`/`_handRotOffsetL/R`). Bug grab "chỉ host grab được" đã **ĐÓNG** (bật `Allow State Authority Override` trên NetworkBall + `_heldLocally`). Body-follow theo ĐẦU (room-scale). Docs mới: `Fusion_Shared_Mode_Gotchas.md`, `M4_Gameplay_Design.md`. **Chân CHƯA làm** (A-pose tĩnh); **throw thật + selector + team CHƯA làm** (mới design).
+- 🔧 **Avatar Kyle (custom IK) — ĐANG LÀM (2026-06-26 session 3), compile sạch:** thay block placeholder bằng model **SpaceRobotKyle** trong `NetworkAvatar.prefab`; `AvatarArmPoser.cs` custom IK (giữ thay vì Animation Rigging — owner thích control): **đầu follow (capture-offset — OK)**, **tay 2-bone IK đặt-vị-trí-khuỷu + palm capture-offset (chống lật cổ tay)** — **tay CHƯA xong, đang chờ test/tune bằng mắt** (`_elbowHint`/`_handRotOffsetL/R`). Bug grab "chỉ host grab được" đã **ĐÓNG** (bật `Allow State Authority Override` trên NetworkBall + `_heldLocally`). Body-follow theo ĐẦU (room-scale). Docs mới: `Fusion_Shared_Mode_Gotchas.md`, `M4_Gameplay_Design.md`. **Chân CHƯA làm** (A-pose tĩnh); **throw thật + selector + team CHƯA làm** (mới design).
 - ▶️ **ĐANG CHỜ — resume tại đây (2026-06-26):**
-  1. **Tinh chỉnh TAY avatar (bằng mắt):** Play → bỏ tick `Hide Own Visuals` trên `NetworkAvatar` để thấy avatar của mình → vung tay → tay gập tự nhiên + palm không lật. Tune `KyleModel → KyleAvatarPoser` `_elbowHint` / `_handRotOffsetL/R` live.
+  1. **Tinh chỉnh TAY avatar (bằng mắt):** Play → bỏ tick `Hide Own Visuals` trên `NetworkAvatar` để thấy avatar của mình → vung tay → tay gập tự nhiên + palm không lật. Tune `KyleModel → AvatarArmPoser` `_elbowHint` / `_handRotOffsetL/R` live.
   2. **Chân procedural (§1)** bằng **custom IK** (owner muốn): raycast hông/gối xuống đất + step khi lệch ngưỡng + 2-bone leg IK trên `Hips / Left|Right_UpperLeg→LowerLeg→Foot`.
   3. **Throw mechanic (§2)** theo `Docs/M4_Gameplay_Design.md`: grab→giữ→swing, spawn ngang body, **bóng cầm ẩn đi + tween projectile bay** (đường đạn mượt, không physics), ném liên tục (không cần thả grab).
   4. **Ammo selector** (tay trái hologram lăn chọn) → **arm-swing run** → **team modes** (1v1/3v3/5v5 + FFA hỗn loạn).
@@ -89,7 +89,7 @@
   - [x] Interpolation cho remote (mượt, không giật).
 - [ ] **Chia 2 team**: gán Team A/B khi join (theo thứ tự / cân bằng), set màu capsule + spawn point đúng phía sân.
 - [ ] Spawn points cho 2 đội ở 2 bên (theo kích thước sân 1v1 ~6m x 5m, có khoảng hở trung tâm).
-- [/] **Avatar humanoid = SpaceRobotKyle + `KyleAvatarPoser` custom IK** (2026-06-26): head follow (capture-offset — OK) + 2-bone arm IK đặt-vị-trí-khuỷu + palm capture-offset (chống lật cổ tay). Head+tay xong, **chờ tune mắt** (`_elbowHint`/`_handRotOffset`). Chân chưa (xem Leg IK trên).
+- [/] **Avatar humanoid = SpaceRobotKyle + `AvatarArmPoser` custom IK** (2026-06-26): head follow (capture-offset — OK) + 2-bone arm IK đặt-vị-trí-khuỷu + palm capture-offset (chống lật cổ tay). Head+tay xong, **chờ tune mắt** (`_elbowHint`/`_handRotOffset`). Chân chưa (xem Leg IK trên).
 - [ ] **Arm-swing run locomotion** (Gorilla-Tag): vung tay khi đi → chạy nhanh hơn (đo vận tốc controller → scale move speed). *[ý tưởng mới 2026-06-26]*
 
 **Acceptance:** Người A thấy người B là 1 capsule có 2 tay + chân, di chuyển/giơ tay realtime, đứng đúng phía đội mình.
@@ -138,7 +138,7 @@
 
 ### 2.1 — Thay Player (avatar thật)
 - [x] Thay capsule placeholder bằng **avatar body thật** (rig sẵn sàng gắn skin sau). *(2026-06-26: SpaceRobotKyle trong NetworkAvatar.prefab, strip StarterAssets controller)*
-- [/] Full-body IK xịn hơn (head + 2 hands + 2 feet IK, hip/spine), giữ network sync. *(head + 2 hands xong qua KyleAvatarPoser custom IK; **2 feet/legs chưa** — làm bằng custom IK: raycast chân + step)*
+- [/] Full-body IK xịn hơn (head + 2 hands + 2 feet IK, hip/spine), giữ network sync. *(head + 2 hands xong qua AvatarArmPoser custom IK; **2 feet/legs chưa** — làm bằng custom IK: raycast chân + step)*
 - [ ] Chuẩn bị socket gắn skin (mũ, kính, găng) cho Phase 3.
 
 ### 2.2 — Hệ thống Vòng Buff (Master Config)

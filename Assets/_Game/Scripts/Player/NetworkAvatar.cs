@@ -16,6 +16,7 @@ namespace TossZone.Player
     public class NetworkAvatar : NetworkBehaviour
     {
         public const int ColorCount = 8;
+        private const string SelfLayerName = "RemoteVisual";   // own avatar layer: main cam culls it, mirror renders it
 
         /// <summary>The local player's own avatar (the one we hold state authority over). Null until spawned;
         /// stays valid across scene loads so exactly ONE local avatar carries Main -> Arena. Mirrors
@@ -63,14 +64,17 @@ namespace TossZone.Player
                 // Claim the local-avatar slot so the spawn manager won't spawn a second one after a scene load.
                 Local = this;
                 gameObject.name = "Avatar (Local)";
-                // D1 — first-person: the owner sees only their local toon hands, so hide their own networked
-                // visuals. Disable the RENDERERS (not the GameObjects) so the synced NetworkTransform nodes keep ticking.
-                // (_hideOwnVisuals can be unchecked on the prefab to DEBUG the IK on your own avatar.)
-                if (_hideOwnVisuals) SetVisualsEnabled(false);
+                // First-person + mirror: put the OWN avatar mesh on the "RemoteVisual" layer. The main camera
+                // CULLS that layer (you don't see yourself from inside your own head) while the MIRROR camera
+                // still RENDERS it (the reflection shows you), and remotes see their own copy normally. Falls
+                // back to disabling the renderers if the layer isn't set up.
+                // (_hideOwnVisuals can be unchecked to DEBUG seeing your own avatar through the main camera.)
+                if (_hideOwnVisuals) ApplySelfLayer();
             }
             else
             {
                 gameObject.name = "Avatar (Remote #" + Object.InputAuthority.PlayerId + ")";
+                SetMeshLayer(0); // proxy → Default so every other player's main camera renders it
             }
             ApplyColor();
         }
@@ -136,6 +140,22 @@ namespace TossZone.Player
             if (_coloredRenderers == null) return;
             for (int i = 0; i < _coloredRenderers.Length; i++)
                 if (_coloredRenderers[i] != null) _coloredRenderers[i].enabled = on;
+        }
+
+        /// <summary>Own avatar → the "RemoteVisual" layer (main cam culls, mirror renders). Falls back to hiding
+        /// the renderers if that layer doesn't exist in the project.</summary>
+        private void ApplySelfLayer()
+        {
+            int layer = LayerMask.NameToLayer(SelfLayerName);
+            if (layer >= 0) SetMeshLayer(layer);
+            else SetVisualsEnabled(false);
+        }
+
+        private void SetMeshLayer(int layer)
+        {
+            if (layer < 0 || _coloredRenderers == null) return;
+            for (int i = 0; i < _coloredRenderers.Length; i++)
+                if (_coloredRenderers[i] != null) _coloredRenderers[i].gameObject.layer = layer;
         }
 
         private void ApplyColor()

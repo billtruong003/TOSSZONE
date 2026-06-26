@@ -21,7 +21,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: New Material 3
-  m_Shader: {fileID: 4800000, guid: 5c4c2777e8261ca40902cb6597046d5f, type: 3}
+  m_Shader: {fileID: 4800000, guid: 38aad05786d3ec46827bd0f559899dfd, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -123,6 +123,7 @@ Material:
     - _GIStrength: 2
     - _GlossMapScale: 0
     - _Glossiness: 0
+    - _GlossinessSource: 0
     - _GlossyReflections: 0
     - _ILMToggle: 0
     - _Metallic: 0
@@ -137,13 +138,16 @@ Material:
     - _ReceiveShadows: 1
     - _RimAlign: 1
     - _RimAlignBias: 0.5
-    - _RimPower: 3
+    - _RimPower: 2.33
     - _RimStrength: 1
     - _RimToggle: 0
     - _ShadowThresh: 0.5
+    - _Shininess: 0
     - _Smoothness: 0.5
+    - _SmoothnessSource: 0
     - _SmoothnessTextureChannel: 0
     - _SpecSize: 0.325
+    - _SpecSource: 0
     - _SpecStrength: 0.68
     - _SpecularHighlights: 1
     - _SrcBlend: 1
@@ -156,10 +160,10 @@ Material:
     - _ZTestBack: 4
     - _ZWrite: 1
     m_Colors:
-    - _BaseColor: {r: 0, g: 0.70351434, b: 1, a: 1}
-    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _BaseColor: {r: 0.9427508, g: 1, b: 0, a: 1}
+    - _Color: {r: 0.9427508, g: 1, b: 0, a: 1}
     - _Emission: {r: 0, g: 0, b: 0, a: 0}
-    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 0}
     - _RimColor: {r: 1, g: 1, b: 1, a: 1}
     - _RimColorOut: {r: 0.4, g: 0.7, b: 1, a: 1}
     - _ShadowTint: {r: 0.45, g: 0.5, b: 0.6, a: 1}

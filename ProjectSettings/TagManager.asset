@@ -8,6 +8,7 @@ TagManager:
   - TeamB
   - Projectile
   - Throwable
+  - CinemachineTarget
   layers:
   - Default
   - TransparentFX
@@ -23,7 +24,7 @@ TagManager:
   - TeamB
   - Projectile
   - Throwable
-  - 
+  - RemoteVisual
   - 
   - 
   - 

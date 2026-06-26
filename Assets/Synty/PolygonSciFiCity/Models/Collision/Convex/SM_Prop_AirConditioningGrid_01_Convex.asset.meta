@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: ff5b2dd2ae513844ab314e46b918901d
+timeCreated: 1580692172
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 43125980302745258
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 115950
+  packageName: POLYGON - Sci-Fi City Pack - Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/Synty/PolygonSciFiCity/Models/Collision/Convex/SM_Prop_AirConditioningGrid_01_Convex.asset
+  uploadId: 939484

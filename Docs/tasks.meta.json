@@ -106,7 +106,7 @@
         },
         {
             "id": "1.3.11",
-            "verify": "KyleAvatarPoser custom IK: head follow + 2-bone arm IK đặt-vị-trí-khuỷu + palm capture-offset",
+            "verify": "AvatarArmPoser custom IK: head follow + 2-bone arm IK đặt-vị-trí-khuỷu + palm capture-offset",
             "evidence": "head: owner confirm OK; arm: compile sạch, chờ tune mắt",
             "verifiedAt": "2026-06-26",
             "result": "Doing",

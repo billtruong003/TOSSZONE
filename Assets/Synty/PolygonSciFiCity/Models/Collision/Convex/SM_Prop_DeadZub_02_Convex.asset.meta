@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 964520564925e2a44ba35a9debc780f5
+timeCreated: 1580692221
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 43280583039212222
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 115950
+  packageName: POLYGON - Sci-Fi City Pack - Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/Synty/PolygonSciFiCity/Models/Collision/Convex/SM_Prop_DeadZub_02_Convex.asset
+  uploadId: 939484

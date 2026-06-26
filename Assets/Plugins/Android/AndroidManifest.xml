@@ -1,5 +1,5 @@
-﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools" android:installLocation="auto">
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools" android:installLocation="auto" xmlns:horizonos="http://schemas.horizonos/sdk">
   <application android:label="@string/app_name" android:icon="@mipmap/app_icon" android:allowBackup="false">
     <activity android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" android:configChanges="locale|fontScale|keyboard|keyboardHidden|mcc|mnc|navigation|orientation|screenLayout|screenSize|smallestScreenSize|touchscreen|uiMode" android:launchMode="singleTask" android:name="com.unity3d.player.UnityPlayerGameActivity" android:excludeFromRecents="true" android:exported="true">
       <intent-filter>
@@ -12,7 +12,8 @@
     <meta-data android:name="unityplayer.SkipPermissionsDialog" android:value="false" />
     <meta-data android:name="com.oculus.ossplash.background" android:value="black" />
     <meta-data android:name="com.oculus.telemetry.project_guid" android:value="7cd3b6e0-2d27-4b45-a89a-eecdaf6a9785" />
-    <meta-data android:name="com.oculus.supportedDevices" android:value="quest|quest2|questpro|quest3|quest3s" tools:replace="android:value" />
+    <meta-data android:name="com.oculus.supportedDevices" android:value="quest2|questpro|quest3|quest3s" tools:replace="android:value" />
   </application>
   <uses-feature android:name="android.hardware.vr.headtracking" android:version="1" android:required="true" />
+  <horizonos:uses-horizonos-sdk horizonos:minSdkVersion="68" horizonos:targetSdkVersion="74" />
 </manifest>

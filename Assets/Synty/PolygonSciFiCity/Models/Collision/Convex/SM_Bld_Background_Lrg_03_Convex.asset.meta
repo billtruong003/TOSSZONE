@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 437acc390d3ba5b4093a0b35407c5a61
+timeCreated: 1580693371
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 43819016479031068
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 115950
+  packageName: POLYGON - Sci-Fi City Pack - Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/Synty/PolygonSciFiCity/Models/Collision/Convex/SM_Bld_Background_Lrg_03_Convex.asset
+  uploadId: 939484

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: f923d13d00af49f4c888dd5f62f0835e
+timeCreated: 1522890794
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 115950
+  packageName: POLYGON - Sci-Fi City Pack - Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/Synty/PolygonSciFiCity/Prefabs/Vehicles/SM_Veh_Garbage_01.prefab
+  uploadId: 939484

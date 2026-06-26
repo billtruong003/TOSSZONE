@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 2760986f200606b41bf8cb5d5011ac43
+timeCreated: 1523506365
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 115950
+  packageName: POLYGON - Sci-Fi City Pack - Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/Synty/PolygonSciFiCity/Prefabs/Props/SM_Prop_Barrier_Plastic_03.prefab
+  uploadId: 939484

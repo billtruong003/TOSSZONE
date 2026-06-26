@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 0835602ed30128f4a88a652bf920fcaa
+timeCreated: 1559623032
+licenseType: Store
+ShaderImporter:
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 115950
+  packageName: POLYGON - Sci-Fi City Pack - Art by Synty
+  packageVersion: 1.3.2
+  assetPath: Assets/Synty/PolygonSciFiCity/Shaders/Legacy/Polygon_UVScroll.shader
+  uploadId: 939484
