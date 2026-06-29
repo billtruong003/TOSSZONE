@@ -9,13 +9,15 @@ namespace TossZone.Throwing
     /// <summary>
     /// Local throw input + hand state machine (see <c>Docs/Throw_Mechanic_Spec.md</c>). One throwing hand
     /// (right by default). Press grab → a ball loads in the hand; HOLD grab and the throw fires on the SWING
-    /// gesture — the hand must wind BACK behind a body-level plane (Armed) then sweep FORWARD across it above a
-    /// speed threshold (FIRE). On fire it spawns a pooled <see cref="ThrowProjectile"/> in the swing direction,
+    /// gesture — a trigger plane sits a short distance IN FRONT of you; the hand pulls back behind it (Armed) then
+    /// pushes/sweeps FORWARD through the plane above a speed threshold (FIRE). No reaching behind the head. On fire
+    /// it spawns a pooled <see cref="ThrowProjectile"/> in the swing direction,
     /// punches haptics, fires <see cref="BallThrownEvent"/>, and (still holding grab) auto-refills after a
     /// cooldown for continuous throwing. Release grab = cancel.
     ///
     /// Grab/swing are read with no AutoHand coupling: grip from XR <see cref="InputDevices"/>, swing velocity
-    /// from the wrist transform delta. A <b>debug throw key (T)</b> fires straight ahead so the projectile +
+    /// from the wrist transform delta MINUS the rig-root delta (so joystick locomotion can't fake a throw).
+    /// A <b>debug throw key (T)</b> fires straight ahead so the projectile +
     /// juice can be validated even before the gesture is dialed in. Place on any scene object; it finds the
     /// local <see cref="PlayerRig"/> at runtime.
     /// </summary>
@@ -29,11 +31,17 @@ namespace TossZone.Throwing
         [SerializeField] private GameObject _projectilePrefab;
         [Tooltip("Held-ball visual prefab (parented into the hand) — tune this one. Empty = runtime sphere fallback.")]
         [SerializeField] private GameObject _heldBallPrefab;
+        [Tooltip("OFF when a ThrowBallHolder provides the real AutoHand grabbable as the in-hand visual (proper finger pose). ON = use the simple parented sphere here.")]
+        [SerializeField] private bool _showVisualHeldBall = true;
         [SerializeField] private bool _rightHand = true;
         [Tooltip("Editor/dev: this key fires a throw straight ahead from the head (validate juice without XR swing).")]
         [SerializeField] private Key _debugThrowKey = Key.T;
         [Tooltip("Editor/dev: hold this key to simulate grip when no XR controller is present.")]
         [SerializeField] private Key _editorGripKey = Key.G;
+        [Tooltip("In-headset HUD with the live throw state + swing speed (debug/tuning). Turn off when dialed in.")]
+        [SerializeField] private bool _debugHud = true;
+        [Tooltip("DebugHud: a PRE-PLACED instance in the scene (used as-is) OR the DebugHud prefab (auto-instantiated + attached to the head). Empty = no HUD.")]
+        [SerializeField] private TossZone.UI.DebugHud _hudRef;
 
         private const string PoolKey = "throwprojectile";
 
@@ -43,9 +51,16 @@ namespace TossZone.Throwing
         private System.Action _onRefillCb;                  // cached → no per-throw delegate alloc
         private System.Action<BallLandedEvent> _onBallLandedCb;
         private Vector3 _lastWristPos;
+        private Vector3 _lastRootPos;
         private bool _hasLastPos;
-        private float _prevFwdDist;
-        private bool _hasPrevDist;
+        private float _peakFwdVel;          // peak forward swing speed since the last wind-up / fire
+        private Vector3 _peakArmVel;        // smoothed hand velocity at that peak → the launch velocity
+        private const int VelSamples = 4;
+        private Vector3[] _velBuf;          // moving-average ring buffer → kills 1-frame tracking jitter
+        private int _velCount;
+        private TossZone.UI.DebugHud _hud;
+        private float _lastLaunchSpeed;
+        private int _fireCount;
         private ThrowState _state;
         private bool _onCooldown;
         private bool _ready;
@@ -89,7 +104,10 @@ namespace TossZone.Throwing
             Bill.Events.Subscribe<BallLandedEvent>(_onBallLandedCb);
 
             _hasLastPos = false;
-            _hasPrevDist = false;
+            _velBuf = new Vector3[VelSamples];
+            _velCount = 0;
+            _peakFwdVel = 0f;
+            if (_debugHud) CreateHud();
             _state = ThrowState.Empty;
             _ready = true;
             Debug.Log("[Throw] ThrowController ready (hand=" + (_rightHand ? "R" : "L") + "). Debug throw key = " + _debugThrowKey);
@@ -99,9 +117,17 @@ namespace TossZone.Throwing
         {
             float dt = Time.deltaTime;
             Vector3 wp = _wrist.position;
-            Vector3 wvel = (_hasLastPos && dt > 1e-5f) ? (wp - _lastWristPos) / dt : Vector3.zero;
+            Vector3 rp = _root.position;
+            bool hadLast = _hasLastPos && dt > 1e-5f;
+            Vector3 wvel = hadLast ? (wp - _lastWristPos) / dt : Vector3.zero;
+            Vector3 rootVel = hadLast ? (rp - _lastRootPos) / dt : Vector3.zero;
             _lastWristPos = wp;
+            _lastRootPos = rp;
             _hasLastPos = true;
+
+            // Body-relative (strips joystick locomotion), then a moving average to kill 1-frame tracking jitter.
+            Vector3 smoothVel = PushSmooth(wvel - rootVel);
+            float fwdVel = Vector3.Dot(smoothVel, FlatForward());
 
             if (DebugKeyPressed())
             {
@@ -111,11 +137,6 @@ namespace TossZone.Throwing
 
             bool grip = ReadGrip();
 
-            Vector3 chest = new Vector3(_head.position.x, _root.position.y + _config.planeHeight, _head.position.z);
-            Vector3 fwd = FlatForward();
-            float fwdDist = Vector3.Dot(wp - chest, fwd);
-            float fwdVel = Vector3.Dot(wvel, fwd);
-
             switch (_state)
             {
                 case ThrowState.Empty:
@@ -124,24 +145,26 @@ namespace TossZone.Throwing
 
                 case ThrowState.Loaded:
                     if (!grip) { Cancel(); break; }
-                    if (fwdDist < -_config.windBackDepth) { _state = ThrowState.Armed; PulseHeld(); }
-                    break;
-
-                case ThrowState.Armed:
-                    if (!grip) { Cancel(); break; }
-                    bool crossedForward = _hasPrevDist && _prevFwdDist < 0f && fwdDist >= 0f;
-                    if (!_onCooldown && crossedForward && fwdVel > _config.vMinFire)
-                        Fire(wp, wvel);
+                    // A backward flick re-arms: reset the peak so the next forward swing is its own throw.
+                    if (fwdVel < -_config.windBackSpeed) _peakFwdVel = 0f;
+                    // Track the forward-swing peak (speed + the velocity vector captured at that instant).
+                    if (fwdVel > _peakFwdVel) { _peakFwdVel = fwdVel; _peakArmVel = smoothVel; }
+                    // FIRE at the natural release point: once a real swing has peaked and started to slow down.
+                    if (!_onCooldown && _peakFwdVel >= _config.vMinFire && fwdVel < _peakFwdVel * _config.releaseDrop)
+                    {
+                        Fire(wp, _peakArmVel);
+                        _peakFwdVel = 0f;
+                    }
                     break;
             }
 
-            _prevFwdDist = fwdDist;
-            _hasPrevDist = true;
+            if (_hud != null) UpdateHud(fwdVel, grip);
         }
 
         private void Load()
         {
             _state = ThrowState.Loaded;
+            _peakFwdVel = 0f;
             ShowHeld(true);
         }
 
@@ -151,13 +174,15 @@ namespace TossZone.Throwing
             ShowHeld(false);
         }
 
-        private void Fire(Vector3 origin, Vector3 wvel)
+        private void Fire(Vector3 origin, Vector3 swingVel)
         {
-            // Ballistic: launch with the REAL hand velocity (no aim cone) → goes exactly where you threw.
-            Vector3 dir = wvel.sqrMagnitude > 1e-4f ? wvel.normalized : FlatForward();
-            float speed = Mathf.Clamp(wvel.magnitude * _config.velocityScale, _config.minLaunchSpeed, _config.maxLaunchSpeed);
+            // Ballistic: launch with the body-relative swing velocity (no aim cone) → goes exactly where you threw.
+            Vector3 dir = swingVel.sqrMagnitude > 1e-4f ? swingVel.normalized : FlatForward();
+            float speed = Mathf.Clamp(swingVel.magnitude * _config.velocityScale, _config.minLaunchSpeed, _config.maxLaunchSpeed);
             Vector3 v0 = dir * speed;
             float power = Mathf.Clamp01(speed / Mathf.Max(_config.maxLaunchSpeed, 0.01f));
+            _lastLaunchSpeed = speed;
+            _fireCount++;
             SpawnProjectile(origin, v0, power);
 
             Haptic(_config.hapticRelease, 0.06f);
@@ -210,8 +235,43 @@ namespace TossZone.Throwing
             return f.sqrMagnitude > 1e-4f ? f.normalized : Vector3.forward;
         }
 
+        private Vector3 PushSmooth(Vector3 v)
+        {
+            if (_velBuf == null) return v;
+            _velBuf[_velCount % VelSamples] = v;
+            _velCount++;
+            int n = Mathf.Min(_velCount, VelSamples);
+            Vector3 sum = Vector3.zero;
+            for (int i = 0; i < n; i++) sum += _velBuf[i];
+            return sum / n;
+        }
+
+        private void CreateHud()
+        {
+            if (_hud != null || _hudRef == null) return;
+            if (_hudRef.gameObject.scene.IsValid())   // a scene instance → pre-placed, use as-is
+            {
+                _hud = _hudRef;
+                return;
+            }
+            if (_head == null) return;
+            GameObject go = Instantiate(_hudRef.gameObject);
+            go.name = "ThrowDebugHUD";
+            _hud = go.GetComponent<TossZone.UI.DebugHud>();
+            if (_hud != null) _hud.AttachTo(_head);
+        }
+
+        private void UpdateHud(float fwdVel, bool grip)
+        {
+            _hud.SetText("THROW " + _state + (grip ? " [grip]" : "")
+                + "\nfwdVel " + fwdVel.ToString("0.0") + "  peak " + _peakFwdVel.ToString("0.0")
+                + "\nvMin " + _config.vMinFire.ToString("0.0") + "  fires " + _fireCount
+                + "\nlast launch " + _lastLaunchSpeed.ToString("0.0") + " m/s");
+        }
+
         private void CreateHeldBall()
         {
+            if (!_showVisualHeldBall) return;   // a ThrowBallHolder provides the real grabbable visual instead
             if (_heldBall != null) return;
             GameObject ball;
             if (_heldBallPrefab != null)

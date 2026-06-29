@@ -13,13 +13,15 @@ namespace TossZone.Throwing
     [CreateAssetMenu(menuName = "TOSSZONE/Throw Config", fileName = "ThrowConfig")]
     public class ThrowConfig : ScriptableObject
     {
-        [BillTitle("Trigger (wind-back → forward swing)")]
-        [BillInfoBox("Plane height (m, from rig root) in body space — push up for behind-head overhand.")]
-        [BillSlider(0.6f, 2.0f)] public float planeHeight = 1.30f;
-        [BillSuffix("m")] public float windBackDepth = 0.12f;
-        [BillSuffix("m/s")] [BillInfoBox("Min forward hand speed across the plane to FIRE (low = flick-friendly).")]
+        [BillTitle("Trigger (forward swing → fire at PEAK speed)")]
+        [BillInfoBox("Giữ grip + vung tay tới trước. Lực & hướng lấy ở ĐỈNH cú vung (không phải lúc tay duỗi hết) rồi mượt qua vài frame → ném đều, đúng hướng, đủ lực. Vung mạnh hơn = bắn mạnh hơn. Đo theo THÂN (đã trừ joystick).")]
+        [BillSuffix("m/s")] [BillInfoBox("Tay lùi nhanh hơn mức này = 'lên đạn' lại cho cú ném kế (reset đỉnh).")]
+        public float windBackSpeed = 0.35f;
+        [BillSuffix("m/s")] [BillInfoBox("Tốc độ ĐỈNH tối thiểu để tính là 1 cú ném (thấp = dễ kích hoạt).")]
         public float vMinFire = 1.0f;
-        [BillSuffix("s")] public float cooldown = 0.4f;
+        [BillSlider(0.3f, 0.95f)] [BillInfoBox("BẮN khi tốc độ tụt còn x lần đỉnh = điểm buông tay. Thấp = buông chắc/trễ; cao = nhạy/sớm.")]
+        public float releaseDrop = 0.7f;
+        [BillSuffix("s")] public float cooldown = 0.35f;
 
         [BillTitle("Ballistic flight (real throw velocity + gravity)")]
         [BillSuffix("m/s²")] [BillInfoBox("THẲNG ↔ VÒNG: thấp (~3-5) = bay thẳng/căng; cao (~9.8) = vòng cung lob.")]

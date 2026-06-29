@@ -12,47 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3cf184317ee25f5448aa26e486fbd4f1, type: 3}
   m_Name: ThrowConfig
   m_EditorClassIdentifier: Assembly-CSharp::TossZone.Throwing.ThrowConfig
-  planeHeight: 1.3
-  windBackDepth: 0.12
+  windBackSpeed: 0.35
   vMinFire: 1
-  aimConeDeg: 35
+  releaseDrop: 0.7
   cooldown: 0.4
-  timeToTarget: 0.6
-  range: 7
-  minRange: 2.5
-  peakHeight: 1.6
-  peakAt: 0.32
+  gravity: 3
+  velocityScale: 3
+  minLaunchSpeed: 10
+  maxLaunchSpeed: 30
   groundMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  powerCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 2
-      outSlope: 2
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  maxSwingSpeed: 2
-  minPower: 0.55
-  heldBallScale: 0.09
-  recoil: 0.05
+  heldBallScale: 0.15
   hapticWind: 0.15
   hapticRelease: 0.85
   hapticImpact: 0.5

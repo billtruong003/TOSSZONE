@@ -4,6 +4,33 @@
 `M4_Gameplay_Design.md` §2 and the old GDD `1.4.x` behind-head breakdown in `tasks.json`. Feel-first build
 order at the end (= the tasks `1.4.s1`..`1.4.s9`).
 
+> **Revision 2026-06-29 (session 5) — trigger reworked (supersedes the "behind-head" wind-back below).**
+> The old plane was anchored at the **head** and arming required the hand to cross *behind* it → you had to reach
+> deep behind your head. Replaced with a **push-through plane set a short distance IN FRONT of you**
+> (`planeForwardOffset`, default 0.30 m): the hand pulls back behind it (Armed, trivial at rest) then **pushes
+> FORWARD through it** above `vMinFire` to FIRE. No behind-head reach. Re-arm = pull the hand back behind the
+> plane (natural kéo-về → đẩy-ra rhythm). The fire/launch velocity is now the wrist delta **minus the rig-root
+> (locomotion) delta** → joystick movement can neither fake a throw nor pollute throw power (body-relative).
+> Lever rename: `planeHeight` (was inert — height never entered the math) → **`planeForwardOffset`**.
+>
+> **Held ball reworked (same session):** the in-hand ball is now a **real AutoHand `Grabbable`** (`ThrowBall`
+> prefab; fingers wrap via AutoHand **auto-pose** — no `GrabbablePose` needed for a simple ball) instead of the
+> flat parented sphere — supplied by
+> `ThrowBallHolder` (force-grabs it into the hand). It is a **persistent visual**: throwing does **NOT** hide it
+> (drop the §2/§3 "held hides on FIRE + flash + refill" steps); the hand keeps holding it and each swing still
+> fires a separate `BillTween` projectile. Set `ThrowController._showVisualHeldBall = false` when the holder is
+> used. Networked "others see the held ball" is deferred (local visual first).
+>
+> **Trigger reworked AGAIN (same session) → peak-velocity release (supersedes the push-through plane above).**
+> Symptoms it fixes: hard to trigger + erratic aim + weak/no power. No plane/position gate now: hold grip + swing
+> the hand forward; the throw FIRES at the **natural release point** — once the forward speed has **peaked and
+> started to drop** (`fwdVel < peak × releaseDrop`) and the peak cleared `vMinFire`. Launch uses the **velocity at
+> that peak**, taken from a **4-frame moving average** (kills 1-frame VR jitter → consistent aim) and from
+> mid-swing (not the drooping full-extension point → real power). A backward flick (`fwdVel < -windBackSpeed`)
+> resets the peak for the next throw → continuous throwing while holding grip. Levers: `windBackSpeed`, `vMinFire`,
+> `releaseDrop`, `cooldown` (removed `planeForwardOffset`/`windBackDepth`). An in-headset debug HUD
+> (`ThrowController._debugHud`) shows state / fwdVel / peak / launch speed for tuning.
+
 > Context: avatar = **3-point networked** (head + 2 wrists), Stickman model, `AvatarArmPoser`/`AvatarLegPoser`.
 > Throw is **LOCAL input** on the toon hands (AutoHand), only active in **`02_Arena`**. **No Fusion Physics
 > Addon** → projectiles are **`BillTween`-driven, NOT physics**. Read `Docs/Fusion_Shared_Mode_Gotchas.md`
