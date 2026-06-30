@@ -38,10 +38,6 @@ namespace TossZone.Throwing
         [SerializeField] private Key _debugThrowKey = Key.T;
         [Tooltip("Editor/dev: hold this key to simulate grip when no XR controller is present.")]
         [SerializeField] private Key _editorGripKey = Key.G;
-        [Tooltip("In-headset HUD with the live throw state + swing speed (debug/tuning). Turn off when dialed in.")]
-        [SerializeField] private bool _debugHud = true;
-        [Tooltip("DebugHud: a PRE-PLACED instance in the scene (used as-is) OR the DebugHud prefab (auto-instantiated + attached to the head). Empty = no HUD.")]
-        [SerializeField] private TossZone.UI.DebugHud _hudRef;
 
         private const string PoolKey = "throwprojectile";
 
@@ -69,9 +65,6 @@ namespace TossZone.Throwing
         private const int VelSamples = 4;
         private Vector3[] _velBuf;          // moving-average ring buffer → kills 1-frame tracking jitter
         private int _velCount;
-        private TossZone.UI.DebugHud _hud;
-        private float _lastLaunchSpeed;
-        private int _fireCount;
         private ThrowState _state;
         private bool _onCooldown;
         private bool _ready;
@@ -119,7 +112,6 @@ namespace TossZone.Throwing
             _velBuf = new Vector3[VelSamples];
             _velCount = 0;
             _peakFwdVel = 0f;
-            if (_debugHud) CreateHud();
             _state = ThrowState.Empty;
             _ready = true;
             Debug.Log("[Throw] ThrowController ready (hand=" + (_rightHand ? "R" : "L") + "). Debug throw key = " + _debugThrowKey);
@@ -169,8 +161,6 @@ namespace TossZone.Throwing
                     }
                     break;
             }
-
-            if (_hud != null) UpdateHud(fwdVel, grip);
         }
 
         private void Load()
@@ -193,8 +183,6 @@ namespace TossZone.Throwing
             float speed = Mathf.Clamp(swingVel.magnitude * _config.velocityScale, _config.minLaunchSpeed, _config.maxLaunchSpeed);
             Vector3 v0 = dir * speed;
             float power = Mathf.Clamp01(speed / Mathf.Max(_config.maxLaunchSpeed, 0.01f));
-            _lastLaunchSpeed = speed;
-            _fireCount++;
             SpawnProjectile(origin, v0, power);
 
             Haptic(_config.hapticRelease, 0.06f);
@@ -298,29 +286,6 @@ namespace TossZone.Throwing
             Vector3 sum = Vector3.zero;
             for (int i = 0; i < n; i++) sum += _velBuf[i];
             return sum / n;
-        }
-
-        private void CreateHud()
-        {
-            if (_hud != null || _hudRef == null) return;
-            if (_hudRef.gameObject.scene.IsValid())   // a scene instance → pre-placed, use as-is
-            {
-                _hud = _hudRef;
-                return;
-            }
-            if (_head == null) return;
-            GameObject go = Instantiate(_hudRef.gameObject);
-            go.name = "ThrowDebugHUD";
-            _hud = go.GetComponent<TossZone.UI.DebugHud>();
-            if (_hud != null) _hud.AttachTo(_head);
-        }
-
-        private void UpdateHud(float fwdVel, bool grip)
-        {
-            _hud.SetText("THROW " + _state + (grip ? " [grip]" : "")
-                + "\nfwdVel " + fwdVel.ToString("0.0") + "  peak " + _peakFwdVel.ToString("0.0")
-                + "\nvMin " + _config.vMinFire.ToString("0.0") + "  fires " + _fireCount
-                + "\nlast launch " + _lastLaunchSpeed.ToString("0.0") + " m/s");
         }
 
         private void CreateHeldBall()

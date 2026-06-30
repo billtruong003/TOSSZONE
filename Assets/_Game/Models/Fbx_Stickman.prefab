@@ -52,6 +52,34 @@ PrefabInstance:
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: 64d553e8f6e1a1049ba2996bdbbf7fd1, type: 2}
+    - target: {fileID: -1244975836807212837, guid: 8b719517da77161478af9bc7abcd20f8, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -1244975836807212837, guid: 8b719517da77161478af9bc7abcd20f8, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -1244975836807212837, guid: 8b719517da77161478af9bc7abcd20f8, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -1244975836807212837, guid: 8b719517da77161478af9bc7abcd20f8, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -1244975836807212837, guid: 8b719517da77161478af9bc7abcd20f8, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -1244975836807212837, guid: 8b719517da77161478af9bc7abcd20f8, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -1244975836807212837, guid: 8b719517da77161478af9bc7abcd20f8, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 8b719517da77161478af9bc7abcd20f8, type: 3}
       propertyPath: m_Name
       value: Fbx_Stickman

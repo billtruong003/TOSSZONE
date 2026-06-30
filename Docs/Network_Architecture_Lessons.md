@@ -5,6 +5,9 @@
 > mỗi mục gắn với một bug thật hoặc một quyết định kiến trúc có hậu quả rõ ràng.
 >
 > **Stack:** Fusion 2.0.12 · Shared Mode · NO Physics Addon · BillGameCore · AutoHand · Unity 6000.3 · Quest/Android
+>
+> **Doc anh em:** `Docs/Networking_Architecture.md` — playbook thiết kế (patterns rút từ Shmackle + roadmap đầy đủ
+> + hệ player `Bill.Players`). Doc NÀY = trạng thái sống + bài học thực tế; doc kia = "xây gì & tại sao".
 
 ---
 

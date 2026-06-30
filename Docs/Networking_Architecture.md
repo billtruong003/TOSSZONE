@@ -1,10 +1,18 @@
 # TOSSZONE — Networking architecture & plan
 
-**Status:** DESIGN (roadmap to follow). Only `FusionNet` (BillGameCore) + the current `NetworkAvatar` /
-`NetworkGrabbable` / `PlayerSpawnManager` exist today. The player-system upgrade, the networked minigame layer,
-pooled networked spawns, and the scene flow below are **not yet implemented** — this doc is the plan, distilled
-from studying the **Shmackle** project (a shipping Fusion VR game) and reading BillGameCore's Fusion module.
+**Status:** DESIGN REFERENCE — the Shmackle-derived patterns + roadmap ("what to build & why"), distilled from
+studying the **Shmackle** project (a shipping Fusion VR game) + BillGameCore's Fusion module. This is NOT the live
+status.
 
+> **For the LIVE state read `Docs/Network_Architecture_Lessons.md`** — what's actually implemented (S2 networked
+> held-ball + S3 networked projectile shipped Session 6, via a thin `NetworkProjectile` + `NetworkAvatar.HoldingBall`),
+> the bugs-and-why lessons, and the current build checklist.
+>
+> **Pivot note (2026-06-30):** direction changed to **minigame-loop-first**. The §7 roadmap below predates this —
+> P2 (player system) / P3 (networked throw) / P4 (scale) are now **deferred**; the live priority order lives in the
+> Lessons doc + `Docs/tasks.json` (section `1.MG`). §4 (minigame networking pattern) is the active reference, and
+> §5 is partly superseded by the shipped S2/S3 impl (which already used NetworkTransform-style sync, not the Physics Addon).
+>
 > Sister doc: `Docs/AutoHand_Grab_Notes.md` (grab/held-object physics).
 
 ---

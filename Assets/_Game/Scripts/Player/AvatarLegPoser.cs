@@ -64,6 +64,7 @@ namespace TossZone.Player
         private FootState _l, _r;
         private Quaternion _lFootRest = Quaternion.identity, _rFootRest = Quaternion.identity;
         private Quaternion _lLowerLegRest = Quaternion.identity, _rLowerLegRest = Quaternion.identity;
+        private Quaternion _lUpperLegRest = Quaternion.identity, _rUpperLegRest = Quaternion.identity;
         private Vector3 _lastBodyPos;
         private bool _captured;
 
@@ -82,6 +83,8 @@ namespace TossZone.Player
             // direction is always roughly horizontal, so it is never parallel to the shin.
             if (_lUpperLeg && _lLowerLeg && _lFoot) _lLowerLegRest = CaptureRollLeg(_lUpperLeg, _lLowerLeg, _lFoot);
             if (_rUpperLeg && _rLowerLeg && _rFoot) _rLowerLegRest = CaptureRollLeg(_rUpperLeg, _rLowerLeg, _rFoot);
+            if (_lUpperLeg && _lLowerLeg) _lUpperLegRest = CaptureRollUpper(body, _lUpperLeg, _lLowerLeg);
+            if (_rUpperLeg && _rLowerLeg) _rUpperLegRest = CaptureRollUpper(body, _rUpperLeg, _rLowerLeg);
             _lastBodyPos = body.position;
             _captured = true;
         }
@@ -99,6 +102,18 @@ namespace TossZone.Player
             return Quaternion.Inverse(Quaternion.LookRotation(shinFwd, shinUp)) * lower.rotation;
         }
 
+        // Capture thigh roll using body.forward as the LookRotation "up" so the thigh's roll is STATELESS
+        // (the old FromToRotation * upper.rotation accumulated twist during movement -> knee twist). Bind pose.
+        private static Quaternion CaptureRollUpper(Transform body, Transform upper, Transform lower)
+        {
+            Vector3 thighFwd = (lower.position - upper.position).normalized;
+            if (thighFwd.sqrMagnitude < 1e-6f) return Quaternion.identity;
+            Vector3 thighUp = Vector3.ProjectOnPlane(body.forward, thighFwd);
+            if (thighUp.sqrMagnitude < 1e-4f) thighUp = body.up;
+            else thighUp.Normalize();
+            return Quaternion.Inverse(Quaternion.LookRotation(thighFwd, thighUp)) * upper.rotation;
+        }
+
         private void LateUpdate()
         {
             if (!_captured) Capture();
@@ -111,12 +126,12 @@ namespace TossZone.Player
 
             // Process one foot then the other; pass each the other's CURRENT stepping flag so they never
             // lift together (a foot only starts a step when its partner is grounded).
-            StepAndSolve(ref _l, _lUpperLeg, _lLowerLeg, _lFoot, _lFootRest, _lLowerLegRest, body, vel, dt, _r.stepping);
-            StepAndSolve(ref _r, _rUpperLeg, _rLowerLeg, _rFoot, _rFootRest, _rLowerLegRest, body, vel, dt, _l.stepping);
+            StepAndSolve(ref _l, _lUpperLeg, _lLowerLeg, _lFoot, _lFootRest, _lLowerLegRest, _lUpperLegRest, body, vel, dt, _r.stepping);
+            StepAndSolve(ref _r, _rUpperLeg, _rLowerLeg, _rFoot, _rFootRest, _rLowerLegRest, _rUpperLegRest, body, vel, dt, _l.stepping);
         }
 
         private void StepAndSolve(ref FootState f, Transform upper, Transform lower, Transform foot,
-                                  Quaternion footRest, Quaternion lowerRest, Transform body, Vector3 vel, float dt, bool otherStepping)
+                                  Quaternion footRest, Quaternion lowerRest, Quaternion upperRest, Transform body, Vector3 vel, float dt, bool otherStepping)
         {
             if (upper == null || lower == null || foot == null) return;
 
@@ -167,7 +182,7 @@ namespace TossZone.Player
                 f.plant = f.grounded; // stay put -> no skating
             }
 
-            SolveLeg(upper, lower, foot, f.plant, body, footRest, lowerRest, normal);
+            SolveLeg(upper, lower, foot, f.plant, body, footRest, lowerRest, upperRest, normal);
         }
 
         /// <summary>
@@ -176,7 +191,7 @@ namespace TossZone.Player
         /// then orients the foot to the body facing (optionally tilted to the ground normal).
         /// </summary>
         private void SolveLeg(Transform upper, Transform lower, Transform foot, Vector3 target,
-                              Transform body, Quaternion footRest, Quaternion lowerRest, Vector3 groundNormal)
+                              Transform body, Quaternion footRest, Quaternion lowerRest, Quaternion upperRest, Vector3 groundNormal)
         {
             Vector3 a = upper.position;
             float lab = Vector3.Distance(a, lower.position);
@@ -197,7 +212,14 @@ namespace TossZone.Player
             if (pole.sqrMagnitude < 1e-4f) pole = Vector3.ProjectOnPlane(Vector3.right, atDir).normalized;
             Vector3 knee = a + atDir * proj + pole * height;
 
-            upper.rotation = Quaternion.FromToRotation(lower.position - a, knee - a) * upper.rotation;
+            // Stateless thigh: aim hip->knee with a body-forward secondary axis. The old incremental
+            // FromToRotation * upper.rotation accumulated roll drift during movement, twisting the mesh at
+            // the knee. LookRotation(+captured rest) reproduces bind pose exactly and never drifts.
+            Vector3 thighFwd = (knee - a).normalized;
+            Vector3 thighUp = Vector3.ProjectOnPlane(body.forward, thighFwd);
+            if (thighUp.sqrMagnitude < 1e-4f) thighUp = body.up;
+            else thighUp.Normalize();
+            upper.rotation = Quaternion.LookRotation(thighFwd, thighUp) * upperRest;
             // Stateless shin roll: use the thigh direction (upper→lower, already IK-solved above so
             // lower.position is now at the knee) as the LookRotation secondary axis. World-up causes
             // singularity because the shin points near-downward — thigh direction is always horizontal.
