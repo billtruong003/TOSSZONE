@@ -47,9 +47,22 @@
 
 ---
 
+### Direction pivot (2026-06-30)
+
+**Không còn đi theo P2 (buff rings) → P3 (shop/weapon) → P4 (lobby) nữa.**
+Hướng mới: **Minigame loop đầu tiên** — hit detection → score → round end → reset. Trải nghiệm chơi được trước khi làm thêm content.
+
+tasks.json đã cập nhật:
+- P2 title: `[DEFERRED]` — buff rings không ưu tiên
+- P3 title: `[DEFERRED]` — vũ khí/shop/skin để sau
+- P4 title: `[DEFERRED]` — full lobby để sau
+- Section `1.MG` mới trong P1: 6 task minigame (MG1-MG6)
+
+---
+
 ### Việc cần làm tiếp (theo thứ tự ưu tiên)
 
-**1. Verify S2 + S3 với 2 player thật** (quan trọng nhất trước khi build thêm)
+**1. Verify S2 + S3 với 2 player thật** (nền tảng — làm trước khi build MG)
 ```
 [ ] Player A thấy HeldBallVisual ở wrist của B khi B đang hold
 [ ] Player A thấy NetworkProjectile bay khi B throw
@@ -57,11 +70,10 @@
 [ ] NetworkProjectile despawn đúng khi ball land
 ```
 
-**2. S8 — Hit detection**
+**2. MG1 — Hit detection** (= S8 cũ, đổi tên để fit minigame context)
 ```csharp
-// Trong ThrowProjectile.OnLanded() hoặc OnTriggerEnter:
-// Nếu hit collider là player → fire RPC_OnHit
-
+// NetworkProjectile: trigger collider detect overlap với NetworkAvatar body collider
+// → authority fires RPC to all:
 [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
 public void RPC_OnHit(PlayerRef hitPlayer, Vector3 hitPoint)
 {
@@ -70,15 +82,18 @@ public void RPC_OnHit(PlayerRef hitPlayer, Vector3 hitPoint)
         TriggerHaptic(HapticStrength.Strong, 0.3f);
 }
 ```
-NetworkProjectile cần collider (trigger) để detect va chạm với avatar. Avatar cần collider trên `NetworkAvatar/Head` hoặc body.
 
-**3. S5 — Haptics 3-tier**
-- Wind-up: light buzz khi `fwdVel > vMinArm` (dấu hiệu chuẩn bị throw)
-- Release: sharp pulse khi Fire() (đã có `hapticRelease` config)
-- Impact: rumble khi nhận hit (S8 RPC)
-Tất cả local — không cần thêm networking.
+**3. MG2 — MinigameManager networking**
+- `[Networked] NetworkDictionary<PlayerRef, int> Scores`
+- `[Networked] MinigamePhase Phase`
+- `[Networked] float TimeRemaining`
+- `RegisterHit(hitPlayer)` trong `FixedUpdateNetwork()` (không RPC)
 
-**4. S9 — 2-player verify checklist** → xem `Docs/Network_Architecture_Lessons.md §3.1`
+**4. MG3 → MG6** — Portal trigger → scoreboard → round end → spawn points
+Chi tiết: xem section `1.MG` trong `Docs/tasks.json`
+
+**5. S5 — Haptics 3-tier** (có thể song song với MG1-2)
+- Wind-up, release, impact — tất cả local, không cần thêm networking
 
 ---
 
