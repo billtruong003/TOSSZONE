@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10791fc1140266d44a19177728df2c8a, type: 3}
+  m_Name: BigBoom
+  m_EditorClassIdentifier: Assembly-CSharp::TossZone.Combat.WeaponConfig
+  id: bigboom
+  displayName: "Bom Nguy\xEAn T\u1EED"
+  icon: {fileID: 0}
+  cost: 20
+  acquireMode: 1
+  costPerUse: 20
+  unlockTime: 45
+  cooldown: 3
+  magazine: 0
+  handSource: 1
+  heldPrefab: {fileID: 3547095352278365093, guid: 8ccbf2602974b12429c4b634207f5654, type: 3}
+  fireMode: 0
+  throwConfig: {fileID: 11400000, guid: 1ac66ba853451a84d9442db1a5ee61fd, type: 2}
+  projectilePrefab: {fileID: 0}
+  muzzleSpeed: 12
+  fireRate: 2
+  damage: 2
+  aoeRadius: 4.5

@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10791fc1140266d44a19177728df2c8a, type: 3}
+  m_Name: Sword
+  m_EditorClassIdentifier: Assembly-CSharp::TossZone.Combat.WeaponConfig
+  id: sword
+  displayName: Lightsword
+  icon: {fileID: 0}
+  cost: 0
+  acquireMode: 0
+  costPerUse: 0
+  unlockTime: 0
+  cooldown: 0.5
+  magazine: 0
+  handSource: 1
+  heldPrefab: {fileID: 6448152446237785353, guid: 2d769635b5ec0a9409e5ac9cb1a2ab20, type: 3}
+  fireMode: 3
+  throwConfig: {fileID: 0}
+  projectilePrefab: {fileID: 0}
+  muzzleSpeed: 12
+  fireRate: 2
+  damage: 2
+  aoeRadius: 0

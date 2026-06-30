@@ -1,0 +1,62 @@
+using BillInspector;
+using UnityEngine;
+
+namespace TossZone.Combat
+{
+    /// <summary>How the player obtains/keeps a weapon. Wallet resets $0 each round (per Combat design §13).</summary>
+    public enum AcquireMode { BuyOnce, PayPerUse }
+
+    /// <summary>How the weapon gets into the hand.</summary>
+    public enum HandSource { AppearInHand, GrabFromHologram }
+
+    /// <summary>How the weapon fires.</summary>
+    public enum FireMode { ThrowBallistic, ProjectileLaunch, Hitscan, Melee }
+
+    /// <summary>
+    /// Designer data for ONE combat weapon — the configurable seam (add a weapon = author an asset, no code).
+    /// Generalizes <see cref="TossZone.Throwing.ThrowConfig"/> across the arsenal
+    /// (Rock / Gun / Grenade / Bazooka / BigBoom / LandMine / Sword). See <c>Docs/Combat_Minigame_Design.md</c> §5.
+    /// Wire <see cref="heldPrefab"/> to an MS_WP_* prefab; the Rock is weapon #0 (cost 0, infinite).
+    /// </summary>
+    [CreateAssetMenu(menuName = "TOSSZONE/Weapon Config", fileName = "WeaponConfig")]
+    public class WeaponConfig : ScriptableObject
+    {
+        [BillTitle("Identity")]
+        [BillRequired] public string id = "rock";
+        public string displayName = "Rock";
+        public Sprite icon;
+
+        [BillTitle("Economy + unlock (ví reset $0 mỗi hiệp)")]
+        [BillInfoBox("cost = giá mua/select. BuyOnce = mua giữ tới hết hiệp; PayPerUse = mỗi phát tốn costPerUse.")]
+        [BillSlider(0, 30)] public int cost = 0;
+        public AcquireMode acquireMode = AcquireMode.BuyOnce;
+        public int costPerUse = 0;
+        [BillSuffix("s")] [BillInfoBox("Có sẵn từ giây thứ mấy trong hiệp (escalation). 0 = từ đầu.")]
+        public float unlockTime = 0f;
+        [BillSuffix("s")] public float cooldown = 0.4f;
+        [BillInfoBox("0 = đạn vô hạn (Rock). >0 = số phát trước khi hết → biến mất / báo hết đạn.")]
+        public int magazine = 0;
+
+        [BillTitle("Đưa vào tay")]
+        [BillInfoBox("AppearInHand = grip là hiện trong tay (ball). GrabFromHologram = grab ra từ hologram (súng).")]
+        public HandSource handSource = HandSource.AppearInHand;
+        public GameObject heldPrefab;
+
+        [BillTitle("Bắn + damage")]
+        [BillInfoBox("ThrowBallistic = ném (peak-velocity). ProjectileLaunch = bắn projectile. Hitscan = raycast. Melee = kiếm.")]
+        public FireMode fireMode = FireMode.ThrowBallistic;
+        [BillInfoBox("ThrowBallistic: tái dùng ThrowConfig (peak-velocity + ballistic). Trống = dùng default.")]
+        public TossZone.Throwing.ThrowConfig throwConfig;
+        [BillInfoBox("ProjectileLaunch / Hitscan: prefab NetworkProjectile bắn ra.")]
+        public GameObject projectilePrefab;
+        [BillSuffix("m/s")] public float muzzleSpeed = 12f;
+        [BillSuffix("shot/s")] public float fireRate = 2f;
+        [BillInfoBox("Số cục máu trừ mỗi hit.")]
+        public int damage = 1;
+        [BillSuffix("m")] [BillInfoBox("0 = trúng trực tiếp. >0 = nổ AoE bán kính này.")]
+        public float aoeRadius = 0f;
+
+        /// <summary>Firing should deduct money each shot (vs free once owned).</summary>
+        public bool IsPayPerUse => acquireMode == AcquireMode.PayPerUse;
+    }
+}

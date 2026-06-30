@@ -248,7 +248,12 @@ namespace TossZone.Throwing
                 _activeNetProj = null;
             }
             _activeNetProj = _runner.Spawn(_netProjectilePrefab, pos, rot);
-            _activeNetProj?.GetComponent<NetworkProjectile>()?.LinkTo(localProj);
+            NetworkProjectile np = _activeNetProj != null ? _activeNetProj.GetComponent<NetworkProjectile>() : null;
+            if (np != null)
+            {
+                np.Shooter = _runner.LocalPlayer;
+                np.LinkTo(localProj);
+            }
         }
 
         private void DespawnNetworkProjectile()

@@ -103,6 +103,19 @@ Map trực tiếp data 3.x: giá→cost, hồi đạn→magazine/ammo, AoE→aoe
 - **PayPerUse**: mỗi phát trừ `costPerUse`/`Ammo` → hết → **biến mất khỏi tay** + cue "hết đạn".
 - *(Cần chốt: 6 món hiện tại cái nào BuyOnce, cái nào PayPerUse — §19.)*
 
+### 5.4 Hành vi từng vũ khí (chốt 2026-06-30) — **mọi đạn ném xuyên vòng đều được buff**
+| Vũ khí | Bắn | Hành vi |
+|---|---|---|
+| **Rock** (=ball) | ném | **trúng trực tiếp, phải ném CHUẨN đúng người** (aoe ~0). Viên ball cơ bản. |
+| **Gun** | **laser sight từ nòng** → nhắm + bắn | đạn nhanh, **uncatchable**. |
+| **Grenade** | ném | **chạm là nổ** (impact) AoE. |
+| **BigBoom** | ném | như grenade, AoE **diện rộng** (finale). |
+| **Bazooka** | bắn projectile | có **trail**, **cong xuống đất** (arc trọng lực) → chạm đất nổ AoE. |
+| **LandMine** | ném | **KHÔNG nổ ngay** → rơi nằm đất → **arm + tít tít** → **delay mới nổ** AoE. Xuyên vòng **x2/x3 → nhân lên**. |
+| **⚔️ Kiếm** | rút sau lưng | §9 — **deflect-only, KHÔNG tấn công người**. |
+
+**Buff-ring áp lên MỌI đạn ném** (không chỉ ball): luồn qua vòng → buff đạn đó (stack 3). Cần thêm field hành vi vào `WeaponConfig` khi build (fuseDelay/armsOnGround=mine, projectileGravity=arc, laserSight, attacksPlayers=false+canDeflect cho kiếm).
+
 ---
 
 ## 6. Throw + **grab/catch arbitration** (chống overlap)
@@ -146,11 +159,12 @@ Không-bắt: **đạn súng**, **quả tím (Power throw)**, **spike-ball**.
 
 ---
 
-## 9. ⚔️ Kiếm — pickup tranh chấp trên map (high risk/reward)
+## 9. ⚔️ Kiếm (Lightsword) — rút sau lưng, **DEFLECT-ONLY** (high risk/reward)
 
-- **Đặt trên map**, ai cũng lụm được → **điểm nóng** cả sân tranh nhau (pattern "power-weapon spawn"). 1 vật phẩm, KHÔNG phải hệ-pickup-vũ-khí (nên không clash buff-ring).
-- **Chém**: vung trúng bóng đang bay → **phá huỷ** (làm trước) → nâng cấp **deflect bật lại** (sau). Counter quả **không-bắt-được** (bắt không được thì chém). Cận chiến: chém người.
-- **Chém hụt = dính đòn** → kỹ năng có rủi ro, không phải nút-block. Chém được **bóng** (kể cả Power throw), **KHÔNG chém đạn súng**.
+- **Luôn đeo SAU LƯNG** khi vào hiệp; **với tay ra sau lưng để RÚT** ra cầm (over-shoulder draw). (Không còn là pickup trên map — bản cũ bỏ.)
+- **KHÔNG tấn công được người** (`attacksPlayers=false`, damage người = 0). Vai trò **thuần phòng thủ / counter**.
+- **Chém để DEFLECT đạn đang bay**: chém trúng **mìn / bom / bóng** → phá/đỡ. Là cách duy nhất chặn đồ **không-bắt-được**.
+- **High risk/reward**: chém đúng = chặn đòn nguy hiểm; **chém HỤT = ăn đòn** (đánh đổi). KHÔNG chém được đạn súng.
 
 ---
 
@@ -169,6 +183,8 @@ Vòng **trôi trái↔phải** qua sân; **ném đạn XUYÊN qua vòng → buff
 | **Lửa (Fire)** | sau nổ tạo **vùng lửa** ai qua mất 1 mạng (đến hết Tier) | theo Tier |
 
 **Compose với catch:** catch = **trục thuộc-tính** (chùm/tiền/máu); ring = **trục nguyên-tố/nhân-số** → bắt quả đỏ (3 chùm) **rồi** luồn vòng Lửa = **3 quả lửa**. Combo đã đời mà vẫn đọc được.
+
+**Áp lên MỌI vũ khí ném** (Rock/Grenade/Bazooka/BigBoom/LandMine — không riêng ball). LandMine + Multiplier x2/x3 = **nhân số mìn**.
 
 ---
 
