@@ -34,7 +34,7 @@ namespace TossZone.UI
         {
             Camera cam = Camera.main;
             if (cam != null)
-                transform.rotation = Quaternion.LookRotation(transform.position - cam.transform.position);
+                transform.rotation = Quaternion.LookRotation(cam.transform.position - transform.position);
 
             if (_combat == null) return;
             int h = _combat.Health;

@@ -38,7 +38,9 @@ namespace TossZone.Combat
             HealthUI healthUI = GetComponentInChildren<HealthUI>();
             if (healthUI != null && _combat != null) healthUI.Bind(_combat);
 
-            SetColor(_aliveColor);
+            // Sync cached dead-state so Render() diffs correctly from the first frame.
+            _wasDeadLastRender = _combat != null && _combat.Health <= 0;
+            SetColor(_wasDeadLastRender ? _deadColor : _aliveColor);
         }
 
         public override void FixedUpdateNetwork()
