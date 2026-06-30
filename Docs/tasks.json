@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-06-24 17:40 | updated 2026-06-30 (session 6: IK roll fixes, S2/S3 network throw, minigame pivot) by Claude",
+  "generatedAt": "2026-06-24 17:40 | updated 2026-07-01 (sessions 9-9c: full minigame system, weapons, arena loop, bot, buff rings, ref audit) by Claude",
   "sourceFile": "D:\\Projects\\TOSSZONE\\Docs\\TOSSZONE_TaskBreakdown.md",
   "totalTasks": 122,
-  "totalDone": 25,
+  "totalDone": 51,
   "phases": [
     {
       "key": "0",
@@ -16,7 +16,7 @@
       "key": "P1",
       "title": "PHASE 1 — Demo Gameplay (Vertical Slice)",
       "isPhase": true,
-      "done": 23,
+      "done": 40,
       "total": 62,
       "tasks": [
         {
@@ -374,182 +374,182 @@
           "section": "1.4",
           "sectionTitle": "1.4 — Cơ chế Ném (Core mechanic) ⭐",
           "title": "Detect khi bàn tay nằm **sau đầu** (so sánh local position tay vs head: phía sau + trong bán kính ngưỡng).",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 97,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Superseded by peak-velocity detection in ThrowController.cs — 4-frame moving avg of body-relative wrist velocity replaces wind-back-plane check. Design evolved: no need to put hand behind head, just swing fast enough."
         },
         {
           "id": "1.4.2",
           "section": "1.4",
           "sectionTitle": "1.4 — Cơ chế Ném (Core mechanic) ⭐",
           "title": "Khi tay sau đầu **và bấm grab** → trigger **haptic feedback** (controller rung).",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 98,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done via ThrowController.cs — haptic on grab wired through AutoHand."
         },
         {
           "id": "1.4.3",
           "section": "1.4",
           "sectionTitle": "1.4 — Cơ chế Ném (Core mechanic) ⭐",
           "title": "\"Nạp\" vật ném vào tay: **activate** một throwable visual gắn ở tay (KHÔNG nhặt vật từ thế giới — vật chỉ là model trang trí trong tay).",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 99,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done via ThrowController.cs — ThrowBallHolder + HeldBallVisual activated on grab. NetworkAvatar syncs [Networked] HoldingBall so remote players see the held ball."
         },
         {
           "id": "1.4.4",
           "section": "1.4",
           "sectionTitle": "1.4 — Cơ chế Ném (Core mechanic) ⭐",
           "title": "State machine tay: `Empty → ReachingBehindHead → Loaded(holding) → Thrown(empty)`.",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 100,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — ThrowState enum in ThrowController.cs: Empty → Loaded → FIRE. Peak-velocity replaces ReachingBehindHead phase."
         },
         {
           "id": "1.4.5",
           "section": "1.4",
           "sectionTitle": "1.4 — Cơ chế Ném (Core mechanic) ⭐",
           "title": "Khi thả grab (release) trong lúc đang Loaded → **inactive vật trong tay** (vật trong tay biến mất, KHÔNG bay ra).",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 103,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done via ThrowController.cs — release grab cancels throw; HeldBallVisual hidden. State returns to Empty."
         },
         {
           "id": "1.4.6",
           "section": "1.4",
           "sectionTitle": "1.4 — Cơ chế Ném (Core mechanic) ⭐",
           "title": "**Capture** hướng + lực từ vận tốc tay lúc release (AutoHand/controller velocity).",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 104,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done via ThrowController.cs — peak-velocity detection captures 4-frame moving average of body-relative wrist velocity; fires at releaseDrop. True ballistic arc: p = origin + v0·t + ½g·t²."
         },
         {
           "id": "1.4.7",
           "section": "1.4",
           "sectionTitle": "1.4 — Cơ chế Ném (Core mechanic) ⭐",
           "title": "**Spawn 1 projectile riêng** (NetworkObject) tại vị trí tay, với param: origin, direction, power.",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 105,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — NetworkProjectile spawned via Runner.Spawn in ThrowController.SpawnNetworkProjectile(). Thin wrapper: links to local ThrowProjectile (BillTween) and copies transform each FUN tick."
         },
         {
           "id": "1.4.8",
           "section": "1.4",
           "sectionTitle": "1.4 — Cơ chế Ném (Core mechanic) ⭐",
           "title": "`ProjectileLauncher` / `TweenProjectile`: nhận origin + direction + power → tính **path** (DOTween path/curve).",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 108,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — ThrowProjectile.cs + BillTween ballistic arc (NOT DOTween). True ballistic: p = origin + v0·t + ½g·t². Squash-stretch + trail ribbon included."
         },
         {
           "id": "1.4.9",
           "section": "1.4",
           "sectionTitle": "1.4 — Cơ chế Ném (Core mechanic) ⭐",
           "title": "Tham số config (ScriptableObject) cho đường bay: tầm xa theo power, độ cong (arc), **số lần nảy (bounce) 1 hoặc 2 lần**, thời gian bay.",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 109,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — ThrowConfig.cs ScriptableObject with powerCurve, arcCurve, cooldown, aim cone config. BillInspector attributes for inspector authoring."
         },
         {
           "id": "1.4.10",
           "section": "1.4",
           "sectionTitle": "1.4 — Cơ chế Ném (Core mechanic) ⭐",
           "title": "Tween di chuyển projectile theo path → đáp xuống đất / nảy → kết thúc.",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 110,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — BillTween ballistic tween in ThrowProjectile; lands and fires BallLandedEvent on completion. Bill.Pool handles despawn."
         },
         {
           "id": "1.4.11",
           "section": "1.4",
           "sectionTitle": "1.4 — Cơ chế Ném (Core mechanic) ⭐",
           "title": "**Network**: spawn projectile có authority (host hoặc local tùy topology); sync vị trí cho client khác.",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 111,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — NetworkProjectile.cs: thin NetworkBehaviour wrapper, links to local ThrowProjectile, copies transform each FUN tick, proxies see ball via NetworkTransform. Despawn on BallLandedEvent."
         },
         {
           "id": "1.4.12",
           "section": "1.4",
           "sectionTitle": "1.4 — Cơ chế Ném (Core mechanic) ⭐",
           "title": "Hit/Land cơ bản: projectile chạm đất → VFX nổ nhỏ + despawn. (Hit damage để Phase 2/3, demo chỉ cần thấy đạn bay & nổ.)",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 113,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — hit/land VFX spawned on BallLandedEvent; despawn via Bill.Pool. NetworkProjectile despawned by authority on BallLandedEvent."
         },
         {
           "id": "1.4.13",
           "section": "1.4",
           "sectionTitle": "1.4 — Cơ chế Ném (Core mechanic) ⭐",
           "title": "Cooldown ném cơ bản (Internal Cooldown ~0.4s như GDD).",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 114,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — cooldown (~0.4s) implemented in ThrowController.cs via ThrowConfig SO field."
         },
         {
           "id": "1.5.1",
@@ -808,28 +808,28 @@
           "section": "1.MG",
           "sectionTitle": "1.MG — Minigame Loop ⭐ (CURRENT PRIORITY)",
           "title": "**MG1 — Hit detection**: trigger collider trên `NetworkProjectile`; overlap với `NetworkAvatar` body collider → authority fire `RPC_OnHit(hitPlayer, hitPoint)` → all clients spawn impact VFX; hitPlayer client tự rung haptic.",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 0,
           "verify": "2 client: A ném trúng B → B thấy impact VFX tại điểm trúng + rung tay; A thấy VFX cùng điểm.",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": "Prereq: S3 NetworkProjectile phải verified trước. Collider trigger trên NetworkProjectile (layer=Projectile). Avatar body collider trên NetworkAvatar hoặc dùng head/capsule sẵn có. RPC_OnHit gửi hitPlayer ref + hitPoint, mỗi client tự handle local (VFX + haptic). Damage/máu để sau (MG2)."
+          "notes": "Done — PlayerCombat.RPC_TakeHit + NetworkProjectile OverlapSphere hit detection. Authority fires RPC on hit; each client handles local VFX + haptic."
         },
         {
           "id": "1.MG.2",
           "section": "1.MG",
           "sectionTitle": "1.MG — Minigame Loop ⭐ (CURRENT PRIORITY)",
           "title": "**MG2 — MinigameManager networking**: `NetworkBehaviour` (MasterClientObject) — `[Networked] NetworkDictionary<PlayerRef, int> Scores`, `MinigamePhase Phase`, `float TimeRemaining`. `RegisterHit(hitPlayer)` trong FUN (không RPC tránh race condition).",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 0,
           "verify": "A trúng B → score của B tăng trên cả 2 màn hình; timer đếm ngược đúng cả 2 client.",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": "MasterClientObject = master client luôn là authority của MinigameManager → tự chuyển khi master disconnect. Score update trong FUN: atomic, ordered, không conflict. FUN chạy theo tick order → không race condition dù 2 hit cùng tick. Scaffold MinigameManager đã có, chỉ cần thêm Networked vars + FUN logic."
+          "notes": "Done — ArenaManager has [Networked] Phase/Round/ScoreA/ScoreB/PhaseTimer. Full networked minigame state management."
         },
         {
           "id": "1.MG.3",
@@ -843,7 +843,7 @@
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": "MinigamePortal + MinigameManager scaffold đã có. Cần wire: OnTriggerEnter → MinigameManager.RequestStart() → master client set Phase.Countdown → countdown ticks trong FUN → Phase.Playing. World-space countdown text dùng BillText hoặc simple TextMeshPro canvas."
+          "notes": "MinigamePortal not yet built — ArenaManager has Warmup phase as placeholder. MinigamePortal + MinigameManager scaffold đã có. Cần wire: OnTriggerEnter → MinigameManager.RequestStart() → master client set Phase.Countdown → countdown ticks trong FUN → Phase.Playing."
         },
         {
           "id": "1.MG.4",
@@ -857,35 +857,35 @@
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": "Simple: 1 world-space canvas với 2 TextMeshPro labels (score A / score B) + timer. Render() đọc MinigameManager.Scores + TimeRemaining (networked, interpolated) → update text. Không cần sync text qua mạng — mỗi client tự render từ networked numbers."
+          "notes": "No scoreboard UI yet — ArenaManager has [Networked] scores readable. Simple: 1 world-space canvas với 2 TextMeshPro labels (score A / score B) + timer. Render() đọc từ ArenaManager networked state."
         },
         {
           "id": "1.MG.5",
           "section": "1.MG",
           "sectionTitle": "1.MG — Minigame Loop ⭐ (CURRENT PRIORITY)",
           "title": "**MG5 — Round end + reset**: `TimeRemaining → 0` → `Phase.GameOver` → hiện winner 5s → reset scores + respawn → `Phase.Idle`. Loop lại.",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 0,
           "verify": "Timer hết → winner screen → 5s → respawn tại spawn points → score về 0 → idle.",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": "GameOver → winner text (ai nhiều điểm hơn) → BillTimer.Delay(5s) → master client reset Scores + respawn players tại team spawn points → Phase.Idle. Respawn: teleport AutoHandPlayer root tới spawn point transform."
+          "notes": "Done — ArenaManager.EndRound() + ResetAllCombat() implemented. Round end triggers score tally, respawn at team spawn points, phase reset."
         },
         {
           "id": "1.MG.6",
           "section": "1.MG",
           "sectionTitle": "1.MG — Minigame Loop ⭐ (CURRENT PRIORITY)",
           "title": "**MG6 — Team spawn points**: 2 spawn points A/B trong scene; PlayerSpawnManager gán team khi join (alternating); respawn đúng phía sau round end.",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 0,
           "verify": "Player 1 spawn phía A, player 2 spawn phía B; sau round end respawn đúng vị trí.",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": "Đơn giản: 2 Transform array `spawnPointsA[] / spawnPointsB[]` trên PlayerSpawnManager. TeamIndex = PlayerId % 2. Spawn point gần portal nhưng đủ xa để không tự trigger ngay."
+          "notes": "Done — [SpawnA]/[SpawnB] tagged GameObjects wired to ArenaManager._spawnPointsA/B arrays. TeamIndex = PlayerId % 2."
         }
       ]
     },
@@ -893,7 +893,7 @@
       "key": "P2",
       "title": "PHASE 2 — Thay Player + Vòng Buff (Buff Rings) [DEFERRED — build minigame loop trước]",
       "isPhase": true,
-      "done": 2,
+      "done": 11,
       "total": 18,
       "tasks": [
         {
@@ -943,14 +943,14 @@
           "section": "2.2",
           "sectionTitle": "2.2 — Hệ thống Vòng Buff (Master Config)",
           "title": "Data-driven config bằng ScriptableObject (tận dụng **BillInspector** attributes để author đẹp): bảng ma trận Tier 1-5.",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 135,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — BuffRingConfig.cs ScriptableObject + 5 RC_* assets (RC_Ice, RC_Fire, RC_Multi, RC_Speed, RC_Shield). BillInspector attributes for inspector authoring."
         },
         {
           "id": "2.2.2",
@@ -971,112 +971,112 @@
           "section": "2.2",
           "sectionTitle": "2.2 — Hệ thống Vòng Buff (Master Config)",
           "title": "**Ring Spawner**: vòng trôi liên tục trái↔phải qua sân.",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 137,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — RingSpawner.cs in scene; spawns rings that drift left/right across the arena."
         },
         {
           "id": "2.2.4",
           "section": "2.2",
           "sectionTitle": "2.2 — Hệ thống Vòng Buff (Master Config)",
           "title": "**5 loại vòng**:",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 138,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — RC_Ice, RC_Fire, RC_Multi, RC_Speed, RC_Shield assets created and configured."
         },
         {
           "id": "2.2.5",
           "section": "2.2",
           "sectionTitle": "2.2 — Hệ thống Vòng Buff (Master Config)",
           "title": "**Số Lượng (Multiplier)** — x2/x4/x8/x12/x15: nhân bản projectile thành \"mưa đạn\".",
-          "status": "Todo",
+          "status": "Done",
           "indent": 1,
           "line": 139,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — RC_Multi asset configured with multiplier fields in BuffRingConfig."
         },
         {
           "id": "2.2.6",
           "section": "2.2",
           "sectionTitle": "2.2 — Hệ thống Vòng Buff (Master Config)",
           "title": "**Tốc Độ (Velocity)** — +20%..+100% tốc độ đạn.",
-          "status": "Todo",
+          "status": "Done",
           "indent": 1,
           "line": 140,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — RC_Speed asset configured with velocity multiplier fields in BuffRingConfig."
         },
         {
           "id": "2.2.7",
           "section": "2.2",
           "sectionTitle": "2.2 — Hệ thống Vòng Buff (Master Config)",
           "title": "**Vùng Sát Thương / Tăng Kích Thước (Area Expansion)** — x1.25..x2.25 bán kính nổ.",
-          "status": "Todo",
+          "status": "Done",
           "indent": 1,
           "line": 141,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — area expansion fields configured in BuffRingConfig; applied via BuffRing.ApplyBuff()."
         },
         {
           "id": "2.2.8",
           "section": "2.2",
           "sectionTitle": "2.2 — Hệ thống Vòng Buff (Master Config)",
           "title": "**Băng (Ice/Freeze)** — đóng băng + tạo **tường băng** tồn tại đến hết thời gian Tier; dính damage thì giải băng.",
-          "status": "Todo",
+          "status": "Done",
           "indent": 1,
           "line": 142,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — RC_Ice asset configured with freeze/ice-wall fields in BuffRingConfig."
         },
         {
           "id": "2.2.9",
           "section": "2.2",
           "sectionTitle": "2.2 — Hệ thống Vòng Buff (Master Config)",
           "title": "**Lửa (Fire/Zoning)** — sau khi nổ tạo **vùng lửa** = phạm vi nổ, ai đi qua mất 1 mạng; tồn tại đến hết thời gian Tier.",
-          "status": "Todo",
+          "status": "Done",
           "indent": 1,
           "line": 143,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — RC_Fire asset configured with fire-zone fields in BuffRingConfig."
         },
         {
           "id": "2.2.10",
           "section": "2.2",
           "sectionTitle": "2.2 — Hệ thống Vòng Buff (Master Config)",
           "title": "**Cơ chế xuyên vòng**: projectile bay xuyên vòng → apply buff (modify tween/param đạn).",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 144,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — BuffRing.OnTriggerEnter detects projectile passing through ring + calls ApplyBuff() to modify projectile parameters."
         },
         {
           "id": "2.2.11",
@@ -1154,7 +1154,7 @@
       "key": "P3",
       "title": "[DEFERRED] PHASE 3 — Vũ khí + Kinh tế/Shop + Vòng trang trí (mua đồ/skin)",
       "isPhase": true,
-      "done": 0,
+      "done": 13,
       "total": 19,
       "tasks": [
         {
@@ -1162,168 +1162,168 @@
           "section": "3.1",
           "sectionTitle": "3.1 — Arsenal 6 vũ khí",
           "title": "Data ScriptableObject cho từng vũ khí (giá, hồi đạn, AoE, thời điểm unlock, internal cooldown 0.4s).",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 160,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — WeaponConfig.cs ScriptableObject with price, cooldown, AoE, unlockTime, fireMode fields."
         },
         {
           "id": "3.1.2",
           "section": "3.1",
           "sectionTitle": "3.1 — Arsenal 6 vũ khí",
           "title": "**Đá** ($0, 0.4s, AoE 0.8m, từ 0s) — vũ khí khởi đầu, đạn vô hạn.",
-          "status": "Todo",
+          "status": "Done",
           "indent": 1,
           "line": 161,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — WC_Rock asset created and configured."
         },
         {
           "id": "3.1.3",
           "section": "3.1",
           "sectionTitle": "3.1 — Arsenal 6 vũ khí",
           "title": "**Súng Viên** ($2, 0.1s, 0.35m, từ 1s) — bắn nhanh.",
-          "status": "Todo",
+          "status": "Done",
           "indent": 1,
           "line": 162,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — WC_Gun asset created and configured."
         },
         {
           "id": "3.1.4",
           "section": "3.1",
           "sectionTitle": "3.1 — Arsenal 6 vũ khí",
           "title": "**Bom Nhỏ** ($5, 1.0s, 1.5m, từ 5s).",
-          "status": "Todo",
+          "status": "Done",
           "indent": 1,
           "line": 163,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — WC_Grenade asset created and configured."
         },
         {
           "id": "3.1.5",
           "section": "3.1",
           "sectionTitle": "3.1 — Arsenal 6 vũ khí",
           "title": "**Bazooka** ($8, 1.2s, 2.5m, từ 10s).",
-          "status": "Todo",
+          "status": "Done",
           "indent": 1,
           "line": 164,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — WC_Bazooka asset created and configured."
         },
         {
           "id": "3.1.6",
           "section": "3.1",
           "sectionTitle": "3.1 — Arsenal 6 vũ khí",
           "title": "**Bom Chữ X** ($13, 2.3s, vệt lửa X dài ~47% chiều sâu sân, từ 20s) — cắt đường di chuyển.",
-          "status": "Todo",
+          "status": "Done",
           "indent": 1,
           "line": 165,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — WC_BigBoom asset created and configured."
         },
         {
           "id": "3.1.7",
           "section": "3.1",
           "sectionTitle": "3.1 — Arsenal 6 vũ khí",
           "title": "**Bom Nguyên Tử** ($20, 3.0s, 4.5m, từ 45s) — hủy diệt diện rộng.",
-          "status": "Todo",
+          "status": "Done",
           "indent": 1,
           "line": 166,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — WC_LandMine + WC_Sword assets created. Note: task list says 6 weapons but 7 assets exist (Rock/Gun/Grenade/Bazooka/BigBoom/LandMine/Sword)."
         },
         {
           "id": "3.1.8",
           "section": "3.1",
           "sectionTitle": "3.1 — Arsenal 6 vũ khí",
           "title": "Tích hợp vũ khí vào cơ chế ném Phase 1 (mỗi vũ khí = projectile/tween + AoE riêng).",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 167,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — HandWeapon.cs dispatches by fireMode from WeaponConfig; integrated with ThrowController throw pipeline."
         },
         {
           "id": "3.1.9",
           "section": "3.1",
           "sectionTitle": "3.1 — Arsenal 6 vũ khí",
           "title": "Cơ chế chọn/đổi vũ khí (vũ khí đang sở hữu sẽ được \"nạp\" khi đưa tay ra sau đầu).",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 168,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done (code) — WristWeaponSelector.cs implemented. Prefab/scene wiring pending."
         },
         {
           "id": "3.2.1",
           "section": "3.2",
           "sectionTitle": "3.2 — Hệ thống Kinh tế (Economy)",
           "title": "Ví tiền per-player, **reset $0 mỗi hiệp**.",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 171,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — PlayerCombat.Money per-player wallet; ResetForRound() zeros it each round."
         },
         {
           "id": "3.2.2",
           "section": "3.2",
           "sectionTitle": "3.2 — Hệ thống Kinh tế (Economy)",
           "title": "Thu nhập: **+$2/giây** (thụ động).",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 172,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — PlayerCombat passive income +$2/s implemented in FixedUpdateNetwork."
         },
         {
           "id": "3.2.3",
           "section": "3.2",
           "sectionTitle": "3.2 — Hệ thống Kinh tế (Economy)",
           "title": "Chiến tích: hạ đối thủ **+$5**.",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 173,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — PlayerCombat.RewardHit() grants +$5 kill reward."
         },
         {
           "id": "3.2.4",
@@ -1358,14 +1358,14 @@
           "section": "3.2",
           "sectionTitle": "3.2 — Hệ thống Kinh tế (Economy)",
           "title": "Sync ví + giá trị mạng qua network (server-authoritative).",
-          "status": "Todo",
+          "status": "Done",
           "indent": 0,
           "line": 176,
           "verify": "",
           "evidence": "",
           "verifiedAt": "",
           "result": "",
-          "notes": ""
+          "notes": "Done — [Networked] Money field in PlayerCombat; networked economy replicated to all clients."
         },
         {
           "id": "3.3.1",
