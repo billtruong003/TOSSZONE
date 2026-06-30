@@ -33,6 +33,26 @@ namespace TossZone.Throwing
         private System.Action _returnCb;
         private static Material _ballMat;
 
+        /// <summary>True while the ball is in flight and catchable (false for uncatchable weapons).</summary>
+        public bool IsCatchable { get; private set; } = true;
+        /// <summary>True when this throw was launched as a Power throw (purple; extra damage, uncatchable).</summary>
+        public bool IsPower { get; private set; }
+
+        /// <summary>Mark the ball as power-throw (called by ThrowController before Launch).</summary>
+        public void SetPower(bool power) { IsPower = power; IsCatchable = !power; }
+
+        /// <summary>Mark uncatchable regardless of power state (called when weapon.isUncatchable).</summary>
+        public void SetUncatchable() { IsCatchable = false; }
+
+        /// <summary>Called by CatchController when the ball enters the catch zone. Stops flight and pools.</summary>
+        public void OnCaught()
+        {
+            if (!_live) return;
+            _live = false;
+            BillTween.KillTarget(this);
+            gameObject.ReturnToPool();
+        }
+
         /// <summary>Launch with a real world-space velocity; the ball flies <c>p(t)=origin + v0·t + ½·g·t²</c>.</summary>
         public void Launch(Vector3 origin, Vector3 velocity, float power, ThrowConfig config)
         {
@@ -70,6 +90,8 @@ namespace TossZone.Throwing
         public override void OnSpawnedFromPool()
         {
             _baseScale = transform.localScale;
+            IsCatchable = true;
+            IsPower = false;
             if (_trail != null) _trail.Clear();
         }
 

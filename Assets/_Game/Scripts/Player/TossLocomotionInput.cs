@@ -20,6 +20,18 @@ namespace TossZone.Player
     {
         [SerializeField] private AutoHandPlayer _player;
 
+        [Header("Dash (right stick click → horizontal burst)")]
+        [SerializeField] private float _dashStrength = 3.5f;
+        [SerializeField] private float _dashDuration = 0.18f;
+        [SerializeField] private float _dashCooldown  = 0.8f;
+
+        private float _dashEnd;
+        private float _dashCooldownEnd;
+        private Vector2 _dashDir;
+
+        private bool _rightStickClickLast;
+        private bool _jumpButtonLast;
+
         private void Start()
         {
             if (_player == null) _player = GetComponentInParent<AutoHandPlayer>();
@@ -36,14 +48,45 @@ namespace TossZone.Player
         private void Update()
         {
             if (_player == null) return;
-            _player.Move(ReadMove());
+
+            HandleDashInput();
+            HandleJumpInput();
+
+            Vector2 move = Time.time < _dashEnd ? _dashDir * _dashStrength : ReadMove();
+            _player.Move(move);
             _player.Turn(ReadTurn().x);
         }
 
         private void FixedUpdate()
         {
             if (_player == null) return;
-            _player.Move(ReadMove());
+            Vector2 move = Time.time < _dashEnd ? _dashDir * _dashStrength : ReadMove();
+            _player.Move(move);
+        }
+
+        private void HandleDashInput()
+        {
+            // Right thumbstick click (stick button) → dash in current move direction.
+            var dev = XRInputDevices.GetDeviceAtXRNode(XRNode.RightHand);
+            bool click = dev.isValid && dev.TryGetFeatureValue(XRCommonUsages.secondary2DAxisClick, out bool b) && b;
+            if (click && !_rightStickClickLast && Time.time >= _dashCooldownEnd)
+            {
+                Vector2 dir = ReadMove();
+                if (dir.sqrMagnitude < 0.1f) dir = Vector2.up; // forward if stick is neutral
+                _dashDir = dir.normalized;
+                _dashEnd = Time.time + _dashDuration;
+                _dashCooldownEnd = Time.time + _dashCooldown;
+            }
+            _rightStickClickLast = click;
+        }
+
+        private void HandleJumpInput()
+        {
+            // A button (right hand primaryButton) → jump.
+            var dev = XRInputDevices.GetDeviceAtXRNode(XRNode.RightHand);
+            bool pressed = dev.isValid && dev.TryGetFeatureValue(XRCommonUsages.primaryButton, out bool b) && b;
+            if (pressed && !_jumpButtonLast) _player.Jump();
+            _jumpButtonLast = pressed;
         }
 
         private static Vector2 ReadMove() => Stronger(ReadNew(true), ReadLegacy(true));

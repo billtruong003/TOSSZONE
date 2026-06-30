@@ -58,5 +58,20 @@ namespace TossZone.Combat
 
         /// <summary>Firing should deduct money each shot (vs free once owned).</summary>
         public bool IsPayPerUse => acquireMode == AcquireMode.PayPerUse;
+
+        [BillTitle("Hành vi đặc biệt")]
+        [BillInfoBox("fuseDelay > 0 = LandMine: arm + delay trước khi nổ AoE.")]
+        [BillSlider(0f, 10f)] public float fuseDelay = 0f;
+        [BillSuffix("m/s²")]
+        [BillInfoBox("projectileGravity: arc cong xuống (Bazooka ~9.8). 0 = thẳng.")]
+        public float projectileGravity = 0f;
+        [BillInfoBox("laserSight = hiện dot/line từ nòng (Gun).")]
+        public bool laserSight = false;
+        [BillInfoBox("attacksPlayers = false → không damage người (Kiếm deflect-only).")]
+        public bool attacksPlayers = true;
+        [BillInfoBox("canDeflect = dùng để chém deflect đạn bay (Kiếm).")]
+        public bool canDeflect = false;
+        [BillInfoBox("isUncatchable = đạn KHÔNG bắt được (đạn súng, Power throw tím).")]
+        public bool isUncatchable = false;
     }
 }

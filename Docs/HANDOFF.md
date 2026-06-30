@@ -4,6 +4,108 @@
 
 ---
 
+## Session 9 — 2026-07-01 (session vừa xong)
+
+### Đã làm được — full minigame implementation pass
+
+**PlayerCombat.cs ✅ (bổ sung)**
+- `[Networked] OwnedMask`, `EquippedIndex` (init -1), `Ammo`
+- `TryBuyWeapon(slotIndex, cost)` — deduct money + set bit
+- `OwnsWeapon(slotIndex)` — bitmask check
+- `EquipWeapon(slotIndex)` — authority write EquippedIndex
+- `UseAmmo()` — decrement, return false if 0
+- `ResetForRound()` — full wipe: Health/Money/OwnedMask/EquippedIndex(-1)/Ammo + fires `WeaponResetEvent`
+- `AllInstances` static list (add Spawned, remove Despawned)
+- `IsPlayer` bool (default true; bots set false)
+
+**MinigameDef.cs ✅ (bổ sung)**
+- `WeaponConfig[] weaponCatalog` + `bestOf` + `roundDuration`
+
+**New scripts (all compiled clean):**
+| File | Role |
+|---|---|
+| `Combat/CombatSession.cs` | DontDestroyOnLoad singleton; resolves catalog từ `Resources/Minigames/<id>`; `RoundElapsed` timer; `NotifyRoundStart()` |
+| `Throwing/HandWeapon.cs` | Per-hand weapon dispatcher; polls `EquippedIndex`; disables ThrowController for non-ThrowBallistic; ProjectileLaunch/Hitscan/Melee fire; Initialize() gọi từ NetworkAvatar.Spawned() |
+| `UI/WristWeaponSelector.cs` | 3-slot wrist carousel; palm-up detect; left-stick flick nav; grip confirm buy/equip; unlock time gate |
+| `UI/RewardText.cs` | `PooledObject` floating text; pool key `"rewardtext"`; BillTween rise+fade |
+| `Combat/CatchController.cs` | SphereCollider trigger; catches ThrowProjectile (IsCatchable) + NetworkProjectile; Normal catch +1 Ammo, Power catch +2 Ammo; fires `BallCaughtEvent` |
+| `Combat/BuffRingConfig.cs` | SO: element (Ice/Fire/Multi/Speed/Shield), color, multiplier, velocityScale, areaScale, shieldSelf, respawnDelay |
+| `Combat/BuffRing.cs` | NetworkBehaviour; BillTween drift; OnTriggerEnter → ApplyBuff + Despawn; authority-only write; ⚠️ Shared Mode note: only applies if ring authority == projectile authority |
+| `Combat/RingSpawner.cs` | NetworkBehaviour; `NetworkArray<NetworkId>` SlotRings + `NetworkArray<TickTimer>` RespawnTimers; FixedUpdateNetwork polls slot presence via `Runner.FindObject(id)`; `ResetRings()` |
+| `Combat/ArenaManager.cs` | NetworkBehaviour scene object; `[Networked]` Phase/Round/ScoreA/ScoreB/PhaseTimer; Warmup→Playing→RoundEnd→MatchEnd; checks AllInstances (IsPlayer) for alive count; `ResetAllCombat()` |
+| `Combat/DummyBotDriver.cs` | NetworkBehaviour; `[Networked] TickTimer ThrowTimer`; authority finds nearest real player + fires NetworkProjectile via `Runner.Spawn`; 2–3.5s random interval |
+
+**ThrowProjectile.cs ✅ (bổ sung)**
+- `IsCatchable`, `IsPower` properties; `SetPower(bool)`, `SetUncatchable()`, `OnCaught()` (kills tween + pools)
+- Reset in `OnSpawnedFromPool()`
+
+**DummyAvatar.cs ✅ (1 dòng)**
+- `_combat.IsPlayer = false` trong Spawned() — loại khỏi win-condition count
+
+**TossLocomotionInput.cs ✅ (bổ sung)**
+- Dash: right stick click → burst (`_dashStrength=3.5`, `_dashDuration=0.18s`, `_dashCooldown=0.8s`)
+- Jump: A button → `_player.Jump()`
+
+**NetworkAvatar.cs ✅ (bổ sung)**
+- Trong Spawned() (authority): `foreach HandWeapon → hw.Initialize(combat, Runner)` + `WristWeaponSelector?.Initialize(combat)`
+- `using TossZone.Throwing` thêm
+
+### Trạng thái sau session 9
+| Layer | Status |
+|---|---|
+| PlayerCombat economy (buy/equip/ammo/reset) | ✅ |
+| CombatSession singleton + catalog | ✅ code; ⬜ prefab chưa đặt trong scene |
+| HandWeapon (per-hand fire dispatch) | ✅ code; ⬜ chưa add vào NetworkAvatar prefab |
+| WristWeaponSelector | ✅ code; ⬜ chưa build prefab |
+| RewardText (floating damage text) | ✅ code; ⬜ chưa build prefab + đăng ký pool |
+| CatchController | ✅ code; ⬜ chưa add vào player prefab |
+| BuffRingConfig (5 ring SO assets) | ✅ code; ⬜ chưa tạo SO assets |
+| BuffRing + RingSpawner | ✅ code; ⬜ chưa build prefabs + đặt trong scene |
+| ArenaManager | ✅ code; ⬜ chưa đặt NetworkObject trong 02_Arena |
+| DummyBotDriver | ✅ code; ⬜ chưa add vào DummyAvatar prefab |
+| Dash + Jump | ✅ code |
+
+### Việc cần làm tiếp (thứ tự)
+1. **M1 verify**: bắn vào DummyAvatar → pips giảm → respawn sau 3s (không cần gì mới, chỉ verify)
+2. **MCP scene setup**: đặt `CombatSession` prefab (DontDestroyOnLoad) + `ArenaManager` NetworkObject trong `02_Arena`
+3. **MCP prefab additions**: add `HandWeapon` + `CatchController` vào `NetworkAvatar` prefab; add `DummyBotDriver` vào `DummyAvatar` prefab
+4. **WeaponConfig assets**: tạo 7 SO assets (Rock, Gun, Grenade, Bazooka, BigBoom, LandMine, Sword) + đăng ký vào MinigameDef arena catalog
+5. **BuffRing prefabs**: tạo 5 prefabs (Ice/Fire/Multi/Speed/Shield) + đặt `RingSpawner` với spawn points trong scene
+6. **WristWeaponSelector prefab**: world-space Canvas child của wristL node
+7. **RewardText prefab**: WorldSpace TextMeshPro + đăng ký pool key `"rewardtext"`
+8. **2-player verify**: S2 HeldBall + S3 Projectile + hit detection với 2 clients thật
+
+### ⚠️ Gotchas (mới thêm)
+- **CombatSession.ResolveMinigameCatalog** load từ `Resources/Minigames/<id>` — MinigameDef asset phải đặt ở `Resources/Minigames/arena.asset` (hoặc id tương ứng).
+- **DummyBotDriver dùng `rb.linearVelocity`** (Unity 6 API) — projectile prefab cần Rigidbody.
+- **BuffRing authority conflict**: trong Shared Mode, ring chỉ apply buff khi ring authority == projectile authority. Fix đúng là RPC gọi về phía projectile's state authority.
+- **HandWeapon.Initialize() gọi authority-only** — non-authority clients không có combat/runner → null guard đủ.
+- **ThrowController disabled** khi HandWeapon equip non-ThrowBallistic weapon — re-enable khi switch về rock (index -1).
+- Mọi gotcha Session 7+8 vẫn còn hiệu lực.
+
+### Files thay đổi (session 9)
+```
+M Assets/_Game/Scripts/Combat/PlayerCombat.cs          — economy methods + AllInstances + IsPlayer
+M Assets/_Game/Scripts/Minigame/MinigameDef.cs         — weaponCatalog + bestOf + roundDuration
++ Assets/_Game/Scripts/Combat/CombatSession.cs         — new
++ Assets/_Game/Scripts/Throwing/HandWeapon.cs          — new
++ Assets/_Game/Scripts/UI/WristWeaponSelector.cs       — new
++ Assets/_Game/Scripts/UI/RewardText.cs                — new
++ Assets/_Game/Scripts/Combat/CatchController.cs       — new
++ Assets/_Game/Scripts/Combat/BuffRingConfig.cs        — new
++ Assets/_Game/Scripts/Combat/BuffRing.cs              — new
++ Assets/_Game/Scripts/Combat/RingSpawner.cs           — new
++ Assets/_Game/Scripts/Combat/ArenaManager.cs          — new
++ Assets/_Game/Scripts/Combat/DummyBotDriver.cs        — new
+M Assets/_Game/Scripts/Throwing/ThrowProjectile.cs     — IsCatchable/IsPower/OnCaught
+M Assets/_Game/Scripts/Combat/DummyAvatar.cs           — IsPlayer=false
+M Assets/_Game/Scripts/Player/TossLocomotionInput.cs   — Dash + Jump
+M Assets/_Game/Scripts/Player/NetworkAvatar.cs         — HandWeapon+WristSelector init
+M Docs/HANDOFF.md                                      — this file
+```
+
+---
+
 ## Session 8 — 2026-06-30 (session vừa xong)
 
 ### Đã làm được

@@ -23,5 +23,14 @@ namespace TossZone.Minigame
         [BillRequired] public string sceneName = "02_Arena";
         public int minPlayers = 1;
         public int maxPlayers = 8;
+
+        [BillTitle("Vũ khí (catalog Arsenal)")]
+        [BillInfoBox("Danh sách WeaponConfig dùng trong minigame này. Index 0 = Rock (miễn phí, vô hạn). WristWeaponSelector hiển thị list này.")]
+        public TossZone.Combat.WeaponConfig[] weaponCatalog;
+
+        [BillTitle("Vòng lặp trận (round rules)")]
+        [BillInfoBox("BO: 1 = first to win 1 round; 3 = best-of-3; 5 = best-of-5.")]
+        [BillSlider(1, 5)] public int bestOf = 1;
+        [BillSuffix("s")] public float roundDuration = 120f;
     }
 }

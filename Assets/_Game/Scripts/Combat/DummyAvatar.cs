@@ -35,6 +35,8 @@ namespace TossZone.Combat
             _combat  = GetComponent<PlayerCombat>();
             _block   = new MaterialPropertyBlock();
 
+            if (_combat != null) _combat.IsPlayer = false;   // excluded from win-condition alive count
+
             HealthUI healthUI = GetComponentInChildren<HealthUI>();
             if (healthUI != null && _combat != null) healthUI.Bind(_combat);
 

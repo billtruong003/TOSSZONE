@@ -1,6 +1,7 @@
 #if PHOTON_FUSION
 using Fusion;
 using TossZone.Combat;
+using TossZone.Throwing;
 using TossZone.UI;
 using UnityEngine;
 
@@ -73,6 +74,15 @@ namespace TossZone.Player
             HealthUI healthUI = GetComponentInChildren<HealthUI>();
             PlayerCombat combat = GetComponent<PlayerCombat>();
             if (healthUI != null && combat != null) healthUI.Bind(combat);
+
+            // Initialize per-hand weapon dispatcher and wrist selector (authority = local player only).
+            if (HasStateAuthority && combat != null)
+            {
+                foreach (HandWeapon hw in GetComponentsInChildren<HandWeapon>())
+                    hw.Initialize(combat, Runner);
+                WristWeaponSelector wws = GetComponentInChildren<WristWeaponSelector>();
+                wws?.Initialize(combat);
+            }
 
             if (HasStateAuthority)
             {
