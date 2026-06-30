@@ -77,17 +77,26 @@ namespace TossZone.Player
             Transform body = Body;
             if (_lFoot) _lFootRest = Quaternion.Inverse(body.rotation) * _lFoot.rotation;
             if (_rFoot) _rFootRest = Quaternion.Inverse(body.rotation) * _rFoot.rotation;
-            if (_lLowerLeg && _lFoot) _lLowerLegRest = CaptureRoll(_lLowerLeg, _lFoot.position);
-            if (_rLowerLeg && _rFoot) _rLowerLegRest = CaptureRoll(_rLowerLeg, _rFoot.position);
+            // Use thigh direction as LookRotation secondary axis — world-up is near-parallel to the
+            // shin (which points down) and causes roll singularity when the foot steps. The thigh
+            // direction is always roughly horizontal, so it is never parallel to the shin.
+            if (_lUpperLeg && _lLowerLeg && _lFoot) _lLowerLegRest = CaptureRollLeg(_lUpperLeg, _lLowerLeg, _lFoot);
+            if (_rUpperLeg && _rLowerLeg && _rFoot) _rLowerLegRest = CaptureRollLeg(_rUpperLeg, _rLowerLeg, _rFoot);
             _lastBodyPos = body.position;
             _captured = true;
         }
 
-        private static Quaternion CaptureRoll(Transform bone, Vector3 endWorldPos)
+        // Capture shin roll using thigh direction as the LookRotation "up" so the reference frame
+        // matches SolveLeg (which also uses the thigh direction). Must be called at bind pose.
+        private static Quaternion CaptureRollLeg(Transform upper, Transform lower, Transform foot)
         {
-            Vector3 fwd = (endWorldPos - bone.position).normalized;
-            if (fwd.sqrMagnitude < 1e-6f) return Quaternion.identity;
-            return Quaternion.Inverse(Quaternion.LookRotation(fwd)) * bone.rotation;
+            Vector3 shinFwd = (foot.position - lower.position).normalized;
+            if (shinFwd.sqrMagnitude < 1e-6f) return Quaternion.identity;
+            Vector3 thighDir = (lower.position - upper.position).normalized;
+            Vector3 shinUp = Vector3.ProjectOnPlane(thighDir, shinFwd);
+            if (shinUp.sqrMagnitude < 1e-4f) shinUp = Vector3.forward; // degenerate fallback
+            else shinUp.Normalize();
+            return Quaternion.Inverse(Quaternion.LookRotation(shinFwd, shinUp)) * lower.rotation;
         }
 
         private void LateUpdate()
@@ -189,11 +198,18 @@ namespace TossZone.Player
             Vector3 knee = a + atDir * proj + pole * height;
 
             upper.rotation = Quaternion.FromToRotation(lower.position - a, knee - a) * upper.rotation;
-            // Stateless shin roll: same technique as AvatarArmPoser — LookRotation gives neutral direction,
-            // lowerRest restores the captured bind-pose roll so it never accumulates twist over frames.
+            // Stateless shin roll: use the thigh direction (upper→lower, already IK-solved above so
+            // lower.position is now at the knee) as the LookRotation secondary axis. World-up causes
+            // singularity because the shin points near-downward — thigh direction is always horizontal.
             Vector3 shinFwd = (target - lower.position).normalized;
             if (shinFwd.sqrMagnitude > 1e-6f)
-                lower.rotation = Quaternion.LookRotation(shinFwd) * lowerRest;
+            {
+                Vector3 thighDir = (lower.position - upper.position).normalized;
+                Vector3 shinUp = Vector3.ProjectOnPlane(thighDir, shinFwd);
+                if (shinUp.sqrMagnitude < 1e-4f) shinUp = body.forward; // degenerate fallback
+                else shinUp.Normalize();
+                lower.rotation = Quaternion.LookRotation(shinFwd, shinUp) * lowerRest;
+            }
 
             Quaternion footRot = body.rotation * footRest;
             if (_alignToGround) footRot = Quaternion.FromToRotation(Vector3.up, groundNormal) * footRot;
