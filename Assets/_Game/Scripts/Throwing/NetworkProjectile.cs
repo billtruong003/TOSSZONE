@@ -74,7 +74,10 @@ namespace TossZone.Throwing
             {
                 PlayerCombat victim = _overlap[i] != null ? _overlap[i].GetComponentInParent<PlayerCombat>() : null;
                 if (victim == null || victim.Object == null) continue;
-                if (victim.Object.StateAuthority == Shooter) continue;   // never hit yourself
+                // Guard: InputAuthority identifies the PLAYER who owns the avatar.
+                // Scene objects (DummyAvatar) have InputAuthority = None, so they are never excluded
+                // even when the master client is the shooter — fixing solo-test blocking.
+                if (victim.Object.InputAuthority == Shooter) continue;
                 _hasHit = true;
                 victim.RPC_TakeHit(_baseDamage, transform.position, Shooter);
                 if (PlayerCombat.Local != null) PlayerCombat.Local.RewardHit();   // reward the shooter (authority = local)

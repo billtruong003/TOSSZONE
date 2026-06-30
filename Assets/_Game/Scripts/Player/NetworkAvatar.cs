@@ -1,5 +1,7 @@
 #if PHOTON_FUSION
 using Fusion;
+using TossZone.Combat;
+using TossZone.UI;
 using UnityEngine;
 
 namespace TossZone.Player
@@ -66,6 +68,11 @@ namespace TossZone.Player
         public override void Spawned()
         {
             if (_heldBallVisual != null) _heldBallVisual.enabled = false; // Render() toggles it per-frame for proxies
+
+            // Bind the HealthUI (child of this prefab) to the PlayerCombat on this NetworkObject.
+            HealthUI healthUI = GetComponentInChildren<HealthUI>();
+            PlayerCombat combat = GetComponent<PlayerCombat>();
+            if (healthUI != null && combat != null) healthUI.Bind(combat);
 
             if (HasStateAuthority)
             {

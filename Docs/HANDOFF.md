@@ -4,6 +4,60 @@
 
 ---
 
+## Session 8 — 2026-06-30 (session vừa xong)
+
+### Đã làm được
+
+**HealthUI ✅**
+- `Assets/_Game/Scripts/UI/HealthUI.cs` — MonoBehaviour: 5 pip renderers, billboard LateUpdate, poll `[Networked]` Health mỗi frame (cheap field read, visible mọi client). `Bind(PlayerCombat)` gọi từ Spawned().
+- **NetworkAvatar prefab** — child `HealthUI` (localPos `0,2,0`): 5 sphere pip con xếp arc nhẹ (`±0.20/±0.10/0` x, `0/0.04/0.06` y), scale `0.055`, collider stripped. `_pipRenderers` wired via SerializedObject.
+- `NetworkAvatar.Spawned()` → `healthUI.Bind(combat)` (thêm `using TossZone.Combat/UI`).
+
+**DummyAvatar (Bot) ✅**
+- `Assets/_Game/Scripts/Combat/DummyAvatar.cs` — NetworkBehaviour: `[Networked] TickTimer RespawnTimer`, tự reset health sau 3s khi chết. `Render()` thay màu grey khi dead (cached `_wasDeadLastRender`). `Spawned()` → `HealthUI.Bind(combat)`.
+- **DummyAvatar prefab** — Capsule body (height 1.8m) + `CapsuleCollider` trigger layer `Hittable=15` (center 0,0.9,0) + `NetworkObject` + `PlayerCombat` + `DummyAvatar` + `HealthUI` child. **Fusion baked: 2 NetworkedBehaviours** (PlayerCombat + DummyAvatar). Đặt trong `02_Arena` tại `(0,0,4)` quay `180°`.
+
+**Guard fix trong NetworkProjectile ✅**
+- `victim.Object.StateAuthority == Shooter` → `victim.Object.InputAuthority == Shooter`.
+- **Lý do**: scene objects (DummyAvatar) có `InputAuthority = PlayerRef.None`, không bao giờ match Shooter → solo test không bị block. Player avatar vẫn đúng vì `InputAuthority == StateAuthority` với owner trong Shared Mode.
+
+### Trạng thái
+| Layer | Status |
+|---|---|
+| HealthUI (5 pip curved, billboard) | ✅ built + wired |
+| DummyAvatar (bot target, auto-respawn) | ✅ built + placed in Arena |
+| Hit detection guard (solo test) | ✅ fixed |
+| HandWeapon (equip + fire) | ⬜ next |
+| Buff-ring system | ⬜ next |
+| Wrist selector | ⬜ next |
+
+### Việc cần làm tiếp (thứ tự)
+1. **Verify hit detection** — bắn vào DummyAvatar, pips giảm, respawn sau 3s. Check `NetworkObject.NetworkedBehaviours` trên DummyAvatar prefab nếu hit không register.
+2. **HandWeapon** — equip `WeaponConfig` lên tay + fire theo `fireMode` (các vũ khí khác bắn đạn).
+3. **Buff-ring system** — `RingSpawner` 5 vòng MS_Circle trôi + xuyên-qua SET modifier-hook của projectile.
+4. **Wrist selector** — UI chọn vũ khí + behaviors (mine fuse / bazooka arc / sword deflect / catch).
+
+### ⚠️ Gotchas (cập nhật)
+- **execute_code guard ĐÚNG**: `Application.dataPath.Contains("ThrowingShot")` — KHÔNG phải "TOSSZONE" (folder tên ThrowingShot, không phải TOSSZONE).
+- **Hittable layer = 15** — DummyAvatar body + player Hitbox đều cần layer này để `NetworkProjectile.OverlapSphere` detect.
+- **HealthUI là MonoBehaviour** (không phải NetworkBehaviour) → không cần Fusion bake khi thêm vào prefab.
+- **DummyAvatar cần bake** (có DummyAvatar.cs NetworkBehaviour): force-reimport đã chạy, verify `NetworkedBehaviours.Length == 2`.
+- Mọi gotcha Session 7 vẫn còn hiệu lực (xem bên dưới).
+
+### Files thay đổi
+```
++ Assets/_Game/Scripts/UI/HealthUI.cs                — new, 5-pip curved billboard
++ Assets/_Game/Scripts/Combat/DummyAvatar.cs         — new, bot target + TickTimer respawn
+M Assets/_Game/Scripts/Player/NetworkAvatar.cs       — HealthUI.Bind() in Spawned() + using
+M Assets/_Game/Scripts/Throwing/NetworkProjectile.cs — guard InputAuthority fix
+M Assets/_Game/Prefabs/NetworkAvatar.prefab          — HealthUI child (5 pips)
++ Assets/_Game/Prefabs/DummyAvatar.prefab            — new, Fusion-baked
+M Assets/_Game/Scenes/02_Arena.unity                 — DummyAvatar instance at (0,0,4)
+M Docs/HANDOFF.md                                    — this file
+```
+
+---
+
 ## Session 7 — 2026-06-30 (session vừa xong)
 
 ### Đã làm được
