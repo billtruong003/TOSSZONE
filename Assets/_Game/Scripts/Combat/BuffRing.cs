@@ -7,75 +7,116 @@ using UnityEngine;
 namespace TossZone.Combat
 {
     /// <summary>
-    /// A scene-placed or spawner-placed buff ring. The ring is a trigger zone — when a
-    /// <see cref="NetworkProjectile"/> passes through it, the ring sets buff fields
-    /// (Multiplier / VelocityScale / AreaScale / Element) on the projectile (authority writes)
-    /// and despawns itself. <see cref="RingSpawner"/> handles respawn.
+    /// Single shared-prefab buff ring. <see cref="RingSpawner"/> spawns one instance and immediately sets
+    /// <see cref="Element"/>; <see cref="Spawned"/> resolves the matching <see cref="BuffRingConfig"/> from
+    /// <see cref="Catalog"/> and applies color + label + bounce-in animation.
     ///
-    /// Visual: a torus-like object with BillTween drift (up/down sine). The material color is
-    /// driven by <see cref="BuffRingConfig.ringColor"/> via MaterialPropertyBlock.
+    /// Detection: SphereCollider trigger at the ring center (radius = inner hole radius). A ball passing through
+    /// the hole enters the sphere and triggers the buff — no MeshCollider needed.
     ///
-    /// Stack: the projectile's existing value is compared against the new buff; the higher wins
-    /// (prevents downgrade, caps at 3 stacks for multiplier).
+    /// Shared Mode note: ring has StateAuthority on master. Buff writes to projectile only when master is also
+    /// the projectile's StateAuthority. RPC fix deferred to C5 live launch.
     /// </summary>
-    [RequireComponent(typeof(Collider))]
+    [RequireComponent(typeof(SphereCollider))]
     public class BuffRing : NetworkBehaviour
     {
-        [SerializeField] private BuffRingConfig _config;
+        [Header("Refs (set on prefab)")]
         [SerializeField] private Renderer _ringRenderer;
+        [SerializeField] private TMPro.TextMeshPro _label;
+
+        /// <summary>The 5 ring configs indexed by RingElement value — assign on the prefab (shared across all instances).</summary>
+        [SerializeField] private BuffRingConfig[] _catalog = new BuffRingConfig[5];
 
         private static readonly int _colorId = Shader.PropertyToID("_BaseColor");
         private MaterialPropertyBlock _block;
+
+        [Networked] public RingElement Element { get; set; }
+
+        private BuffRingConfig _config;
         private Vector3 _originPos;
         private Tween _driftTween;
-
-        public BuffRingConfig Config => _config;
 
         public override void Spawned()
         {
             _block = new MaterialPropertyBlock();
-            if (_ringRenderer != null)
-            {
-                _block.SetColor(_colorId, _config != null ? _config.ringColor : Color.white);
-                _ringRenderer.SetPropertyBlock(_block);
-            }
+            GetComponent<SphereCollider>().isTrigger = true;
+
+            _config = ResolveConfig();
+            ApplyColor();
+            ApplyLabel();
 
             _originPos = transform.position;
+            PlayBounceIn();
             StartDrift();
+        }
 
-            GetComponent<Collider>().isTrigger = true;
+        // ── Visual setup ──────────────────────────────────────────────────────────────
+
+        private BuffRingConfig ResolveConfig()
+        {
+            int idx = (int)Element;
+            return (idx >= 0 && idx < _catalog.Length) ? _catalog[idx] : null;
+        }
+
+        private void ApplyColor()
+        {
+            if (_ringRenderer == null || _config == null) return;
+            // The ring mesh may use a palette shader that ignores MPB tinting.
+            // Create a runtime URP Unlit material instance so color always shows correctly.
+            Shader sh = Shader.Find("Universal Render Pipeline/Unlit");
+            if (sh == null) sh = Shader.Find("Universal Render Pipeline/Lit");
+            if (sh == null && _ringRenderer.sharedMaterial != null) sh = _ringRenderer.sharedMaterial.shader;
+            Material mat = sh != null ? new Material(sh) : new Material(_ringRenderer.sharedMaterial);
+            Color c = _config.ringColor;
+            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", c);
+            else mat.color = c;
+            _ringRenderer.material = mat; // per-instance, GC'd on despawn
+        }
+
+        private void ApplyLabel()
+        {
+            if (_label == null || _config == null) return;
+            _label.text = _config.displayName;
+            Color c = _config.ringColor; c.a = 0f; _label.color = c;
+            // Fade label in after bounce.
+            BillTween.Float(0f, 1f, 0.3f, a =>
+            {
+                Color lc = _label.color; lc.a = a; _label.color = lc;
+            })?.SetDelay(0.35f).SetEase(EaseType.OutCubic).SetTarget(this);
+        }
+
+        private void PlayBounceIn()
+        {
+            transform.localScale = Vector3.zero;
+            BillTween.Scale(transform, 1.0f, 0.5f)
+                ?.SetEase(EaseType.OutBack)
+                .SetTarget(this);
         }
 
         private void StartDrift()
         {
-            if (_config == null) return;
-            float amp = _config.driftAmplitude;
-            float period = _config.driftPeriod > 0f ? _config.driftPeriod : 3f;
+            float amp    = _config != null ? _config.driftAmplitude : 0.2f;
+            float period = _config != null && _config.driftPeriod > 0f ? _config.driftPeriod : 3f;
             _driftTween = BillTween.Float(0f, 1f, period, t =>
             {
                 float y = Mathf.Sin(t * Mathf.PI * 2f) * amp;
                 transform.position = _originPos + Vector3.up * y;
             })?.SetLoops(-1, LoopType.Restart)
-              .SetTarget(this)
-              .SetEase(EaseType.Linear);
+              .SetEase(EaseType.Linear)
+              .SetTarget(this);
         }
+
+        // ── Hit detection ─────────────────────────────────────────────────────────────
 
         private void OnTriggerEnter(Collider other)
         {
-            // Shared Mode authority note: this ring has StateAuthority on the master client.
-            // The incoming projectile has StateAuthority on ITS shooter. Writing [Networked]
-            // fields on the projectile here only works if this client IS the projectile's
-            // StateAuthority too (i.e. the master is the shooter). A proper fix is to send an RPC
-            // to the projectile's StateAuthority. For C5 launch this is acceptable; wire the RPC
-            // when rings are added to live sessions.
             if (!HasStateAuthority || _config == null) return;
             if (!other.TryGetComponent(out NetworkProjectile proj)) return;
             if (proj.Object == null || !proj.Object.IsValid) return;
-            if (!proj.Object.HasStateAuthority) return; // only apply when we also own the projectile
+            if (!proj.Object.HasStateAuthority) return;
 
             ApplyBuff(proj);
-            if (Bill.IsReady) Bill.Events.Fire(new RingConsumedEvent { RingId = _config.id });
-            Runner.Despawn(Object);
+            PlayConsumeAnim();
         }
 
         private void ApplyBuff(NetworkProjectile proj)
@@ -88,6 +129,22 @@ namespace TossZone.Combat
                 proj.AreaScale = Mathf.Max(proj.AreaScale, _config.areaScale);
             if (_config.element != RingElement.None)
                 proj.Element = (int)_config.element;
+        }
+
+        private void PlayConsumeAnim()
+        {
+            // "EFFECTIVE!" flash on label then shrink ring to zero and despawn.
+            if (_label != null) _label.text = "EFFECTIVE!";
+
+            _driftTween?.Kill();
+            BillTween.Scale(transform, 0f, 0.25f)
+                ?.SetEase(EaseType.InBack)
+                .SetTarget(this)
+                .OnComplete(() =>
+                {
+                    if (Bill.IsReady) Bill.Events.Fire(new RingConsumedEvent { RingId = _config.id });
+                    if (Runner != null && Object != null) Runner.Despawn(Object);
+                });
         }
     }
 

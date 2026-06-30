@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10791fc1140266d44a19177728df2c8a, type: 3}
+  m_Name: WC_Sword
+  m_EditorClassIdentifier: Assembly-CSharp::TossZone.Combat.WeaponConfig
+  id: sword
+  displayName: "Ki\u1EBFm"
+  icon: {fileID: 0}
+  cost: 18
+  acquireMode: 0
+  costPerUse: 0
+  unlockTime: 20
+  cooldown: 0.5
+  magazine: 0
+  handSource: 0
+  heldPrefab: {fileID: 0}
+  fireMode: 3
+  throwConfig: {fileID: 0}
+  projectilePrefab: {fileID: 0}
+  muzzleSpeed: 0
+  fireRate: 1
+  damage: 2
+  aoeRadius: 0
+  fuseDelay: 0
+  projectileGravity: 0
+  laserSight: 0
+  attacksPlayers: 1
+  canDeflect: 1
+  isUncatchable: 0

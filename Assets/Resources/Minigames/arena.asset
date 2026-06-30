@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 29b48ea6b2957d84d83d5be5c75fb297, type: 3}
+  m_Name: arena
+  m_EditorClassIdentifier: Assembly-CSharp::TossZone.Minigame.MinigameDef
+  id: arena
+  displayName: Arena
+  description: 
+  icon: {fileID: 0}
+  sceneName: 02_Arena
+  minPlayers: 1
+  maxPlayers: 8
+  weaponCatalog:
+  - {fileID: 11400000, guid: 846181d4ad5c8fc40ba94e82e5041e3b, type: 2}
+  - {fileID: 11400000, guid: f0869f4e57377304488beb7edc58382d, type: 2}
+  - {fileID: 11400000, guid: 49a67c862da09d74b89f4b3503a22ae3, type: 2}
+  - {fileID: 11400000, guid: 8196dcf3e401adc4384d793dc236ed31, type: 2}
+  - {fileID: 11400000, guid: 499242c1d9e3a3b48b455bdbbd67706e, type: 2}
+  - {fileID: 11400000, guid: 4c9da668493c5a04fadfc04ac25205d6, type: 2}
+  - {fileID: 11400000, guid: 46d163f3babc88a45ad28fc18d1d5751, type: 2}
+  bestOf: 1
+  roundDuration: 120

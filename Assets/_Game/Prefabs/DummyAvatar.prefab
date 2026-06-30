@@ -553,6 +553,7 @@ GameObject:
   - component: {fileID: 6867071015060229716}
   - component: {fileID: 6543567976967324165}
   - component: {fileID: 7228818867617982405}
+  - component: {fileID: 6319737537888113021}
   m_Layer: 15
   m_Name: DummyAvatar
   m_TagString: Untagged
@@ -619,6 +620,7 @@ MonoBehaviour:
   NetworkedBehaviours:
   - {fileID: 6543567976967324165}
   - {fileID: 7228818867617982405}
+  - {fileID: 6319737537888113021}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &6543567976967324165
 MonoBehaviour:
@@ -634,6 +636,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TossZone.Combat.PlayerCombat
   _Health: 0
   _Money: 0
+  _OwnedMask: 0
+  _EquippedIndex: 0
+  _Ammo: 0
   _incomePerSecond: 1
   _hitReward: 10
 --- !u!114 &7228818867617982405
@@ -653,6 +658,24 @@ MonoBehaviour:
   _aliveColor: {r: 0.78, g: 0.29, b: 0.1, a: 1}
   _deadColor: {r: 0.22, g: 0.22, b: 0.22, a: 1}
   _respawnDelay: 3
+--- !u!114 &6319737537888113021
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8016643276908417007}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74bf7c72765275549a73a20a363e9296, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TossZone.Combat.DummyBotDriver
+  _netProjPrefab: {fileID: 5391802754855499962, guid: e9c3d2cc37b0f9645959450117c020bf, type: 3}
+  _throwOrigin: {fileID: 6415747040885929244}
+  _throwIntervalMin: 2
+  _throwIntervalMax: 3.5
+  _muzzleSpeed: 6
+  _damage: 1
 --- !u!1 &9027558597600895271
 GameObject:
   m_ObjectHideFlags: 0

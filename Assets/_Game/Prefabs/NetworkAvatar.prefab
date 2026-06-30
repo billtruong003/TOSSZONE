@@ -707,6 +707,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8270880108385499334}
+  - {fileID: 2069038346092855076}
   m_Father: {fileID: 1492260674991546427}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &865725772801836624
@@ -726,6 +727,37 @@ MonoBehaviour:
   SyncParent: 0
   _autoAOIOverride: 1
   DisableSharedModeInterpolation: 0
+--- !u!1 &4993221563465116822
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2069038346092855076}
+  m_Layer: 0
+  m_Name: Muzzle
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2069038346092855076
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4993221563465116822}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0.15}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7685845686349916651}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5194368672321729368
 GameObject:
   m_ObjectHideFlags: 0
@@ -860,6 +892,8 @@ GameObject:
   - component: {fileID: 1372590995041968222}
   - component: {fileID: 2355378341532234341}
   - component: {fileID: 5029712955536213259}
+  - component: {fileID: 8176461611797126089}
+  - component: {fileID: 2037327525173968736}
   m_Layer: 0
   m_Name: NetworkAvatar
   m_TagString: Untagged
@@ -975,8 +1009,51 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TossZone.Combat.PlayerCombat
   _Health: 0
   _Money: 0
+  _OwnedMask: 0
+  _EquippedIndex: 0
+  _Ammo: 0
   _incomePerSecond: 1
   _hitReward: 10
+--- !u!114 &8176461611797126089
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5683549520839284970}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e99f8265640db7e4bacdd82ca00b0a3b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TossZone.Throwing.ThrowController
+  _config: {fileID: 0}
+  _projectilePrefab: {fileID: 0}
+  _heldBallPrefab: {fileID: 0}
+  _showVisualHeldBall: 1
+  _rightHand: 1
+  _debugThrowKey: 34
+  _editorGripKey: 21
+  _netProjectilePrefab: {fileID: 0}
+--- !u!114 &2037327525173968736
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5683549520839284970}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 390d2605b791e954eb76062cf1408425, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TossZone.Throwing.HandWeapon
+  _rightHand: 1
+  _muzzle: {fileID: 2069038346092855076}
+  _bladeTip: {fileID: 0}
+  _defaultNetProjPrefab: {fileID: 5391802754855499962, guid: e9c3d2cc37b0f9645959450117c020bf, type: 3}
+  _hitscanRange: 20
+  _hitscanMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &6763242888330656289
 GameObject:
   m_ObjectHideFlags: 0
@@ -1044,6 +1121,8 @@ GameObject:
   m_Component:
   - component: {fileID: 361300307473054911}
   - component: {fileID: 8213307284825834251}
+  - component: {fileID: 3591194058416662872}
+  - component: {fileID: 3987244849773467173}
   m_Layer: 0
   m_Name: WristL
   m_TagString: Untagged
@@ -1083,6 +1162,41 @@ MonoBehaviour:
   SyncParent: 0
   _autoAOIOverride: 1
   DisableSharedModeInterpolation: 0
+--- !u!135 &3591194058416662872
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7031968901690542938}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.5
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &3987244849773467173
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7031968901690542938}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49a4a060775f3a14f8913b366613c32f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TossZone.Combat.CatchController
+  _combat: {fileID: 5029712955536213259}
+  _catchRadius: 0.15
 --- !u!1 &7675478009931383650
 GameObject:
   m_ObjectHideFlags: 0
