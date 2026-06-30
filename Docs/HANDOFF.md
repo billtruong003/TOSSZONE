@@ -7,110 +7,273 @@
 ## Session 9c — 2026-07-01 (session vừa xong) — Ref audit + hotfix pass
 
 ### Vấn đề cốt lõi session này
+Session 9b tạo toàn bộ code/assets/prefabs nhưng **rất nhiều ref null** do MCP verify chạy nhầm scene (Bootstrap thay vì 02_Arena) và bỏ sót kiểm tra ThrowController. Session này dump toàn bộ serialized fields của mọi component, phát hiện và fix hết.
 
-Session 9b đã tạo ra toàn bộ code, assets, prefabs — nhưng **rất nhiều ref bị null** do MCP set up ở sai scene (Bootstrap thay vì 02_Arena) và do bỏ sót kiểm tra ThrowController. Session này verify kỹ từng component bằng cách dump toàn bộ serialized fields.
+### Tất cả fixes đã làm
 
-### Fixes thực tế đã làm
-
-**ThrowController trên NetworkAvatar.prefab — 4 refs đều null:**
-- `_config` → `Assets/_Game/ScriptableObjects/ThrowConfig.asset`
-- `_projectilePrefab` → `Assets/_Game/Prefabs/ThrowProjectile.prefab`
-- `_heldBallPrefab` → `Assets/_Game/Prefabs/HeldBall.prefab`
-- `_netProjectilePrefab` → `Assets/_Game/Prefabs/NetworkProjectile.prefab` (NetworkObject)
-
-**HandWeapon._bladeTip null:**
-- Tạo child `BladeTip` dưới `WristR` tại `localPos(0, 0, 0.35)`
-- Wire vào `HandWeapon._bladeTip`
-
-**BillBootstrapConfig.defaultPools — hoàn toàn trống:**
-- `Bill.Pool.Spawn("throwprojectile")` sẽ fail silently → ball không spawn ra được
-- Đăng ký: `"throwprojectile"` → `ThrowProjectile.prefab` (warm=5, max=20)
-- Đăng ký: `"rewardtext"` → `RewardText.prefab` (warm=5, max=20)
-
-**RewardText.prefab — chưa tồn tại:**
-- Tạo: root `RewardText` + `TMPro.TextMeshPro` + `RewardText` component
-- Wire `_label` = TMP trên root, `_duration=1.0`, `_riseHeight=0.6`
-- Lưu tại `Assets/_Game/Prefabs/RewardText.prefab`
-
-**CatchController.SphereCollider.isTrigger = false:**
-- Fix: set `isTrigger = true` trên prefab
-
-**NetworkProjectile.prefab — thiếu Rigidbody:**
-- DummyBotDriver.FireAt() dùng `rb.linearVelocity` → `TryGetComponent<Rigidbody>` trả null → đạn đứng im
-- Thêm Rigidbody: mass=0.2, useGravity=true, ContinuousSpeculative
-
-**NetworkProjectile.cs — bot throws không hit gì được:**
-- `FixedUpdateNetwork()` early-return khi `_localProjectile == null` → bot spawns projectile nhưng hit detection không chạy
-- Fix: tách mirroring-position (chỉ khi có `_localProjectile`) khỏi hit detection (chạy mọi lúc authority active)
-- Thêm trong `Spawned()`: `rb.isKinematic = !HasStateAuthority` → proxy dùng NT, authority dùng physics
-
-**ArenaManager spawn points — trống:**
-- `_spawnPointsA[0]` → `[SpawnA]` GO trong scene
-- `_spawnPointsB[0]` → `[SpawnB]` GO trong scene
-
-**Root cause của lần check đầu thất bại:**
-- MCP verify đầu tiên chạy khi Unity đang mở scene `00_Bootstrap` (không phải `02_Arena`)
-- `FindFirstObjectByType<ArenaManager>()` trả null → báo missing nhưng thực ra chỉ sai scene
-- Fix: luôn `OpenScene("02_Arena")` trước khi verify scene objects
-
-### Trạng thái sau session 9c — sẵn sàng test M1
-
-| Thứ | Component | Status |
+| Fix | Vấn đề | Kết quả |
 |---|---|---|
-| NetworkAvatar | ThrowController (4 refs) | ✅ wired |
-| NetworkAvatar | HandWeapon (muzzle, bladeTip, netProjPrefab) | ✅ wired |
-| NetworkAvatar | CatchController (_combat, SphereCollider trigger) | ✅ wired |
-| NetworkAvatar | HealthUI (5/5 pips) | ✅ wired |
-| NetworkAvatar | NetworkAvatar (head/wristL/wristR/heldBall) | ✅ wired |
-| DummyAvatar | DummyBotDriver (_netProjPrefab, _throwOrigin) | ✅ wired |
-| DummyAvatar | HealthUI (5/5 pips) | ✅ wired |
-| BuffRing | _ringRenderer, _label, _catalog[1-5] | ✅ wired |
-| NetworkProjectile | Rigidbody (physics-driven bot path) | ✅ added |
-| NetworkProjectile | Hit detection mọi path | ✅ fixed |
-| BillBootstrapConfig | pool "throwprojectile" | ✅ registered |
-| BillBootstrapConfig | pool "rewardtext" | ✅ registered |
-| RewardText.prefab | TMP + _label | ✅ created |
-| ArenaManager | _ringSpawner, _spawnPointsA/B | ✅ wired |
-| RingSpawner | _ringPrefab, _catalog(5/5), _spawnPoints(3/3) | ✅ wired |
+| ThrowController 4 refs | `_config`, `_projectilePrefab`, `_heldBallPrefab`, `_netProjectilePrefab` đều null | ✅ wired |
+| HandWeapon._bladeTip | null — tạo child `BladeTip` dưới WristR tại (0,0,0.35) | ✅ wired |
+| BillBootstrapConfig.defaultPools | hoàn toàn trống — `Bill.Pool.Spawn("throwprojectile")` fail silently | ✅ registered 2 keys |
+| RewardText.prefab | chưa tồn tại — code có nhưng prefab chưa build | ✅ created |
+| CatchController SphereCollider | isTrigger=false | ✅ set true |
+| NetworkProjectile Rigidbody | thiếu — bot dùng `rb.linearVelocity`, đạn đứng im | ✅ added |
+| NetworkProjectile hit detection | early-return khi `_localProjectile==null` → bot throw không hit được ai | ✅ fixed |
+| ArenaManager spawn points | `_spawnPointsA/B` trống | ✅ wired to [SpawnA]/[SpawnB] |
+| BuffRing SphereCollider | isTrigger=false | ✅ set true |
 
-### Test flow M1 (throw vào DummyAvatar)
+---
 
-```
-1. Mở 02_Arena scene
-2. Play mode (Fusion Shared starts)
-3. DummyAvatar spawn tại (0,0,4) — IsPlayer=false, Health=5
-4. Bắt đầu: nhấn G giữ (simulate grip) → ball load vào tay
-5. Nhấn T → throw thẳng về phía DummyAvatar
-6. Kỳ vọng: pips giảm 1 → sau 3s DummyAvatar respawn về đầy pips
-7. Sau 5 hit: DummyAvatar chết, DummyBotDriver không fire nữa, respawn sau 3s
-```
+## ══ DANH SÁCH TASK NGÀY MAI ══
 
-### Test flow M2 (bot ném ngược lại)
+> Đọc kỹ phần này trước khi bắt đầu. Làm theo thứ tự: verify trước, fix bug, rồi mới build thêm.
+
+### BƯỚC 0 — Môi trường (5 phút)
 
 ```
-DummyBotDriver.FixedUpdateNetwork: mỗi 2-3.5s → Runner.Spawn NetworkProjectile từ _throwOrigin → rb.linearVelocity
-NetworkProjectile (Rigidbody, useGravity): bay theo trajectory → OverlapSphere detect player → RPC_TakeHit
+1. Mở Unity project ThrowingShot
+2. Kiểm console: 0 compile error (expected)
+3. Mở scene: 02_Arena
+4. Bật Meta XR Simulator: Meta > Meta XR Simulator > Activate
+5. Play mode → kiểm [Bill] Ready trong console
 ```
 
-### ⚠️ Known issues còn lại
+---
 
-- **WristWeaponSelector prefab chưa có**: code xong (WristWeaponSelector.cs) nhưng chưa build World-Space Canvas child trên WristL. UI chọn vũ khí chưa hoạt động.
-- **Buff ring Shared Mode conflict**: BuffRing.OnTriggerEnter guard `proj.Object.HasStateAuthority` — ring chỉ apply khi ring authority == projectile authority. Với bot projectile (master owns both) thì OK; với player throw từ non-master thì bị block.
-- **2-player verify chưa làm**: S2 HeldBall + S3 Projectile visible giữa 2 client thật.
-- **WeaponConfig held prefabs**: WC_Sword._heldPrefab null (chưa có sword model). Sword equip sẽ bị lỗi nếu HandWeapon cố tìm heldPrefab.
-- **ArenaManager spawn positions**: chỉ có [SpawnA] và [SpawnB] ở vị trí mặc định (chưa kiểm tra tọa độ đúng chưa).
-- **Bot accuracy**: DummyBotDriver aim thẳng về phía player (không lead target, không randomize) — OK cho testing.
+### BƯỚC 1 — Test M1: Ném vào DummyAvatar
 
-### Files thay đổi (session 9b + 9c)
+**Mục tiêu**: xác nhận hit detection + health system hoạt động.
 
 ```
-M  Assets/_Game/Scripts/Throwing/NetworkProjectile.cs       — bot hit-detection path + Rigidbody kinematic
-+  Assets/_Game/Prefabs/RewardText.prefab                   — new (TMP world-space text)
-M  Assets/_Game/Prefabs/NetworkAvatar.prefab               — ThrowController (4 refs) + HandWeapon._bladeTip + BladeTip child
-M  Assets/_Game/Prefabs/NetworkProjectile.prefab            — Rigidbody added
-M  Assets/_Game/Prefabs/BuffRing.prefab                     — SphereCollider.isTrigger=true fixed
-M  Assets/_Game/Scenes/02_Arena.unity                       — ArenaManager spawn points wired
-M  Assets/Resources/BillBootstrapConfig.asset              — pool "throwprojectile" + "rewardtext" registered
+Trong Play mode (02_Arena):
+  1. Chờ Warmup 5s → ArenaManager chuyển sang Playing
+  2. Kiểm: 3 BuffRing xuất hiện tại 3 spawn points và drift lên xuống
+  3. Nhấn G (giữ) → HeldBallVisual xuất hiện ở wrist
+  4. Nhấn T → ball bay thẳng về phía DummyAvatar
+  5. Kiểm: DummyAvatar HealthUI pip giảm từ 5→4
+  6. Nhấn T thêm 4 lần → DummyAvatar chết (pips=0, body chuyển màu xám)
+  7. Kiểm: sau 3s → DummyAvatar respawn (pips về 5, màu bình thường)
+```
+
+**Nếu không hit được** (pips không giảm):
+- Kiểm layer của `[Hitbox]` trên DummyAvatar prefab → phải là `Hittable` (15)
+- Kiểm `NetworkProjectile._hittableMask` → phải include layer 15
+- Kiểm console: có log "Spawned" từ Fusion không → nếu không có nghĩa Runner chưa start
+
+**Nếu ball không spawn** (T key không làm gì):
+- Kiểm console: `[Bill] Pool 'throwprojectile' not found` → BillBootstrapConfig chưa boot đúng
+- Kiểm: scene 02_Arena có `CombatSession` GO không (phải tồn tại để Fusion start)
+- Kiểm: `PlayerSpawnManager` trong scene có spawn NetworkAvatar không
+
+---
+
+### BƯỚC 2 — Test M2: Bot ném ngược lại
+
+**Mục tiêu**: DummyBotDriver tự throw NetworkProjectile và trúng player.
+
+```
+Tiếp tục trong Play mode:
+  1. Chờ 2-3.5s → DummyBotDriver throw (interval random)
+  2. Kiểm: thấy NetworkProjectile bay từ DummyAvatar về phía player
+  3. Kiểm: Player HealthUI pip giảm khi trúng đạn
+  4. Nếu player bị hết pips → không có gì xảy ra (chưa implement player respawn)
+```
+
+**Nếu đạn bot không bay** (đứng im):
+- Vấn đề: Rigidbody.isKinematic = true khi không phải authority
+- Kiểm: `NetworkProjectile.Spawned()` → `rb.isKinematic = !HasStateAuthority` có chạy không
+- Debug: thêm `Debug.Log("Spawned isKinematic=" + rb.isKinematic)` tạm thời
+
+**Nếu đạn bay nhưng không hit player**:
+- Kiểm: Player body có collider trên layer Hittable (15) không
+- `[Hitbox]` trên NetworkAvatar prefab → layer = 15, trigger = true, isTrigger = true
+
+---
+
+### BƯỚC 3 — Test BuffRing
+
+**Mục tiêu**: vòng buff xuất hiện đúng màu, ball xuyên qua apply buff, "EFFECTIVE!" hiện.
+
+```
+  1. Kiểm: 3 vòng xuất hiện sau Playing start
+  2. Vòng có màu khác nhau (Ice=xanh, Fire=đỏ, ...) và drift lên xuống
+  3. Label hiện tên ring (fade in sau 0.35s)
+  4. Ném ball xuyên qua ring → "EFFECTIVE!" flash trên label → ring thu nhỏ và despawn
+  5. Sau respawnDelay giây → ring mới xuất hiện tại slot đó
+```
+
+**⚠️ Known bug khả năng cao**: BuffRing.Spawned() chạy trước khi RingSpawner set Element → ring hiện màu trắng/không có màu.
+
+**Cách fix nếu gặp**:
+```csharp
+// Trong BuffRing.cs — thêm [OnChangedRender] cho Element
+[Networked, OnChangedRender(nameof(ApplyVisuals))]
+public RingElement Element { get; set; }
+
+private void ApplyVisuals()
+{
+    _config = ResolveConfig();
+    if (_config == null) return;
+    ApplyColor();
+    ApplyLabel();
+}
+
+// Và trong Spawned() bỏ ApplyColor/ApplyLabel, chỉ giữ:
+public override void Spawned()
+{
+    GetComponent<SphereCollider>().isTrigger = true;
+    _originPos = transform.position;
+    PlayBounceIn();
+    StartDrift();
+    // ApplyVisuals() sẽ được gọi tự động khi Element thay đổi
+    if (Element != RingElement.None) ApplyVisuals(); // fallback nếu đã set trước Spawned
+}
+```
+
+---
+
+### BƯỚC 4 — Test ArenaManager flow
+
+**Mục tiêu**: Warmup → Playing → RoundEnd → MatchEnd cycle hoạt động.
+
+```
+  1. Vào Play: Phase=Warmup (5s)
+  2. Sau 5s: Phase=Playing, timer 120s bắt đầu
+  3. Giết DummyAvatar 5 lần (không phải IsPlayer=true) → win condition không trigger (đúng)
+  4. Đợi timer hết 120s → Phase=RoundEnd (4s) → Phase=Warmup lại
+  5. Kiểm: RoundEndEvent fire trong console (Debug.Log hoặc Bill.Events)
+```
+
+**⚠️ Note**: ArenaManager.CheckWinCondition chỉ đếm `AllInstances where IsPlayer==true`. Chỉ có NetworkAvatar (player thật) count. DummyAvatar không count vì `IsPlayer=false`.
+
+---
+
+### BƯỚC 5 — Build tasks còn thiếu (theo thứ tự ưu tiên)
+
+#### 5.1 Player respawn sau chết (QUAN TRỌNG nhất)
+Hiện tại player chết (Health=0) nhưng không có gì xảy ra — DummyAvatar có auto-respawn nhưng NetworkAvatar thì không.
+
+```
+Cần thêm vào PlayerCombat.cs:
+  - Khi Health hit 0 → fire PlayerDiedEvent
+  - ArenaManager.EndRound() → teleport player tới spawn point
+  - Hoặc: NetworkAvatar.Render() → hide body khi Health=0, show ghost/spectate
+```
+
+#### 5.2 WristWeaponSelector prefab
+Code có (`WristWeaponSelector.cs`) nhưng chưa có prefab. Cần:
+```
+Trong NetworkAvatar.prefab:
+  - Add child GO "WristSelector" parented to WristL
+  - Add World Space Canvas (Canvas + CanvasScaler)
+  - Add 3 slots (WeaponSlotUI): prev / current / next
+  - Add WristWeaponSelector component, wire _slots[3]
+  - Wire trong NetworkAvatar.Spawned(): wws.Initialize(combat)
+```
+
+#### 5.3 RewardText pool registration trong Resources/Pools
+BillGameCore auto-loads từ `Resources/Pools/<key>` nhưng folder trống. Đã đăng ký qua BillBootstrapConfig rồi nên OK — nhưng cần verify pool hoạt động khi `RewardHit()` call.
+
+#### 5.4 2-player verify với ParrelSync
+```
+Setup:
+  1. ParrelSync: Tools > ParrelSync > Clones Manager > Add Clone
+  2. Open Clone → Play cả 2 editor
+  3. Verify: thấy avatar kia di chuyển
+  4. Verify: ném trúng nhau → pip giảm đúng bên
+  5. Verify: HeldBallVisual hiện ở tay đúng khi đang hold
+```
+
+---
+
+### TRẠNG THÁI TOÀN BỘ HỆ THỐNG
+
+| Layer | Code | Prefab/Assets | Scene | Test |
+|---|---|---|---|---|
+| **Throw mechanic** | ✅ | ✅ | ✅ | ⬜ verify tomorrow |
+| **NetworkProjectile** | ✅ | ✅ | N/A | ⬜ verify tomorrow |
+| **PlayerCombat** (health/economy) | ✅ | ✅ | ✅ | ⬜ verify tomorrow |
+| **HealthUI** (5 pip) | ✅ | ✅ | N/A | ⬜ verify tomorrow |
+| **DummyAvatar** (static target) | ✅ | ✅ | ✅ | ⬜ verify tomorrow |
+| **DummyBotDriver** (AI throw) | ✅ | ✅ | ✅ | ⬜ verify tomorrow |
+| **BuffRing** (drift + apply) | ✅ | ✅ | N/A | ⬜ likely bug on color |
+| **RingSpawner** | ✅ | N/A | ✅ | ⬜ verify tomorrow |
+| **ArenaManager** (loop) | ✅ | N/A | ✅ | ⬜ verify tomorrow |
+| **CombatSession** | ✅ | N/A | ✅ | ⬜ verify tomorrow |
+| **HandWeapon** (dispatch) | ✅ | ✅ wired | N/A | ⬜ |
+| **CatchController** | ✅ | ✅ wired | N/A | ⬜ |
+| **WeaponConfig** (7 weapons) | ✅ | ✅ SOs | N/A | ⬜ |
+| **WristWeaponSelector** | ✅ code | ⬜ NO prefab | N/A | ⬜ |
+| **RewardText** | ✅ | ✅ | N/A | ⬜ |
+| **Player respawn** | ⬜ NO code | N/A | N/A | N/A |
+| **2-player verify** | N/A | N/A | N/A | ⬜ |
+
+---
+
+### ⚠️ GOTCHAS QUAN TRỌNG NHẤT
+
+1. **BuffRing.Element timing bug**: `Spawned()` chạy trước khi RingSpawner set Element → ring không có màu/label. Fix: dùng `[OnChangedRender]` (xem Bước 3 ở trên).
+
+2. **Buff ring Shared Mode conflict**: `BuffRing.OnTriggerEnter` có guard `proj.Object.HasStateAuthority` — chỉ apply buff khi ring authority == projectile authority. Bot projectile: master owns both → OK. Player throw từ non-master: bị block. Fix sau khi verify cơ bản.
+
+3. **Player chết nhưng không respawn**: chưa implement player-side death/respawn. Arena round end reset tất cả combat, nhưng không teleport player về spawn point.
+
+4. **[SpawnA] và [SpawnB] position**: chưa kiểm tra tọa độ thực trong scene — cần đặt đúng 2 phía sân.
+
+5. **execute_code guard**: `Application.dataPath.Contains("ThrowingShot")` — không phải "TOSSZONE".
+
+6. **Mở 02_Arena trước khi verify scene**: MCP FindObjectOfType fail nếu scene sai.
+
+---
+
+### FILES THAY ĐỔI SESSION 9b + 9c (đầy đủ)
+
+```
+NEW SCRIPTS:
++ Assets/_Game/Scripts/Combat/CombatSession.cs
++ Assets/_Game/Scripts/Combat/ArenaManager.cs
++ Assets/_Game/Scripts/Combat/BuffRing.cs
++ Assets/_Game/Scripts/Combat/BuffRingConfig.cs
++ Assets/_Game/Scripts/Combat/CatchController.cs
++ Assets/_Game/Scripts/Combat/DummyBotDriver.cs
++ Assets/_Game/Scripts/Combat/RingSpawner.cs
++ Assets/_Game/Scripts/Throwing/HandWeapon.cs
++ Assets/_Game/Scripts/UI/WristWeaponSelector.cs
++ Assets/_Game/Scripts/UI/RewardText.cs
+
+MODIFIED SCRIPTS:
+M Assets/_Game/Scripts/Combat/PlayerCombat.cs       — economy + AllInstances + IsPlayer
+M Assets/_Game/Scripts/Combat/DummyAvatar.cs        — IsPlayer=false
+M Assets/_Game/Scripts/Minigame/MinigameDef.cs      — weaponCatalog + bestOf + roundDuration
+M Assets/_Game/Scripts/Player/TossLocomotionInput.cs — Dash + Jump
+M Assets/_Game/Scripts/Player/NetworkAvatar.cs       — HandWeapon+WristSelector init
+M Assets/_Game/Scripts/Throwing/ThrowProjectile.cs  — IsCatchable/IsPower/OnCaught
+M Assets/_Game/Scripts/Throwing/NetworkProjectile.cs — bot hit-detection + Rigidbody kinematic
+
+NEW ASSETS:
++ Assets/_Game/Data/Rings/RC_Ice.asset ... RC_Shield.asset   (5 BuffRingConfig)
++ Assets/_Game/Data/Weapons/WC_Rock.asset ... WC_Sword.asset (7 WeaponConfig)
++ Assets/Resources/Minigames/arena.asset                     (MinigameDef)
++ Assets/_Game/Prefabs/BuffRing.prefab
++ Assets/_Game/Prefabs/RewardText.prefab
+
+MODIFIED ASSETS:
+M Assets/_Game/Prefabs/NetworkAvatar.prefab    — HandWeapon+CatchController+BladeTip+ThrowController refs
+M Assets/_Game/Prefabs/DummyAvatar.prefab      — DummyBotDriver added
+M Assets/_Game/Prefabs/NetworkProjectile.prefab — Rigidbody added
+M Assets/_Game/Prefabs/BuffRing.prefab          — SphereCollider.isTrigger=true
+M Assets/_Game/Scenes/02_Arena.unity           — ArenaManager+CombatSession+RingSpawner placed + refs
+M Assets/Resources/BillBootstrapConfig.asset   — pools registered
+
+DEPRECATED (moved to Docs/deprecated/):
+- M0_Activation_Design.md
+- M2_M3_Design.md
+- M3_Avatar_Redesign.md
+- M4_Gameplay_Design.md
+- PHASE1_BUILD_PLAN.md
+- Networking_Architecture.md
+- AutoHand_Grab_Notes.md
 ```
 
 ---
