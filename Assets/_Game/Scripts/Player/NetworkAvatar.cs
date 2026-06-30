@@ -40,7 +40,13 @@ namespace TossZone.Player
         [Tooltip("First-person: hide this avatar for its OWNER (you see only your local toon hands). Uncheck to DEBUG the IK on your own avatar in a solo / single-controller test.")]
         [SerializeField] private bool _hideOwnVisuals = true;
 
+        [Header("Held-ball sync")]
+        [Tooltip("Small sphere renderer parented inside _wristRNode — shown on proxies when the player is holding the ball.")]
+        [SerializeField] private Renderer _heldBallVisual;
+
         [Networked] public int ColorIndex { get; set; }
+        /// <summary>True while this player has a ball in hand (visible to all clients as a sphere on the wrist).</summary>
+        [Networked] public bool HoldingBall { get; set; }
 
         private static readonly Color[] _palette =
         {
@@ -59,6 +65,8 @@ namespace TossZone.Player
 
         public override void Spawned()
         {
+            if (_heldBallVisual != null) _heldBallVisual.enabled = false; // Render() toggles it per-frame for proxies
+
             if (HasStateAuthority)
             {
                 // Claim the local-avatar slot so the spawn manager won't spawn a second one after a scene load.
@@ -106,6 +114,9 @@ namespace TossZone.Player
             CopyNode(_headNode, rig.Head);
             CopyNode(_wristLNode, rig.WristL);
             CopyNode(_wristRNode, rig.WristR);
+
+            // Held-ball state driven from the local throw controller (static bool, zero overhead).
+            HoldingBall = TossZone.Throwing.ThrowController.LocalHoldingBall;
         }
 
         public override void Render()
@@ -113,6 +124,9 @@ namespace TossZone.Player
             if (HasStateAuthority) return;   // owner avatar is hidden; nothing to pose
             StretchArm(_shoulderL, _armL, _wristLNode);
             StretchArm(_shoulderR, _armR, _wristRNode);
+            // Held-ball visual: show only when the remote player is holding a ball.
+            // The sphere is a child of _wristRNode so NT interpolation carries it automatically.
+            if (_heldBallVisual != null) _heldBallVisual.enabled = HoldingBall;
         }
 
         private static void CopyNode(Transform node, Transform src)

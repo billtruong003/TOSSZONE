@@ -45,6 +45,17 @@ namespace TossZone.Throwing
 
         private const string PoolKey = "throwprojectile";
 
+        /// <summary>NetworkAvatar reads this in FixedUpdateNetwork to sync the held-ball visual to other players.</summary>
+        public static bool LocalHoldingBall { get; private set; }
+
+#if PHOTON_FUSION
+        [Header("Networking (Fusion)")]
+        [Tooltip("NetworkProjectile prefab (NetworkObject + NetworkTransform + NetworkProjectile). Assign to replicate projectile flight to remote clients.")]
+        [SerializeField] private Fusion.NetworkObject _netProjectilePrefab;
+        private Fusion.NetworkObject _activeNetProj;
+        private Fusion.NetworkRunner _runner;
+#endif
+
         private PlayerRig _rig;
         private Transform _wrist, _head, _root, _heldBall;
         private float _heldBaseScale = 1f;
@@ -67,6 +78,7 @@ namespace TossZone.Throwing
 
         private void OnDisable()
         {
+            LocalHoldingBall = false;
             if (_ready && Bill.IsReady && _onBallLandedCb != null)
                 Bill.Events.Unsubscribe<BallLandedEvent>(_onBallLandedCb);
         }
@@ -222,9 +234,51 @@ namespace TossZone.Throwing
             if (go == null) return;
             ThrowProjectile proj = go.GetComponent<ThrowProjectile>();
             if (proj != null) proj.Launch(pos, velocity, power, _config);
+#if PHOTON_FUSION
+            SpawnNetworkProjectile(pos, rot, go.transform);
+#endif
         }
 
-        private void OnBallLanded(BallLandedEvent e) => Haptic(_config.hapticImpact, 0.05f);
+        private void OnBallLanded(BallLandedEvent e)
+        {
+            Haptic(_config.hapticImpact, 0.05f);
+#if PHOTON_FUSION
+            DespawnNetworkProjectile();
+#endif
+        }
+
+#if PHOTON_FUSION
+        private void SpawnNetworkProjectile(Vector3 pos, Quaternion rot, Transform localProj)
+        {
+            if (_netProjectilePrefab == null) return;
+            TryGetRunner();
+            if (_runner == null || !_runner.IsRunning) return;
+            // Clean up any stale previous projectile (shouldn't happen in normal flow).
+            if (_activeNetProj != null)
+            {
+                _runner.Despawn(_activeNetProj);
+                _activeNetProj = null;
+            }
+            _activeNetProj = _runner.Spawn(_netProjectilePrefab, pos, rot);
+            _activeNetProj?.GetComponent<NetworkProjectile>()?.LinkTo(localProj);
+        }
+
+        private void DespawnNetworkProjectile()
+        {
+            if (_activeNetProj == null) return;
+            TryGetRunner();
+            if (_runner != null && _runner.IsRunning)
+                _runner.Despawn(_activeNetProj);
+            _activeNetProj = null;
+        }
+
+        private void TryGetRunner()
+        {
+            if (_runner != null && _runner.IsRunning) return;
+            var instances = Fusion.NetworkRunner.Instances;
+            _runner = instances.Count > 0 ? instances[0] : null;
+        }
+#endif
 
         // ── helpers ──────────────────────────────────────────────────────────────
 
@@ -299,6 +353,7 @@ namespace TossZone.Throwing
 
         private void ShowHeld(bool on)
         {
+            LocalHoldingBall = on;   // replicated by NetworkAvatar.FixedUpdateNetwork → remote players see the ball
             if (_heldBall == null) return;
             if (on)
             {

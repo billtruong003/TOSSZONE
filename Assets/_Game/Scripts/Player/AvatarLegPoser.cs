@@ -63,6 +63,7 @@ namespace TossZone.Player
 
         private FootState _l, _r;
         private Quaternion _lFootRest = Quaternion.identity, _rFootRest = Quaternion.identity;
+        private Quaternion _lLowerLegRest = Quaternion.identity, _rLowerLegRest = Quaternion.identity;
         private Vector3 _lastBodyPos;
         private bool _captured;
 
@@ -76,8 +77,17 @@ namespace TossZone.Player
             Transform body = Body;
             if (_lFoot) _lFootRest = Quaternion.Inverse(body.rotation) * _lFoot.rotation;
             if (_rFoot) _rFootRest = Quaternion.Inverse(body.rotation) * _rFoot.rotation;
+            if (_lLowerLeg && _lFoot) _lLowerLegRest = CaptureRoll(_lLowerLeg, _lFoot.position);
+            if (_rLowerLeg && _rFoot) _rLowerLegRest = CaptureRoll(_rLowerLeg, _rFoot.position);
             _lastBodyPos = body.position;
             _captured = true;
+        }
+
+        private static Quaternion CaptureRoll(Transform bone, Vector3 endWorldPos)
+        {
+            Vector3 fwd = (endWorldPos - bone.position).normalized;
+            if (fwd.sqrMagnitude < 1e-6f) return Quaternion.identity;
+            return Quaternion.Inverse(Quaternion.LookRotation(fwd)) * bone.rotation;
         }
 
         private void LateUpdate()
@@ -92,12 +102,12 @@ namespace TossZone.Player
 
             // Process one foot then the other; pass each the other's CURRENT stepping flag so they never
             // lift together (a foot only starts a step when its partner is grounded).
-            StepAndSolve(ref _l, _lUpperLeg, _lLowerLeg, _lFoot, _lFootRest, body, vel, dt, _r.stepping);
-            StepAndSolve(ref _r, _rUpperLeg, _rLowerLeg, _rFoot, _rFootRest, body, vel, dt, _l.stepping);
+            StepAndSolve(ref _l, _lUpperLeg, _lLowerLeg, _lFoot, _lFootRest, _lLowerLegRest, body, vel, dt, _r.stepping);
+            StepAndSolve(ref _r, _rUpperLeg, _rLowerLeg, _rFoot, _rFootRest, _rLowerLegRest, body, vel, dt, _l.stepping);
         }
 
         private void StepAndSolve(ref FootState f, Transform upper, Transform lower, Transform foot,
-                                  Quaternion footRest, Transform body, Vector3 vel, float dt, bool otherStepping)
+                                  Quaternion footRest, Quaternion lowerRest, Transform body, Vector3 vel, float dt, bool otherStepping)
         {
             if (upper == null || lower == null || foot == null) return;
 
@@ -148,7 +158,7 @@ namespace TossZone.Player
                 f.plant = f.grounded; // stay put -> no skating
             }
 
-            SolveLeg(upper, lower, foot, f.plant, body, footRest, normal);
+            SolveLeg(upper, lower, foot, f.plant, body, footRest, lowerRest, normal);
         }
 
         /// <summary>
@@ -157,7 +167,7 @@ namespace TossZone.Player
         /// then orients the foot to the body facing (optionally tilted to the ground normal).
         /// </summary>
         private void SolveLeg(Transform upper, Transform lower, Transform foot, Vector3 target,
-                              Transform body, Quaternion footRest, Vector3 groundNormal)
+                              Transform body, Quaternion footRest, Quaternion lowerRest, Vector3 groundNormal)
         {
             Vector3 a = upper.position;
             float lab = Vector3.Distance(a, lower.position);
@@ -179,7 +189,11 @@ namespace TossZone.Player
             Vector3 knee = a + atDir * proj + pole * height;
 
             upper.rotation = Quaternion.FromToRotation(lower.position - a, knee - a) * upper.rotation;
-            lower.rotation = Quaternion.FromToRotation(foot.position - lower.position, target - lower.position) * lower.rotation;
+            // Stateless shin roll: same technique as AvatarArmPoser — LookRotation gives neutral direction,
+            // lowerRest restores the captured bind-pose roll so it never accumulates twist over frames.
+            Vector3 shinFwd = (target - lower.position).normalized;
+            if (shinFwd.sqrMagnitude > 1e-6f)
+                lower.rotation = Quaternion.LookRotation(shinFwd) * lowerRest;
 
             Quaternion footRot = body.rotation * footRest;
             if (_alignToGround) footRot = Quaternion.FromToRotation(Vector3.up, groundNormal) * footRot;
