@@ -4,7 +4,69 @@
 
 ---
 
-## Session 6 — 2026-06-30 (session vừa xong)
+## Session 7 — 2026-06-30 (session vừa xong)
+
+### Đã làm được
+
+**Dọn merge (S5+S6) + verify**
+- Xóa **duplicate `PlayerRig`** (bug chí mạng: 2 PlayerRig cùng GameObject → `Awake` singleton gọi `Destroy(LocalPlayer)` → phá rig lúc start; trạng thái merge này chưa từng chạy) + duplicate `TossLocomotionInput`. Giữ PlayerRig `Root=AutoHandPlayer`.
+- `headCamera` đã gán (root-cause locomotion S5). Dọn **debug HUD** khỏi `TossLocomotionInput`/`ThrowController`. Reconcile 2 doc networking.
+
+**Fix leg knee-twist**
+- `AvatarLegPoser`: đùi (upper leg) → **stateless `LookRotation` + captured rest** (trước dùng `FromToRotation` tích lũy → roll-drift vặn gối khi di chuyển nhiều). Shin đã fix S6, đùi bị sót.
+
+**Palette tooling**
+- `Assets/_Game/Editor/PaletteAssigner.cs` — tool gán M_Pallet hàng loạt (prefab renderer + **FBX default remap**), right-click `TOSSZONE ▸ Assign Palette` hoặc menu `TOSSZONE/Palette`. Tìm M_Pallet theo TÊN (move file thoải mái). Đã gán cho toàn kit MS_ (20 prefab) + FBX defaults + lightsword. M_Pallet đã move sang `Materials/`.
+
+**Design combat — `Docs/Combat_Minigame_Design.md` v2 (đọc kỹ trước khi build tiếp)**
+- Roster THẬT: **7 vũ khí chiến đấu** (Rock/Gun/Grenade/Bazooka/BigBoom/LandMine/Sword). Egg/Tomato = người CHẾT ném từ khán đài; Poop = cosmetic.
+- Win-condition: **1v1** (chết trước thua) / **BO3** / **BO5** (team last-standing); ví reset $0/hiệp.
+- Hành vi từng vũ khí (§5.4) · Sword **rút sau lưng, DEFLECT-ONLY** (§9) · catch random-theo-màu (§7) · buff-ring áp **mọi đạn ném** (§10).
+
+**Weapon system ✅**
+- `WeaponConfig.cs` (SO configurable: AcquireMode/HandSource/FireMode + economy/unlock/fire).
+- **7 WeaponConfig asset** (`Weapons/`), wired heldPrefab/projectile/throwConfig (5 món stats thật, LandMine/Sword placeholder).
+- 7 weapon prefab → **AutoHand grabbable** (Rigidbody+collider+Grabbable+layer Grabbable).
+
+**Combat foundation ✅ (built + wired + Fusion-baked)**
+- `PlayerCombat` (NetworkBehaviour): `[Networked]` Health(5)/Money · `RPC_TakeHit` (**victim-authority-writes** đúng Shared Mode) · income theo thời gian + `RewardHit` + `ResetForRound` · static `Local`.
+- `CombatEvents`: PlayerHit/PlayerDied/MoneyChanged (Bill.Events).
+- `NetworkProjectile`: **buff-hook sẵn** (`Multiplier/VelocityScale/AreaScale/Element`, default no-buff) + `Shooter` + hit detection (authority OverlapSphere → `RPC_TakeHit` + reward).
+- `ThrowController`: set Shooter khi spawn networked projectile.
+- **Wired**: layer `Hittable=15` · PlayerCombat trên NetworkAvatar prefab (**baked** — verify `NetworkedBehaviours` chứa PlayerCombat) · Hitbox trigger capsule · NetworkProjectile mask=Hittable/dmg=1/r=0.3.
+
+### Trạng thái
+| Layer | Status |
+|---|---|
+| Throw + IK + NetworkAvatar + S2/S3 | ✅ (S6) |
+| Leg knee-twist | ✅ fixed |
+| Weapon data (7 config + grabbable prefab) | ✅ |
+| Combat foundation (PlayerCombat + hit + buff-hook) | ✅ built+wired+baked |
+| HealthUI / Bot / HandWeapon / buff-ring / selector | ⬜ next |
+
+### Việc cần làm tiếp (thứ tự)
+1. **HealthUI (5 cục curved)** — bind `PlayerCombat.Health`, billboard. Visible nhanh nhất.
+2. **Bot `DummyAvatar`** — NetworkAvatar giả (Hitbox+PlayerCombat) làm target test hit/damage **solo** (ném không tự trúng mình).
+3. **HandWeapon** — equip WeaponConfig + fire theo `fireMode` (các vũ khí khác bắn).
+4. **Buff-ring system** — RingSpawner (5 vòng MS_Circle trôi) + xuyên-qua **SET modifier-hook** (đã buff-aware → zero rework).
+5. **Wrist selector** + behaviors (mine fuse / bazooka arc / sword deflect / catch). Thêm field hành vi vào WeaponConfig khi build (fuseDelay/armsOnGround/projectileGravity/laserSight/attacksPlayers/canDeflect).
+
+### ⚠️ Gotchas (QUAN TRỌNG)
+- **Multi-editor routing CỰC kỳ flip** khi mở 2 editor ("Teabag - Copy" + TOSSZONE): `read_console`/`refresh_unity`/`manage_scene` nhảy qua lại → từng lưu nhầm scene Overview + đọc console Teabag. **ĐÓNG Teabag** trước khi MCP. `execute_code` **tự an toàn** (Teabag từ chối nó) → dùng cho mutation, self-guard `Application.dataPath.Contains("TOSSZONE")`.
+- New folder/file → `refresh_unity scope=all` (scope=scripts bỏ sót file trong folder mới).
+- Thêm NetworkBehaviour vào prefab → cần **Fusion bake** (force-reimport `ImportAssetOptions.ForceUpdate` → verify `NetworkObject.NetworkedBehaviours`).
+- **Projectile buff-aware**: ring/catch chỉ SET 4 hook → không sửa lại projectile/damage.
+- WeaponConfig stats = **placeholder** (nhất là LandMine/Sword) → tune Inspector.
+
+### Commits (đã push hết)
+`f25f786` cleanup+leg+palette+kit · `2053480` weapon system + combat foundation code · `8762d1e` wire foundation.
+
+### Cần chốt (design opens)
+Respawn 1-mạng/hiệp? · Team size BO3/BO5 (3v3/5v5)? · Egg/Tomato heckle (nuisance hay chỉ splat)? · LandMine stats thật? · Sword model (đã có `lightsword`).
+
+---
+
+## Session 6 — 2026-06-30
 
 ### Đã làm được
 
