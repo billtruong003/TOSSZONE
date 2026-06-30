@@ -31,6 +31,61 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1492260674991546427}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &882964054867093917
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1990882737059464687}
+  - component: {fileID: 1185005605867563395}
+  m_Layer: 15
+  m_Name: Hitbox
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1990882737059464687
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 882964054867093917}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1492260674991546427}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!136 &1185005605867563395
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 882964054867093917}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.3
+  m_Height: 1.7
+  m_Direction: 1
+  m_Center: {x: 0, y: 0.9, z: 0}
 --- !u!1 &887058724720785592
 GameObject:
   m_ObjectHideFlags: 0
@@ -624,6 +679,7 @@ GameObject:
   - component: {fileID: 4303279452157685385}
   - component: {fileID: 1372590995041968222}
   - component: {fileID: 2355378341532234341}
+  - component: {fileID: 5029712955536213259}
   m_Layer: 0
   m_Name: NetworkAvatar
   m_TagString: Untagged
@@ -653,6 +709,7 @@ Transform:
   - {fileID: 4817609458001232204}
   - {fileID: 4395874810837472613}
   - {fileID: 5141835259904971893}
+  - {fileID: 1990882737059464687}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &4303279452157685385
@@ -674,6 +731,7 @@ MonoBehaviour:
   NetworkedBehaviours:
   - {fileID: 1372590995041968222}
   - {fileID: 2355378341532234341}
+  - {fileID: 5029712955536213259}
   - {fileID: 3915520981554320660}
   - {fileID: 8213307284825834251}
   - {fileID: 865725772801836624}
@@ -722,6 +780,22 @@ MonoBehaviour:
   _heldBallVisual: {fileID: 4546852742754288829}
   _ColorIndex: 0
   _HoldingBall: 0
+--- !u!114 &5029712955536213259
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5683549520839284970}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 86510945fbe79f146b0fee4b07943058, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TossZone.Combat.PlayerCombat
+  _Health: 0
+  _Money: 0
+  _incomePerSecond: 1
+  _hitReward: 10
 --- !u!1 &7031968901690542938
 GameObject:
   m_ObjectHideFlags: 0

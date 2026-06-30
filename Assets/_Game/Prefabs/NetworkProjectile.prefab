@@ -174,3 +174,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 173290b38c74d2c40aec0be7d3f72e2a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TossZone.Throwing.NetworkProjectile
+  _baseDamage: 1
+  _hitRadius: 0.3
+  _hittableMask:
+    serializedVersion: 2
+    m_Bits: 32768
+  _Multiplier: 0
+  _VelocityScale: 0
+  _AreaScale: 0
+  _Element: 0
