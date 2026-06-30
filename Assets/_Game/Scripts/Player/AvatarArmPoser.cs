@@ -35,6 +35,9 @@ namespace TossZone.Player
         // Bind-relative offsets captured at rest: bone rotation expressed in its driving node's space, so applying
         // node.rotation * offset preserves the bone's axis (head) and palm (hands) as the node rotates.
         private Quaternion _headRest = Quaternion.identity, _lHandRest = Quaternion.identity, _rHandRest = Quaternion.identity;
+        // Forearm roll captured relative to Quaternion.LookRotation(fwd) so reconstruction is stateless each frame
+        // (prevents accumulated forearm twist from the delta / FromToRotation approach).
+        private Quaternion _lLowerRest = Quaternion.identity, _rLowerRest = Quaternion.identity;
         private bool _captured;
 
         private void Awake() => Capture();
@@ -44,7 +47,17 @@ namespace TossZone.Player
             if (_headBone && _headNode) _headRest = Quaternion.Inverse(_headNode.rotation) * _headBone.rotation;
             if (_lHand && _wristL) _lHandRest = Quaternion.Inverse(_wristL.rotation) * _lHand.rotation;
             if (_rHand && _wristR) _rHandRest = Quaternion.Inverse(_wristR.rotation) * _rHand.rotation;
+            if (_lLowerArm && _lHand) _lLowerRest = CaptureRoll(_lLowerArm, _lHand.position);
+            if (_rLowerArm && _rHand) _rLowerRest = CaptureRoll(_rLowerArm, _rHand.position);
             _captured = true;
+        }
+
+        // Capture the forearm's roll relative to a neutral LookRotation(fwd) so we can reconstruct it stateless.
+        private static Quaternion CaptureRoll(Transform bone, Vector3 endWorldPos)
+        {
+            Vector3 fwd = (endWorldPos - bone.position).normalized;
+            if (fwd.sqrMagnitude < 1e-6f) return Quaternion.identity;
+            return Quaternion.Inverse(Quaternion.LookRotation(fwd)) * bone.rotation;
         }
 
         private void LateUpdate()
@@ -54,8 +67,8 @@ namespace TossZone.Player
             if (_headBone && _headNode)
                 _headBone.rotation = _headNode.rotation * _headRest * Quaternion.Euler(_headRotOffset);
 
-            SolveArm(_lUpperArm, _lLowerArm, _lHand, _wristL, _lHandRest * Quaternion.Euler(_handRotOffsetL));
-            SolveArm(_rUpperArm, _rLowerArm, _rHand, _wristR, _rHandRest * Quaternion.Euler(_handRotOffsetR));
+            SolveArm(_lUpperArm, _lLowerArm, _lHand, _wristL, _lHandRest * Quaternion.Euler(_handRotOffsetL), _lLowerRest);
+            SolveArm(_rUpperArm, _rLowerArm, _rHand, _wristR, _rHandRest * Quaternion.Euler(_handRotOffsetR), _rLowerRest);
         }
 
         /// <summary>
@@ -63,7 +76,7 @@ namespace TossZone.Player
         /// triangle + the hint pole, aim the upper bone at it, aim the forearm at the target. Deterministic — the
         /// arm never contorts, regardless of the model's bone-axis convention.
         /// </summary>
-        private void SolveArm(Transform upper, Transform lower, Transform hand, Transform target, Quaternion handRot)
+        private void SolveArm(Transform upper, Transform lower, Transform hand, Transform target, Quaternion handRot, Quaternion lowerRest)
         {
             if (upper == null || lower == null || hand == null || target == null) return;
 
@@ -87,7 +100,11 @@ namespace TossZone.Player
             Vector3 elbow = a + atDir * proj + pole * height;
 
             upper.rotation = Quaternion.FromToRotation(lower.position - a, elbow - a) * upper.rotation;
-            lower.rotation = Quaternion.FromToRotation(hand.position - lower.position, target.position - lower.position) * lower.rotation;
+            // Stateless forearm roll: reconstruct from captured bind offset rather than accumulating deltas.
+            // LookRotation(fwd) gives a neutral roll reference; lowerRest rotates it back to bind-pose roll.
+            Vector3 forearmFwd = (target.position - lower.position).normalized;
+            if (forearmFwd.sqrMagnitude > 1e-6f)
+                lower.rotation = Quaternion.LookRotation(forearmFwd) * lowerRest;
 
             // Palm stays aligned with the controller hand via the captured bind offset (no wrist flip).
             hand.rotation = target.rotation * handRot;

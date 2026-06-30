@@ -21,7 +21,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: New Material 1
-  m_Shader: {fileID: 4800000, guid: 38aad05786d3ec46827bd0f559899dfd, type: 3}
+  m_Shader: {fileID: 4800000, guid: 5c4c2777e8261ca40902cb6597046d5f, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -126,7 +126,7 @@ Material:
     - _OcclusionStrength: 1
     - _Parallax: 0.005
     - _QueueOffset: 0
-    - _RampSmooth: 1
+    - _RampSmooth: 0
     - _RampSteps: 2.37
     - _RampTexToggle: 0
     - _ReceiveShadows: 1
@@ -137,8 +137,8 @@ Material:
     - _RimToggle: 0
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
-    - _SpecSize: 0.325
-    - _SpecStrength: 0.68
+    - _SpecSize: 0
+    - _SpecStrength: 2
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
