@@ -266,6 +266,37 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &1082272428070368818
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2303435564012624083}
+  m_Layer: 0
+  m_Name: BladeTip
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2303435564012624083
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1082272428070368818}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0.35}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7685845686349916651}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1175760677720475776
 GameObject:
   m_ObjectHideFlags: 0
@@ -708,6 +739,7 @@ Transform:
   m_Children:
   - {fileID: 8270880108385499334}
   - {fileID: 2069038346092855076}
+  - {fileID: 2303435564012624083}
   m_Father: {fileID: 1492260674991546427}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &865725772801836624
@@ -1026,14 +1058,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e99f8265640db7e4bacdd82ca00b0a3b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TossZone.Throwing.ThrowController
-  _config: {fileID: 0}
-  _projectilePrefab: {fileID: 0}
-  _heldBallPrefab: {fileID: 0}
+  _config: {fileID: 11400000, guid: 1ac66ba853451a84d9442db1a5ee61fd, type: 2}
+  _projectilePrefab: {fileID: 2983061311041850839, guid: 30a25f488bb6abc428d810951d30cdb8, type: 3}
+  _heldBallPrefab: {fileID: 7984634097529775090, guid: cadd7f6dea8e568489d55ec2e8dbb7fa, type: 3}
   _showVisualHeldBall: 1
   _rightHand: 1
   _debugThrowKey: 34
   _editorGripKey: 21
-  _netProjectilePrefab: {fileID: 0}
+  _netProjectilePrefab: {fileID: 5391802754855499962, guid: e9c3d2cc37b0f9645959450117c020bf, type: 3}
 --- !u!114 &2037327525173968736
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1048,7 +1080,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TossZone.Throwing.HandWeapon
   _rightHand: 1
   _muzzle: {fileID: 2069038346092855076}
-  _bladeTip: {fileID: 0}
+  _bladeTip: {fileID: 2303435564012624083}
   _defaultNetProjPrefab: {fileID: 5391802754855499962, guid: e9c3d2cc37b0f9645959450117c020bf, type: 3}
   _hitscanRange: 20
   _hitscanMask:
@@ -1177,7 +1209,7 @@ SphereCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
@@ -1534,6 +1566,18 @@ PrefabInstance:
     - target: {fileID: 6018595179232392466, guid: bfb30af0737387c43999459a3178c3c5, type: 3}
       propertyPath: m_Layer
       value: 14
+      objectReference: {fileID: 0}
+    - target: {fileID: 7525665654078303818, guid: bfb30af0737387c43999459a3178c3c5, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -3.52212e-11
+      objectReference: {fileID: 0}
+    - target: {fileID: 7525665654078303818, guid: bfb30af0737387c43999459a3178c3c5, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.002649946
+      objectReference: {fileID: 0}
+    - target: {fileID: 7525665654078303818, guid: bfb30af0737387c43999459a3178c3c5, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -2.947331e-12
       objectReference: {fileID: 0}
     - target: {fileID: 7865713219811174196, guid: bfb30af0737387c43999459a3178c3c5, type: 3}
       propertyPath: m_Layer

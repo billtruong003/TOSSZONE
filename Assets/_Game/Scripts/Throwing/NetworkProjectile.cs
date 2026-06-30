@@ -59,15 +59,20 @@ namespace TossZone.Throwing
                 if (VelocityScale <= 0f) VelocityScale = 1f;
                 if (AreaScale <= 0f) AreaScale = 1f;
             }
+            // Physics-driven path (DummyBotDriver): authority runs Rigidbody, proxies use kinematic NT.
+            if (TryGetComponent(out Rigidbody rb))
+                rb.isKinematic = !HasStateAuthority;
         }
 
         public override void FixedUpdateNetwork()
         {
-            if (!HasStateAuthority || _localProjectile == null) return;
-            // Mirror the local BillTween-driven transform every tick; NT sends the delta to all proxies.
-            transform.SetPositionAndRotation(_localProjectile.position, _localProjectile.rotation);
+            if (!HasStateAuthority) return;
 
-            // Hit detection runs only on the authority (the shooter). One hit per projectile.
+            // Mirror BillTween-driven position when linked to a local ThrowProjectile (player throw path).
+            if (_localProjectile != null)
+                transform.SetPositionAndRotation(_localProjectile.position, _localProjectile.rotation);
+
+            // Hit detection runs on the authority regardless of how the projectile moves.
             if (_hasHit) return;
             int n = Physics.OverlapSphereNonAlloc(transform.position, _hitRadius * AreaScale, _overlap, _hittableMask, QueryTriggerInteraction.Collide);
             for (int i = 0; i < n; i++)
@@ -80,7 +85,7 @@ namespace TossZone.Throwing
                 if (victim.Object.InputAuthority == Shooter) continue;
                 _hasHit = true;
                 victim.RPC_TakeHit(_baseDamage, transform.position, Shooter);
-                if (PlayerCombat.Local != null) PlayerCombat.Local.RewardHit();   // reward the shooter (authority = local)
+                if (PlayerCombat.Local != null) PlayerCombat.Local.RewardHit();
                 break;
             }
         }

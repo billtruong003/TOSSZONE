@@ -20,7 +20,17 @@ MonoBehaviour:
   showOverlayOnStartup: 0
   enableTracing: 1
   defaultNetworkMode: 2
-  defaultPools: []
+  defaultPools:
+  - key: throwprojectile
+    prefab: {fileID: 2983061311041850839, guid: 30a25f488bb6abc428d810951d30cdb8, type: 3}
+    warmCount: 5
+    maxSize: 20
+    autoReturnTime: 0
+  - key: rewardtext
+    prefab: {fileID: 3775340835287890016, guid: 1c1bef96ddf98c9478cc7e90fdfdde88, type: 3}
+    warmCount: 5
+    maxSize: 20
+    autoReturnTime: 0
   defaultAudioLibrary: {fileID: 0}
   masterVolume: 1
   musicVolume: 0.8

@@ -480,8 +480,10 @@ MonoBehaviour:
   _roundDuration: 120
   _warmupDuration: 5
   _roundEndDuration: 4
-  _spawnPointsA: []
-  _spawnPointsB: []
+  _spawnPointsA:
+  - {fileID: 379173921}
+  _spawnPointsB:
+  - {fileID: 1716991296}
   _ringSpawner: {fileID: 1358483356}
   _Phase: 0
   _Round: 0
