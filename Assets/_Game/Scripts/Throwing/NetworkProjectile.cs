@@ -27,6 +27,9 @@ namespace TossZone.Throwing
         [SerializeField] private float _hitRadius = 0.3f;
         [Tooltip("Layers the projectile can hit (the networked avatar bodies).")]
         [SerializeField] private LayerMask _hittableMask = ~0;
+        [Tooltip("Authority despawns the projectile after this many seconds (backstop; player throws also " +
+                 "despawn early on BallLanded). Prevents bot/orphan projectiles from leaking forever.")]
+        [SerializeField] private float _lifetime = 5f;
 
         /// <summary>Who fired this — excluded from its own hits + rewarded on a landed hit.</summary>
         [Networked] public PlayerRef Shooter { get; set; }
@@ -38,6 +41,7 @@ namespace TossZone.Throwing
         [Networked] public int Element { get; set; }         // 0 None · 1 Ice · 2 Fire
 
         private bool _hasHit;
+        private float _age;
         private static readonly Collider[] _overlap = new Collider[8];
 
         /// <summary>
@@ -48,6 +52,13 @@ namespace TossZone.Throwing
 
         public override void Spawned()
         {
+            // Reset per-life plain state — a pooled instance keeps stale fields from its previous life
+            // (Fusion resets [Networked] state, but not these). Without this a reused projectile carries
+            // _hasHit=true (never hits again) or a leftover _localProjectile link.
+            _hasHit = false;
+            _age = 0f;
+            _localProjectile = null;
+
             _mr = GetComponentInChildren<Renderer>();
             // Authority sees the real local ThrowProjectile; hide the network copy to avoid doubling.
             // Proxies keep it enabled — they have no local projectile, so this IS the ball for them.
@@ -61,12 +72,20 @@ namespace TossZone.Throwing
             }
             // Physics-driven path (DummyBotDriver): authority runs Rigidbody, proxies use kinematic NT.
             if (TryGetComponent(out Rigidbody rb))
+            {
                 rb.isKinematic = !HasStateAuthority;
+                rb.linearVelocity = Vector3.zero;   // clear stale velocity on pooled reuse
+                rb.angularVelocity = Vector3.zero;
+            }
         }
 
         public override void FixedUpdateNetwork()
         {
             if (!HasStateAuthority) return;
+
+            // Lifetime backstop → despawn (recycled by the pool). Fixes bot/orphan projectiles leaking forever.
+            _age += Runner.DeltaTime;
+            if (_age >= _lifetime) { Runner.Despawn(Object); return; }
 
             // Mirror BillTween-driven position when linked to a local ThrowProjectile (player throw path).
             if (_localProjectile != null)

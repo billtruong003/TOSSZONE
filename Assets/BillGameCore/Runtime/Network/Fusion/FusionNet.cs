@@ -367,8 +367,9 @@ namespace BillGameCore
 
         INetworkObjectProvider GetOrAddObjectProvider()
         {
-            var op = _runner.GetComponent<NetworkObjectProviderDefault>();
-            if (op == null) op = _runner.gameObject.AddComponent<NetworkObjectProviderDefault>();
+            // Pooling provider: recycles NetworkPoolable prefabs (projectiles) instead of Instantiate/Destroy.
+            var op = _runner.GetComponent<PooledNetworkObjectProvider>();
+            if (op == null) op = _runner.gameObject.AddComponent<PooledNetworkObjectProvider>();
             return op;
         }
 
