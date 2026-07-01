@@ -6,8 +6,10 @@
 >
 > **Stack:** Fusion 2.0.12 · Shared Mode · NO Physics Addon · BillGameCore · AutoHand · Unity 6000.3 · Quest/Android
 >
-> **Doc anh em:** `Docs/Networking_Architecture.md` — playbook thiết kế (patterns rút từ Shmackle + roadmap đầy đủ
-> + hệ player `Bill.Players`). Doc NÀY = trạng thái sống + bài học thực tế; doc kia = "xây gì & tại sao".
+> **Phạm vi (cập nhật Session 10):** doc NÀY = bài học kiến trúc bền (IK, InputSystem, scene-load, juice-local,
+> lifecycle) — vẫn đúng, đọc để hiểu netcode/avatar. Nhưng phần **roadmap** trong doc này (Phần 3.1 các task
+> S2..S9, Phần 5 thứ tự build) ĐÃ CŨ — roadmap sống hiện ở `Docs/TASKS_MASTER.md`. Playbook Shmackle/Bill.Players
+> đã chuyển vào `Docs/deprecated/Networking_Architecture.md`.
 
 ---
 

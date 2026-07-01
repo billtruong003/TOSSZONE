@@ -1,7 +1,7 @@
 # TOSSZONE — Master Task List (audit + hướng đã sửa)
 
 > Cập nhật: Session 10 (2026-07-01). Đây là danh sách tổng đã audit theo THỰC TẾ chạy được, thay cho
-> `Docs/tasks.json` (tracker cũ 122 task, over-report "Done"). Quy ước: ✅ xong+verify · 🟡 code xong chưa
+> `Docs/deprecated/tasks.json` (tracker cũ 122 task, over-report "Done"). Quy ước: ✅ xong+verify · 🟡 code xong chưa
 > verify · ⬜ chưa làm · ❌ bug đang mở.
 
 ## Ghi chú audit (đọc trước)
@@ -72,7 +72,7 @@
 - ⬜ **Phase 2 audit** — rà PlayerSpawnManager, PortalMatchmaker, MinigameManager, ThrowController spawn/despawn cho khớp network layer mới (sau pool).
 - ⬜ **2-player verify (ParrelSync)** — thấy nhau di chuyển, held ball đúng tay, ném trúng nhau pip giảm đúng bên. (cả loạt task 1.x "Pending 2-player verify")
 - ⬜ **Buff-ring Shared Mode RPC** — ring dán buff qua RPC về authority của đạn, cho chạy đúng multi-client (giờ chỉ đúng solo master).
-- ⬜ Additive scene, Bill.Players — để sau cùng.
+- ⬜ **Bill.Players** (hệ player cấp cao) + **additive scene loading** — CHƯA build. Thiết kế đầy đủ nằm ở `deprecated/Networking_Architecture.md` §2/§7 (playbook Shmackle). Networking core + pool đã xong; hai cái này là phần networking còn thiếu, để sau cùng.
 
 ## G. Polish / juice (Throw spec S4-S8, đều Todo)
 
