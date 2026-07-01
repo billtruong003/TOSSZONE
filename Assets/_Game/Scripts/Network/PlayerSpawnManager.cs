@@ -22,6 +22,10 @@ namespace TossZone.Network
 
         private bool _initialized;
 
+        // Guards the async gap between net.Spawn() returning and NetworkAvatar.Spawned() setting Local. Static so
+        // it spans the Main->Arena transition, where a fresh PlayerSpawnManager instance takes over spawning.
+        private static bool _spawnInFlight;
+
         private void OnEnable() => TryInit();
 
         // Bootstrap may not be finished when this scene's objects enable (e.g. Play from any scene),
@@ -70,21 +74,32 @@ namespace TossZone.Network
             // DontDestroyOnLoad PlayerRig), so a single avatar carries Main -> Arena. Fusion's player-object
             // registry does NOT survive that load, so guarding only on TryGetPlayerObject would spawn a second
             // avatar in the new scene. Guard on the live avatar instead, and re-register it if the registry lost it.
-            if (NetworkAvatar.Local != null)
+            // Reuse the surviving local avatar. It is DontDestroyOnLoad, so it carries across a Single-mode load;
+            // treat a stale/invalid reference as "gone" so a genuinely despawned avatar can still respawn.
+            NetworkAvatar local = NetworkAvatar.Local;
+            if (local != null && local.Object != null && local.Object.IsValid)
             {
+                _spawnInFlight = false; // the avatar is settled; clear any pending flag
                 if (!net.TryGetPlayerObject(net.LocalPlayer, out _))
-                    net.SetPlayerObject(net.LocalPlayer, NetworkAvatar.Local.Object);
+                    net.SetPlayerObject(net.LocalPlayer, local.Object);
                 return;
             }
+
+            // A spawn is already pending (net.Spawn returned but Spawned() hasn't set Local yet). TrySpawn is driven
+            // from BOTH OnConnected and OnSceneLoaded, which fire together on scene entry — without this guard both
+            // calls spawn before Local is set, producing two overlapping avatars.
+            if (_spawnInFlight) return;
+
             if (net.TryGetPlayerObject(net.LocalPlayer, out _)) return; // already have a player
 
             if (PlayerRig.Local == null)
                 Debug.LogWarning("[PlayerSpawn] No local PlayerRig found — the avatar will spawn but won't follow you. " +
                                  "Add an AutoHand rig with a PlayerRig component to the scene.");
 
+            _spawnInFlight = true;
             NetworkObject obj = net.Spawn(
                 _avatarPrefab, transform.position, transform.rotation, net.LocalPlayer, OnBeforeSpawned);
-            if (obj == null) return;
+            if (obj == null) { _spawnInFlight = false; return; }
 
             net.SetPlayerObject(net.LocalPlayer, obj);
             Debug.Log("[PlayerSpawn] Spawned local avatar at " + transform.position);

@@ -88,6 +88,11 @@ namespace TossZone.Player
             {
                 // Claim the local-avatar slot so the spawn manager won't spawn a second one after a scene load.
                 Local = this;
+                // Survive Single-mode networked scene loads (hub -> arena) like the DDOL PlayerRig we follow.
+                // Otherwise Fusion despawns this avatar with the unloading scene (it lives in that scene), Local
+                // clears, and the destination scene's PlayerSpawnManager double-spawns -> two overlapping bodies.
+                // Staying alive keeps Local valid so the spawn guard reuses this one avatar across the load.
+                DontDestroyOnLoad(gameObject);
                 gameObject.name = "Avatar (Local)";
                 // First-person + mirror: put the OWN avatar mesh on the "RemoteVisual" layer. The main camera
                 // CULLS that layer (you don't see yourself from inside your own head) while the MIRROR camera
