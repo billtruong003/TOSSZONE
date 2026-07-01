@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: BillBootstrapConfig
   m_EditorClassIdentifier: Assembly-CSharp::BillGameCore.BillBootstrapConfig
   enforceBootstrapScene: 1
-  defaultGameScene: 
+  defaultGameScene: 00_Bootstrap
   returnToEditSceneInEditor: 1
   includeDebugOverlay: 1
   includeCheatConsole: 1
