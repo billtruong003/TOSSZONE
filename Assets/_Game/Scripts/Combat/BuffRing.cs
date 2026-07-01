@@ -27,6 +27,9 @@ namespace TossZone.Combat
         /// <summary>The 5 ring configs indexed by RingElement value — assign on the prefab (shared across all instances).</summary>
         [SerializeField] private BuffRingConfig[] _catalog = new BuffRingConfig[5];
 
+        [Tooltip("Gravity applied to the Multi-ring burst rain (arc). Higher = falls faster.")]
+        [SerializeField] private float _burstGravity = 2f;
+
         private static readonly int _colorId = Shader.PropertyToID("_BaseColor");
         private MaterialPropertyBlock _block;
 
@@ -134,8 +137,17 @@ namespace TossZone.Combat
 
         private void ApplyBuff(NetworkProjectile proj)
         {
-            if (_config.multiplier > 1)
-                proj.Multiplier = Mathf.Min(proj.Multiplier + _config.multiplier - 1, 3);
+            // Multi ring → convert the single ball into a data-driven BURST (the "rain") aimed along its travel,
+            // then consume the original. The burst is DATA, not N NetworkObjects (see ProjectileBurstSystem).
+            if (_config.element == RingElement.Multi && ProjectileBurstSystem.Instance != null)
+            {
+                int count = Mathf.Max(2, _config.multiplier);
+                ProjectileBurstSystem.Instance.SpawnBurst(
+                    proj.transform.position, proj.transform.forward, count, _burstGravity, (int)_config.element, proj.Shooter);
+                if (proj.Runner != null && proj.Object != null && proj.Object.IsValid) proj.Runner.Despawn(proj.Object);
+                return;
+            }
+
             if (_config.velocityScale > 1f)
                 proj.VelocityScale = Mathf.Max(proj.VelocityScale, _config.velocityScale);
             if (_config.areaScale > 1f)

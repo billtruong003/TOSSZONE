@@ -17,7 +17,7 @@ MonoBehaviour:
   element: 3
   ringColor: {r: 1, g: 0.9, b: 0.1, a: 1}
   icon: {fileID: 0}
-  multiplier: 3
+  multiplier: 40
   velocityScale: 1
   areaScale: 1
   shieldSelf: 0
