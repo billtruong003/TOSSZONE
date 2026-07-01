@@ -58,9 +58,14 @@ namespace TossZone.Combat
             if (proj != null && proj.TryGetComponent(out NetworkProjectile np))
             {
                 np.Shooter = PlayerRef.None;
-                // Velocity applied via Rigidbody if present (basic approach for bot throws).
+                // Velocity applied via Rigidbody if present (basic approach for bot throws). Gravity OFF so the
+                // shot flies straight to the aimed chest point — with gravity + the low muzzle speed it dropped
+                // below the target (and through the floor) long before covering the distance, never hitting.
                 if (proj.TryGetComponent(out Rigidbody rb))
+                {
+                    rb.useGravity = false;
                     rb.linearVelocity = dir * _muzzleSpeed;
+                }
             }
         }
 
