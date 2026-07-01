@@ -1,4 +1,5 @@
 #if PHOTON_FUSION
+using BillGameCore;
 using Fusion;
 using TossZone.Combat;
 using TossZone.Throwing;
@@ -51,6 +52,12 @@ namespace TossZone.Player
         /// <summary>True while this player has a ball in hand (visible to all clients as a sphere on the wrist).</summary>
         [Networked] public bool HoldingBall { get; set; }
 
+        [Header("Respawn")]
+        [Tooltip("Seconds after Health hits 0 before the player restores + teleports back to spawn.")]
+        [SerializeField] private float _respawnDelay = 3f;
+        [Networked] private TickTimer RespawnTimer { get; set; }
+        private PlayerCombat _combat;
+
         private static readonly Color[] _palette =
         {
             new Color(0.92f, 0.24f, 0.24f), // 0 red
@@ -72,16 +79,16 @@ namespace TossZone.Player
 
             // Bind the HealthUI (child of this prefab) to the PlayerCombat on this NetworkObject.
             HealthUI healthUI = GetComponentInChildren<HealthUI>();
-            PlayerCombat combat = GetComponent<PlayerCombat>();
-            if (healthUI != null && combat != null) healthUI.Bind(combat);
+            _combat = GetComponent<PlayerCombat>();
+            if (healthUI != null && _combat != null) healthUI.Bind(_combat);
 
             // Initialize per-hand weapon dispatcher and wrist selector (authority = local player only).
-            if (HasStateAuthority && combat != null)
+            if (HasStateAuthority && _combat != null)
             {
                 foreach (HandWeapon hw in GetComponentsInChildren<HandWeapon>())
-                    hw.Initialize(combat, Runner);
+                    hw.Initialize(_combat, Runner);
                 WristWeaponSelector wws = GetComponentInChildren<WristWeaponSelector>();
-                wws?.Initialize(combat);
+                wws?.Initialize(_combat);
             }
 
             if (HasStateAuthority)
@@ -119,6 +126,9 @@ namespace TossZone.Player
         public override void FixedUpdateNetwork()
         {
             if (!HasStateAuthority) return;
+
+            HandleRespawn();
+
             PlayerRig rig = PlayerRig.Local;
             if (rig == null || rig.Root == null) return;
 
@@ -139,6 +149,44 @@ namespace TossZone.Player
 
             // Held-ball state driven from the local throw controller (static bool, zero overhead).
             HoldingBall = TossZone.Throwing.ThrowController.LocalHoldingBall;
+        }
+
+        // ── Death + respawn (authority = the local owner in Shared Mode) ────────────────
+        // On death, wait _respawnDelay then restore health and teleport the local VR rig back to a spawn point.
+        // Expiry is checked BEFORE (re)arming so the timer doesn't re-arm on the expiry tick (see DummyAvatar).
+        private void HandleRespawn()
+        {
+            if (_combat == null) return;
+
+            if (RespawnTimer.Expired(Runner))
+            {
+                RespawnTimer = default;
+                _combat.ResetForRound();          // Health -> Max (networked, PlayerDied already fired on death)
+                TeleportToSpawn();                // move the local rig (no-op if there's no local rig)
+                if (Bill.IsReady) Bill.Events.Fire(new PlayerRespawnedEvent { IsLocal = true });
+            }
+            else if (_combat.Health <= 0 && !RespawnTimer.IsRunning)
+            {
+                RespawnTimer = TickTimer.CreateFromSeconds(Runner, _respawnDelay);
+            }
+        }
+
+        private void TeleportToSpawn()
+        {
+            PlayerRig rig = PlayerRig.Local;
+            if (rig == null) return;   // headless / direct-arena: health restored, nothing to move
+            Vector3 pos = ResolveSpawnPos();
+            Autohand.AutoHandPlayer ahp = rig.GetComponentInChildren<Autohand.AutoHandPlayer>()
+                                          ?? FindFirstObjectByType<Autohand.AutoHandPlayer>();
+            if (ahp != null) ahp.SetPosition(pos);
+            else if (rig.Root != null) rig.Root.position = pos;
+        }
+
+        private Vector3 ResolveSpawnPos()
+        {
+            ArenaManager arena = FindFirstObjectByType<ArenaManager>();
+            if (arena != null) return arena.GetSpawnPosition(Object.InputAuthority);
+            return transform.position;   // fallback: restore where you died
         }
 
         public override void Render()

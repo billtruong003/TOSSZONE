@@ -16,6 +16,9 @@ namespace TossZone.Combat
     /// <summary>A player's health reached 0 (fired on the victim's client).</summary>
     public struct PlayerDiedEvent : IEvent { public bool IsLocal; }
 
+    /// <summary>A player respawned after the death delay (fired on the victim's client).</summary>
+    public struct PlayerRespawnedEvent : IEvent { public bool IsLocal; }
+
     /// <summary>The LOCAL player's money changed — for the wrist weapon-selector UI.</summary>
     public struct MoneyChangedEvent : IEvent { public int Money; }
 

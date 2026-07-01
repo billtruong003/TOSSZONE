@@ -171,6 +171,15 @@ namespace TossZone.Combat
             foreach (PlayerCombat pc in PlayerCombat.AllInstances)
                 pc.ResetForRound();
         }
+
+        /// <summary>World spawn position for a player, by team (PlayerId % 2 → A/B). Used by respawn.
+        /// Falls back to this object's position when spawn points aren't wired.</summary>
+        public Vector3 GetSpawnPosition(PlayerRef player)
+        {
+            Transform[] pts = (player.PlayerId % 2 == 0) ? _spawnPointsA : _spawnPointsB;
+            if (pts != null && pts.Length > 0 && pts[0] != null) return pts[0].position;
+            return transform.position;
+        }
     }
 }
 #endif
