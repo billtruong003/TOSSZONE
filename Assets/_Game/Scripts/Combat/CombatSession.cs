@@ -27,6 +27,7 @@ namespace TossZone.Combat
         public WeaponConfig[] CurrentCatalog { get; private set; }
 
         private bool _roundRunning;
+        private bool _subscribed;
 
         private void Awake()
         {
@@ -35,35 +36,32 @@ namespace TossZone.Combat
             DontDestroyOnLoad(gameObject);
         }
 
-        private void OnEnable()
-        {
-            if (!Bill.IsReady) { Bill.Events.Subscribe<GameReadyEvent>(OnReady); return; }
-            Subscribe();
-        }
+        private void OnEnable() => TrySubscribe();
 
-        private void OnReady(GameReadyEvent _)
+        // As a scene object, OnEnable can run BEFORE BillBootstrap registers the EventBus (touching
+        // Bill.Events then throws — the service doesn't exist yet). Poll Bill.IsReady in Update and only
+        // subscribe once the bus is live, mirroring PlayerSpawnManager.
+        private void TrySubscribe()
         {
-            Bill.Events.Unsubscribe<GameReadyEvent>(OnReady);
-            Subscribe();
-        }
-
-        private void OnDisable()
-        {
-            if (!Bill.IsReady) return;
-            Bill.Events.Unsubscribe<MinigameEnteredEvent>(OnMinigameEntered);
-            Bill.Events.Unsubscribe<MinigameExitedEvent>(OnMinigameExited);
-            Bill.Events.Unsubscribe<RoundEndEvent>(OnRoundEnd);
-        }
-
-        private void Subscribe()
-        {
+            if (_subscribed || !Bill.IsReady) return;
+            _subscribed = true;
             Bill.Events.Subscribe<MinigameEnteredEvent>(OnMinigameEntered);
             Bill.Events.Subscribe<MinigameExitedEvent>(OnMinigameExited);
             Bill.Events.Subscribe<RoundEndEvent>(OnRoundEnd);
         }
 
+        private void OnDisable()
+        {
+            if (!_subscribed || !Bill.IsReady) return;
+            _subscribed = false;
+            Bill.Events.Unsubscribe<MinigameEnteredEvent>(OnMinigameEntered);
+            Bill.Events.Unsubscribe<MinigameExitedEvent>(OnMinigameExited);
+            Bill.Events.Unsubscribe<RoundEndEvent>(OnRoundEnd);
+        }
+
         private void Update()
         {
+            if (!_subscribed) TrySubscribe();
             if (_roundRunning) RoundElapsed += Time.deltaTime;
         }
 

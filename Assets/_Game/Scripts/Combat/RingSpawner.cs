@@ -67,18 +67,20 @@ namespace TossZone.Combat
         private void SpawnRingAt(int i)
         {
             if (_ringPrefab == null || _spawnPoints == null || i >= _spawnPoints.Length) return;
+
+            // Pick a random element and set it in onBeforeSpawned so it is written BEFORE BuffRing.Spawned()
+            // runs — otherwise Spawned() resolves its config with Element still = None (0 → null slot),
+            // leaving the ring colorless. (Setting Element after Runner.Spawn() is too late.)
+            int pick = Random.Range(1, System.Enum.GetValues(typeof(RingElement)).Length);
             NetworkObject obj = Runner.Spawn(_ringPrefab,
-                _spawnPoints[i].position, _spawnPoints[i].rotation, PlayerRef.None);
+                _spawnPoints[i].position, _spawnPoints[i].rotation, PlayerRef.None,
+                (runner, o) =>
+                {
+                    if (o.TryGetComponent(out BuffRing ring)) ring.Element = (RingElement)pick;
+                });
             if (obj == null) return;
             SlotRings.Set(i, obj.Id);
             RespawnTimers.Set(i, default);
-
-            // Set a random element so Spawned() can resolve the correct config.
-            if (obj.TryGetComponent(out BuffRing ring) && _catalog.Length > 0)
-            {
-                int pick = Random.Range(1, System.Enum.GetValues(typeof(RingElement)).Length);
-                ring.Element = (RingElement)pick;
-            }
         }
 
         private BuffRingConfig PickConfig()

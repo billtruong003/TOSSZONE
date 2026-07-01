@@ -87,11 +87,13 @@ namespace TossZone.Combat
         {
             PlayerRef winner = PlayerRef.None;
             int aliveCount = 0;
+            int realPlayerCount = 0;
             PlayerCombat winnerCombat = null;
 
             foreach (PlayerCombat pc in PlayerCombat.AllInstances)
             {
-                if (!pc.IsPlayer) continue;
+                if (!pc.IsPlayer) continue;   // bots (DummyAvatar) never count
+                realPlayerCount++;
                 if (pc.Health > 0)
                 {
                     aliveCount++;
@@ -100,7 +102,10 @@ namespace TossZone.Combat
                 }
             }
 
-            if (aliveCount <= 1 && PlayerCombat.AllInstances.Count > 0)
+            // Decide a round by elimination only once at least 2 real players are in the match. Gating on the
+            // bot-inclusive AllInstances.Count let a solo player (or a bot-only arena) end the round every tick,
+            // spinning Warmup→Playing→RoundEnd forever and constantly resetting combat health.
+            if (realPlayerCount >= 2 && aliveCount <= 1)
                 EndRound(winner, winnerCombat);
         }
 

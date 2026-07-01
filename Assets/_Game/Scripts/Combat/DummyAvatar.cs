@@ -51,15 +51,18 @@ namespace TossZone.Combat
 
             bool dead = _combat.Health <= 0;
 
-            // Start respawn countdown the moment health hits 0.
-            if (dead && RespawnTimer.ExpiredOrNotRunning(Runner))
-                RespawnTimer = TickTimer.CreateFromSeconds(Runner, _respawnDelay);
-
-            // Timer elapsed → restore health and clear the timer.
+            // Timer elapsed → restore health and clear the timer. Checked BEFORE (re)arming: on the expiry
+            // tick ExpiredOrNotRunning is also true, so arming first would reset the countdown every time it
+            // elapses and the dummy would never respawn.
             if (RespawnTimer.Expired(Runner))
             {
                 RespawnTimer = default;
                 _combat.ResetForRound();
+            }
+            // Start the respawn countdown the moment health hits 0 (only when none is armed yet).
+            else if (dead && !RespawnTimer.IsRunning)
+            {
+                RespawnTimer = TickTimer.CreateFromSeconds(Runner, _respawnDelay);
             }
         }
 
