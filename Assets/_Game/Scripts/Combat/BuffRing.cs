@@ -11,13 +11,13 @@ namespace TossZone.Combat
     /// <see cref="Element"/>; <see cref="Spawned"/> resolves the matching <see cref="BuffRingConfig"/> from
     /// <see cref="Catalog"/> and applies color + label + bounce-in animation.
     ///
-    /// Detection: SphereCollider trigger at the ring center (radius = inner hole radius). A ball passing through
-    /// the hole enters the sphere and triggers the buff — no MeshCollider needed.
+    /// Detection: a convex trigger collider (the ColliderRing mesh) spanning the ring opening. A ball flying
+    /// through the ring enters the trigger and applies the buff.
     ///
     /// Shared Mode note: ring has StateAuthority on master. Buff writes to projectile only when master is also
     /// the projectile's StateAuthority. RPC fix deferred to C5 live launch.
     /// </summary>
-    [RequireComponent(typeof(SphereCollider))]
+    [RequireComponent(typeof(Collider))]
     public class BuffRing : NetworkBehaviour
     {
         [Header("Refs (set on prefab)")]
@@ -39,7 +39,11 @@ namespace TossZone.Combat
         public override void Spawned()
         {
             _block = new MaterialPropertyBlock();
-            GetComponent<SphereCollider>().isTrigger = true;
+            // The prefab carries a convex ColliderRing mesh collider (not a SphereCollider); take whatever
+            // Collider is present and make sure it's a trigger. GetComponent<SphereCollider>() here threw a
+            // MissingComponentException and aborted the rest of Spawned() (no color/label/drift).
+            Collider col = GetComponent<Collider>();
+            if (col != null) col.isTrigger = true;
 
             _config = ResolveConfig();
             ApplyColor();
@@ -95,7 +99,7 @@ namespace TossZone.Combat
 
         private void StartDrift()
         {
-            float amp    = _config != null ? _config.driftAmplitude : 0.2f;
+            float amp = _config != null ? _config.driftAmplitude : 0.2f;
             float period = _config != null && _config.driftPeriod > 0f ? _config.driftPeriod : 3f;
             _driftTween = BillTween.Float(0f, 1f, period, t =>
             {
