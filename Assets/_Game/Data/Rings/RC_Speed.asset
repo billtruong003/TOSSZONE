@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: RC_Speed
   m_EditorClassIdentifier: Assembly-CSharp::TossZone.Combat.BuffRingConfig
   id: ring_speed
-  displayName: "\U0001F4A8 T\u1ED1c \u0110\u1ED9"
+  displayName: "T\u1ED1c \u0110\u1ED9"
   element: 4
   ringColor: {r: 0.4, g: 0.8, b: 1, a: 1}
   icon: {fileID: 0}

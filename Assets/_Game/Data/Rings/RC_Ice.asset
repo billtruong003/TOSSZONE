@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: RC_Ice
   m_EditorClassIdentifier: Assembly-CSharp::TossZone.Combat.BuffRingConfig
   id: ring_ice
-  displayName: "\u2744 B\u0103ng"
+  displayName: "B\u0103ng"
   element: 1
   ringColor: {r: 0.3, g: 0.9, b: 1, a: 1}
   icon: {fileID: 0}

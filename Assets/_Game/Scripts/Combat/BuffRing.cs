@@ -54,6 +54,15 @@ namespace TossZone.Combat
             StartDrift();
         }
 
+        public override void Despawned(NetworkRunner runner, bool hasState)
+        {
+            // Kill any tween still targeting this ring (drift/label/scale) — otherwise it fires after the
+            // GameObject is destroyed and throws MissingReferenceException. Covers despawn paths other than
+            // the consume anim (RingSpawner.ResetRings, respawn cycling).
+            BillTween.KillTarget(this);
+            _driftTween = null;
+        }
+
         // ── Visual setup ──────────────────────────────────────────────────────────────
 
         private BuffRingConfig ResolveConfig()

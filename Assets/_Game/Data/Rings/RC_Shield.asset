@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: RC_Shield
   m_EditorClassIdentifier: Assembly-CSharp::TossZone.Combat.BuffRingConfig
   id: ring_shield
-  displayName: "\U0001F6E1 Ch\u1EAFn"
+  displayName: "Ch\u1EAFn"
   element: 5
   ringColor: {r: 0.6, g: 0.3, b: 1, a: 1}
   icon: {fileID: 0}

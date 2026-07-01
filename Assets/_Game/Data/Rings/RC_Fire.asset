@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: RC_Fire
   m_EditorClassIdentifier: Assembly-CSharp::TossZone.Combat.BuffRingConfig
   id: ring_fire
-  displayName: "\U0001F525 L\u1EEDa"
+  displayName: "L\u1EEDa"
   element: 2
   ringColor: {r: 1, g: 0.35, b: 0, a: 1}
   icon: {fileID: 0}
