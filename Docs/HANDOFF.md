@@ -7,6 +7,7 @@
 | Doc | Khi nào đọc |
 |---|---|
 | **HANDOFF.md** (file này) | Đầu mỗi session — trạng thái + test flow |
+| **GDD_Core_Reference.md** | ⭐ NGUỒN CHÂN LÝ thiết kế (chép từ GDD PDF owner 2026-07-02) — thắng mọi doc khác khi mâu thuẫn. LƯU Ý: không có ring Shield (vòng 5 = Tăng Kích Thước), Băng = freeze không damage, 6 vũ khí (có Bom X, không sword/mine), kinh tế/mạng/sân khác code hiện tại |
 | **TASKS_MASTER.md** | Danh sách task sống (đã audit). Chọn việc tiếp theo ở đây |
 | **TASKS_DETAIL.md** | Chi tiết "làm gì" từng task T1-T17 (✅ XONG HẾT session 11) |
 | **TASKS_WEAPON_UX.md** | ⭐ KẾ HOẠCH SESSION 12: map vision-vs-hiện-trạng weapon UX + task T18-T24 |
@@ -147,10 +148,12 @@ Nếu scene objects dormant khi play thẳng (gate chưa fire): gọi tay `BillG
 
 ## Việc tiếp theo (→ TASKS_WEAPON_UX.md)
 
-T1-T17 xong hết. Session 12 = weapon UX rework theo vision owner: **T19** (held grabbable thật, fix kiếm-ra-bóng)
-→ **T18** (selector nút chọt + view-cone + grab hologram) → **T20** (đạn bay đúng model) → T21/T22 (feedback +
-icon). Backlog BillCore: T23 matchmaking API, T24 host migration. Song song: owner build APK test 2 máy theo
-checklist `T17_Test_Report.html`.
+T1-T17 xong hết. **Đọc `GDD_Core_Reference.md` TRƯỚC** (nguồn chân lý mới — nhiều thứ code đang lệch GDD).
+Session 12 = weapon UX rework: **T19** (held grabbable thật, fix kiếm-ra-bóng) → **T18** (selector nút chọt +
+view-cone + grab hologram) → **T25** (training range) → **T20** (đạn đúng model) → **T27** (RING OVERHAUL theo
+GDD: Shield→Area, Băng=freeze, giá trị theo Tier, stack≤3...) → **T30/T31** (match/economy/weapon theo GDD —
+2 câu hỏi chờ owner chốt trong T31). Backlog: T28 HUD, T23/T32 lobby, T24 host-migration. Song song: owner
+build APK test theo checklist `T17_Test_Report.html`.
 
 ---
 

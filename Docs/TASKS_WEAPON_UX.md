@@ -68,24 +68,33 @@ Master thoát → trận hiện tại chết. `FusionNet` đã expose `HostMigra
 
 ---
 
-## 3. AUDIT design-vs-code — các điểm SAI/CHƯA LÀM mà trước giờ CHƯA NOTE (quét 2026-07-02)
+## 3. AUDIT design-vs-code — các điểm SAI/CHƯA LÀM (quét 2026-07-02)
+
+> ⚠️ **ĐÍNH CHÍNH sau khi owner đưa GDD PDF chính chủ** (đã chép thành `GDD_Core_Reference.md` — NGUỒN
+> CHÂN LÝ mới): bản audit đầu tiên của phần này dựa trên code + Combat_Minigame_Design cũ nên có dòng SAI —
+> **GDD không hề có ring Shield**; vòng thứ 5 là **Tăng Kích Thước (Area)**. Các dòng dưới đã sửa theo GDD.
+> Toàn bộ lệch GDD lớn hơn (kinh tế/mạng/sân/vũ khí/lobby) xem mục 9.
 
 Grep xác nhận: các field sau tồn tại trong config nhưng **KHÔNG CÓ DÒNG CODE NÀO ĐỌC** (design data chết):
 
 | Field / cơ chế | Design nói gì | Code thực tế | Task |
 |---|---|---|---|
-| `fuseDelay` (LandMine) | Ném/đặt xuống → ARM → người đạp/hết fuse → nổ AoE | Không được đọc — LandMine bay y hệt grenade thường | T26 |
+| `fuseDelay` (LandMine) | Ném/đặt xuống → ARM → người đạp/hết fuse → nổ AoE *(lưu ý: LandMine KHÔNG có trong GDD — số phận chốt ở T31)* | Không được đọc — LandMine bay y hệt grenade thường | T26/T31 |
 | `laserSight` (Gun/Bazooka) | Dot/line laser từ nòng để nhắm | Không được đọc — không có laser | T26 |
 | `magazine` | >0 = hết băng phải chờ/mua | Không được đọc — bắn vô hạn | T26 |
 | `costPerUse` + PayPerUse | "Mỗi phát tốn tiền" (design nghiêng PayPerUse cho đa số vũ khí) | Code trừ **Ammo** chứ không trừ tiền; VÀ cả 7 config đang set **BuyOnce** hết — data lẫn code đều lệch design | T26 (cần owner chốt lại: PayPerUse hay BuyOnce cho từng món) |
-| `shieldSelf` / **Ring Chắn Đạn** | Chủ nhân được shield | **Ring Shield là NO-OP hoàn toàn** — chỉ set Element=5 lên đạn, không có behavior shield nào | T27 |
-| `VelocityScale` / **Ring Tốc Độ** | Đạn nhanh hơn +20%→+100% | Ring SET giá trị vào projectile nhưng **không chỗ nào nhân vào vận tốc bay thật** → ring Tốc Độ cũng NO-OP (chỉ AreaScale là ăn thật vào hit radius) | T27 |
-| Stack "tối đa 3 vòng/viên" | Xuyên nhiều ring → buff cộng dồn, trần 3 | Code dùng `Mathf.Max(cũ, mới)` → **không stack gì cả**, xuyên 2 ring Tốc Độ = như 1 | T27 |
-| Buff "theo Tier" (Ice/Fire) | Giá trị tường băng/vùng lửa scale theo Tier ring | BuffZone damage/duration cố định, Tier chỉ ảnh hưởng rarity+tốc trôi (T11) | T27 |
+| **Ring thứ 5 SAI DANH TÍNH** | GDD: vòng 5 = **Tăng Kích Thước (Area)** x1.25→x2.25 — **KHÔNG có ring Shield nào** | Code enum đặt `Shield=5` + field `shieldSelf` (bịa, không trong GDD) + asset `RC_Shield` — và cũng NO-OP luôn | T27 |
+| **Ring Băng SAI CƠ CHẾ** | GDD: Băng **ĐÓNG BĂNG người (KHÔNG damage)**; tường băng freeze khi chạm; **dính damage thì băng giải trừ**; tường sống theo Tier (1-3s) | BuffZone Ice đang GÂY DAMAGE 1 lần khi chạm + tan khi trúng đạn — cơ chế freeze (khóa movement/hands) hoàn toàn chưa có | T27 |
+| **Ring Lửa lệch thông số** | GDD: đi qua **mất 1 mạng/lần**; vùng sống theo Tier **1-3 giây** | Code: DoT 1 máu/giây khi đứng trong + sống tới hết hiệp (90s failsafe) | T27 |
+| `VelocityScale` / **Ring Tốc Độ** | Đạn nhanh hơn +20%→+100% theo Tier | Ring SET giá trị vào projectile nhưng **không chỗ nào nhân vào vận tốc bay thật** → NO-OP (chỉ AreaScale là ăn thật vào hit radius) | T27 |
+| Stack "tối đa 3 vòng/viên" | Xuyên nhiều ring → buff cộng dồn, trần 3 vòng | Code dùng `Mathf.Max(cũ, mới)` → **không stack gì cả**, xuyên 2 ring = như 1 | T27 |
+| **Giá trị buff DO TIER quyết định** | Ma trận GDD: Multi x2→x15, Area x1.25→x2.25, Velocity +20→+100%, Băng/Lửa 1→3s; đường kính ring 1.8m→0.6m; tốc trôi 1→3.5m/s | BuffRingConfig 1 giá trị tĩnh/element (`RC_Multi.multiplier=40` — GDD max x15!); Tier không scale giá trị/đường kính; bảng weight T11 là placeholder ≠ số GDD | T27 |
+| Anti-dup Tier 4-5 | GDD: tối đa **1 vòng T4** và **1 vòng T5** cùng lúc (bất kể loại; cùng tên khác tier vẫn OK) | T11 đang chặn theo cùng-ELEMENT tier≥4 — sai rule | T27 |
+| Quỹ đạo ring | GDD: **trôi ngang liên tục mép trái↔phải** | T9: wander Perlin ngẫu nhiên trong box (owner từng mô tả miệng "random ở giữa" — ❓cần owner chốt: GDD drift ngang hay wander) | T27 |
 | Nổ AoE khi chạm đất | Grenade/BigBoom chạm đất là nổ | **Chỉ nổ khi overlap NGƯỜI** — ném hụt là bay tới hết lifetime rồi biến mất, không nổ | T26 |
 | Effect nổ AoE | Cầu lửa/shockwave to theo `aoeRadius` | **CHƯA CÓ** — ImpactBurst nhỏ chỉ nổ khi trúng người/chạm đất đường ném | T26 |
 | `isUncatchable` | Đạn súng/power throw KHÔNG bắt được | CatchController đang đoán qua `Element != 0` (comment trong code tự nhận "extend once networked") | T26 |
-| Kiếm rút sau lưng | Design §9: đeo SAU LƯNG, với tay ra sau để RÚT (over-shoulder draw) | Equip qua selector như mọi vũ khí | T29 |
+| Kiếm rút sau lưng | Combat_Minigame_Design cũ §9: đeo SAU LƯNG, với tay ra sau RÚT *(Sword KHÔNG có trong GDD — số phận chốt ở T31)* | Equip qua selector như mọi vũ khí | T29/T31 |
 | Heckle khán đài | Chết → ra khán đài ném Egg/Tomato/Poop chọc người sống | Chưa build gì (prefab `MS_WP_Egg/Poop/Tomato` có sẵn) | backlog |
 | Ring spawn nhiều | — | `RingSpawner` capacity 8 slot, đang config 3 — chỉnh `_slotCount` inspector là ra nhiều; CHƯA test >3 | T25 test |
 
@@ -142,7 +151,7 @@ Format mỗi phase: ✅ có · 🟡 tạm/thiếu 1 phần · ❌ chưa có.
 **Mục tiêu:** khu tập bắn kiểu training — test ring + mọi vũ khí không tốn tiền, không cần vào trận.
 **Làm gì:**
 - **Vị trí:** dựng ngay trong hub `01_TOSSZONE_Main` (hub = sân tập, đúng chất Gorilla-Tag; khỏi thêm scene/build index). Nếu owner muốn scene riêng `03_Training` thì nói lại.
-- **Hàng nút RING:** 5-6 cube mesh có collider (mỗi nút 1 loại: Băng/Lửa/Đạn Mưa/Tốc Độ/Chắn + 1 nút "random x8"), chọt tay + bóp trigger → spawn ring loại đó trước mặt (RingSpawner API thêm `SpawnSpecific(element, tier)`); nút thêm để test **spawn NHIỀU ring** (capacity 8 đã hỗ trợ, chưa test >3).
+- **Hàng nút RING:** 5-6 cube mesh có collider (mỗi nút 1 loại theo GDD: **Số Lượng/Tốc Độ/Băng/Lửa/Kích Thước** + 1 nút "random x8"), chọt tay + bóp trigger → spawn ring loại đó trước mặt (RingSpawner API thêm `SpawnSpecific(element, tier)`); nút thêm để test **spawn NHIỀU ring** (capacity 8 đã hỗ trợ, chưa test >3). GDD gọi khu này là "Khu Khởi Động (Warm-up Target)" — có thể thêm máy bắn bóng sau.
 - **Hàng nút VŨ KHÍ:** 7 cube (mỗi vũ khí 1 nút) — chọt + trigger → equip FREE (không tiền/unlock). Cần cờ `CombatSession.TrainingMode` (KHÔNG dùng cheat DEV-only — phải chạy cả build thường) + fire `MinigameEnteredEvent` tại hub để catalog sống ngoài arena.
 - **Targets:** 2-3 DummyAvatar đứng các khoảng cách + tường để test đạn xuyên/nổ.
 - Nút = pattern chung với 2 nút selector T18 (poke detection dùng chung 1 component `PokeButton3D`).
@@ -154,9 +163,45 @@ Format mỗi phase: ✅ có · 🟡 tạm/thiếu 1 phần · ❌ chưa có.
 ## 7. Task list cập nhật (thứ tự đề xuất Session 12+)
 
 T19 held-grabbable → T18 selector poke/cone/hologram → **T25 training range** → T20 projectile visuals →
-T26 weapon phases (nổ chạm đất + effect AoE + landmine arm/trigger + laser + magazine + costPerUse + isUncatchable)
-→ T27 ring effects thật (Shield, VelocityScale áp flight, stack≤3, scale theo Tier) → T28 HUD/feedback pack →
-T21 equip feedback → T22 icons → T29 kiếm rút sau lưng → backlog: heckle khán đài, T23 matchmaking, T24 host-migration.
+T26 weapon phases (nổ chạm đất + effect AoE + laser + magazine + isUncatchable — landmine/costPerUse chờ chốt T31)
+→ **T27 RING OVERHAUL THEO GDD** (xem chi tiết dưới) → T30 match/economy theo GDD → T31 weapon roster theo GDD
+→ T28 HUD/feedback → T21 equip feedback → T22 icons → backlog: T29 kiếm rút sau lưng (❓ngoài GDD), heckle
+khán đài, T23 matchmaking (nâng cấp thành GDD lobby flow), T24 host-migration, T32 lobby epic.
+
+### T27 — RING OVERHAUL theo GDD (thay spec cũ)
+Nguồn: `GDD_Core_Reference.md` mục VI. Gồm: ① đổi element 5 `Shield` → **`Area`** (enum + asset `RC_Shield`
+→ `RC_Area`, xóa `shieldSelf`; Area = nhân `AreaScale` — pipeline AreaScale→hit radius ĐÃ chạy sẵn, chỉ thiếu
+ring cấp nó); ② **BuffRingConfig chuyển sang giá trị THEO TIER** (bảng ma trận: Multi x2/4/8/12/15, Area
+x1.25→x2.25, Velocity +20→+100%, Băng/Lửa 1/1.5/2/2.5/3s, đường kính 1.8→0.6m, tốc trôi 1→3.5m/s) — thay
+5 asset đơn trị bằng ma trận (mảng per-tier trong 1 config, hoặc AnimationCurve); ③ **VelocityScale áp vào
+vận tốc bay thật** (cả ThrowProjectile local tween lẫn NetworkProjectile RB); ④ **stack cộng dồn tối đa 3
+vòng/viên** (thay Max — cần đếm số ring đã áp per-projectile); ⑤ **Băng = FREEZE**: đóng băng player
+(khóa AutoHandPlayer move + hands) theo thời gian tier, damage giải băng, KHÔNG gây damage — tường băng
+freeze-on-touch, sống theo tier; ⑥ **Lửa** = mất 1 mạng/lần đi qua, vùng sống 1-3s theo tier (không phải
+90s); ⑦ anti-dup sửa thành: tối đa 1 vòng T4 + 1 vòng T5 đồng thời (bỏ check cùng-element); ⑧ quỹ đạo:
+GDD = trôi ngang trái↔phải — ❓owner chốt (đã có wander T9, đổi = thay `WanderPosition` bằng drift tuyến
+tính X theo tốc độ tier); ⑨ scale đường kính ring theo tier; ⑩ weight spawn dùng ĐÚNG số GDD:
+T1-T5 = (65,25,8,2,0) / (38,26,20,10,5) / (20,25,25,20,10) theo 3 cửa sổ.
+
+### T30 — Match & Economy theo GDD (mới)
+90s/hiệp (code 120) · nghỉ 5s + ĐỔI BÊN + bảng điểm · mạng theo chế độ 7/5/4 (bỏ MaxHealth=5 cứng) ·
+timeout so **tổng mạng ĐỘI** (code đang so máu cá nhân) · hòa hiệp + **Hòa Chung Cuộc** (1-1-1) · thu nhập
++$2/s (code +1) · **+$5/KILL** (code +$10/HIT — sai cả giá trị lẫn điều kiện) · chết +$10 & **3s bất tử** ·
+shutdown bounty +$2/kill.
+
+### T31 — Weapon roster & bảng số theo GDD (mới — cần owner chốt 2 điểm)
+GDD = 6 vũ khí: Đá $0/0.4s/AoE 0.8m · Súng $2/0.1s/0.35m/mở 1s · Bom Nhỏ $5/1s/1.5m/5s · Bazooka
+$8/1.2s/2.5m/10s · **Bom Chữ X $13/2.3s (vệt lửa chữ X 1.1m × 47% sâu sân)/20s — CHƯA CÓ TRONG CODE** ·
+Nuke $20/3s/4.5m/45s. Việc: sửa giá/cooldown/AoE/unlock 7 asset WC_* theo bảng; build Bom X (vệt lửa chữ
+thập = 2 BuffZone dạng hộp xoay 90°); Đá/Súng cũng có AoE nhỏ. **❓Owner chốt:** (a) Sword + LandMine —
+ngoài GDD, giữ làm extension hay bỏ? (b) BuyOnce vs PayPerUse — GDD chỉ ghi "Giá", không nói mua 1 lần
+hay per-use.
+
+### T32 — Lobby/Out-game epic theo GDD (backlog lớn)
+Hub 3D tương tác: HOST đấm nút → room code 5 chữ · join = ném khối chữ/bàn phím hologram · Quick Play
+teleport pad · Waiting room: host panel cần gạt (mode/size sân khóa theo mode/map theme), **chia đội bằng
+vùng đứng** Xanh/Đỏ/Trung lập, ready = đập nút hologram, START khóa tới khi đội cân + 100% ready,
+transition blackout · wardrobe gương + skin · voice proximity. (T23 matchmaking API là móng của phần này.)
 
 ---
 
