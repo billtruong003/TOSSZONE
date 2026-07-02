@@ -3,6 +3,7 @@ using Fusion;
 using TossZone.Combat;
 using TossZone.Player;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.XR;
 
 namespace TossZone.Throwing
@@ -33,6 +34,8 @@ namespace TossZone.Throwing
         [SerializeField] private NetworkObject _defaultNetProjPrefab;
         [SerializeField] private float _hitscanRange = 20f;
         [SerializeField] private LayerMask _hitscanMask = ~0;
+        [Tooltip("Editor/dev: hold this key to simulate the trigger when no XR controller is present (mirrors ThrowController's _editorGripKey). Weapons here have no hand-held visual/grab pose — firing is pure trigger-press logic, so no XR Simulator or AutoHand Grabbable setup is needed just to test fire behavior.")]
+        [SerializeField] private Key _editorTriggerKey = Key.F;
 
         private ThrowController _throwController;
         private PlayerCombat _combat;
@@ -211,8 +214,10 @@ namespace TossZone.Throwing
         private bool ReadTrigger()
         {
             XRNode node = _rightHand ? XRNode.RightHand : XRNode.LeftHand;
-            InputDevice dev = InputDevices.GetDeviceAtXRNode(node);
-            return dev.TryGetFeatureValue(CommonUsages.triggerButton, out bool pressed) && pressed;
+            UnityEngine.XR.InputDevice dev = InputDevices.GetDeviceAtXRNode(node);
+            if (dev.isValid && dev.TryGetFeatureValue(UnityEngine.XR.CommonUsages.triggerButton, out bool pressed) && pressed) return true;
+            Keyboard kb = Keyboard.current;
+            return kb != null && kb[_editorTriggerKey].isPressed;
         }
 
         private static WeaponConfig GetConfig(int index)
