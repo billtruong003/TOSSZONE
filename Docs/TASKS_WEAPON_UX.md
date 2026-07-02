@@ -68,7 +68,99 @@ Master thoát → trận hiện tại chết. `FusionNet` đã expose `HostMigra
 
 ---
 
-## 3. Trạng thái verify còn nợ từ T17 (làm cùng đợt test build)
+## 3. AUDIT design-vs-code — các điểm SAI/CHƯA LÀM mà trước giờ CHƯA NOTE (quét 2026-07-02)
+
+Grep xác nhận: các field sau tồn tại trong config nhưng **KHÔNG CÓ DÒNG CODE NÀO ĐỌC** (design data chết):
+
+| Field / cơ chế | Design nói gì | Code thực tế | Task |
+|---|---|---|---|
+| `fuseDelay` (LandMine) | Ném/đặt xuống → ARM → người đạp/hết fuse → nổ AoE | Không được đọc — LandMine bay y hệt grenade thường | T26 |
+| `laserSight` (Gun/Bazooka) | Dot/line laser từ nòng để nhắm | Không được đọc — không có laser | T26 |
+| `magazine` | >0 = hết băng phải chờ/mua | Không được đọc — bắn vô hạn | T26 |
+| `costPerUse` + PayPerUse | "Mỗi phát tốn tiền" (design nghiêng PayPerUse cho đa số vũ khí) | Code trừ **Ammo** chứ không trừ tiền; VÀ cả 7 config đang set **BuyOnce** hết — data lẫn code đều lệch design | T26 (cần owner chốt lại: PayPerUse hay BuyOnce cho từng món) |
+| `shieldSelf` / **Ring Chắn Đạn** | Chủ nhân được shield | **Ring Shield là NO-OP hoàn toàn** — chỉ set Element=5 lên đạn, không có behavior shield nào | T27 |
+| `VelocityScale` / **Ring Tốc Độ** | Đạn nhanh hơn +20%→+100% | Ring SET giá trị vào projectile nhưng **không chỗ nào nhân vào vận tốc bay thật** → ring Tốc Độ cũng NO-OP (chỉ AreaScale là ăn thật vào hit radius) | T27 |
+| Stack "tối đa 3 vòng/viên" | Xuyên nhiều ring → buff cộng dồn, trần 3 | Code dùng `Mathf.Max(cũ, mới)` → **không stack gì cả**, xuyên 2 ring Tốc Độ = như 1 | T27 |
+| Buff "theo Tier" (Ice/Fire) | Giá trị tường băng/vùng lửa scale theo Tier ring | BuffZone damage/duration cố định, Tier chỉ ảnh hưởng rarity+tốc trôi (T11) | T27 |
+| Nổ AoE khi chạm đất | Grenade/BigBoom chạm đất là nổ | **Chỉ nổ khi overlap NGƯỜI** — ném hụt là bay tới hết lifetime rồi biến mất, không nổ | T26 |
+| Effect nổ AoE | Cầu lửa/shockwave to theo `aoeRadius` | **CHƯA CÓ** — ImpactBurst nhỏ chỉ nổ khi trúng người/chạm đất đường ném | T26 |
+| `isUncatchable` | Đạn súng/power throw KHÔNG bắt được | CatchController đang đoán qua `Element != 0` (comment trong code tự nhận "extend once networked") | T26 |
+| Kiếm rút sau lưng | Design §9: đeo SAU LƯNG, với tay ra sau để RÚT (over-shoulder draw) | Equip qua selector như mọi vũ khí | T29 |
+| Heckle khán đài | Chết → ra khán đài ném Egg/Tomato/Poop chọc người sống | Chưa build gì (prefab `MS_WP_Egg/Poop/Tomato` có sẵn) | backlog |
+| Ring spawn nhiều | — | `RingSpawner` capacity 8 slot, đang config 3 — chỉnh `_slotCount` inspector là ra nhiều; CHƯA test >3 | T25 test |
+
+---
+
+## 4. SPEC từng vũ khí — phase tuần tự + trạng thái (note đầy đủ theo yêu cầu owner)
+
+Format mỗi phase: ✅ có · 🟡 tạm/thiếu 1 phần · ❌ chưa có.
+
+**ROCK (đá — free, vô hạn)**
+1. Equip: mặc định index -1 ✅ → 2. Hold: grip → Grabbable thật (ThrowBallHolder) ✅ *nhưng model phải là CỤC ĐÁ, đang là bóng vàng* 🟡T20 → 3. Fire: vung ném peak-velocity ✅ → 4. Flight: ballistic + trail ✅ (model đá ❌T20) → 5. Impact: −1 máu + ImpactBurst ✅, bắt được ✅.
+
+**GUN (súng — $15)**
+1. Equip ✅(rework T18) → 2. Hold: model tay 🟡(grabbable thật T19); **laser sight ❌T26** → 3. Fire: trigger ✅; đạn phải là `MS_WP_Gun_Bullet` ❌T20; **magazine ❌** / **costPerUse ❌** T26; muzzle flash ❌T26 → 4. Flight: thẳng nhanh ✅ → 5. Impact: −1 máu ✅; **không-bắt-được chưa enforce ❌T26**.
+
+**GRENADE (lựu đạn — $8)**
+1. Equip ✅ → 2. Hold 🟡T19 → 3. Fire: NÉM (swing) ✅ → 4. Flight: arc ✅, model grenade ❌T20 → 5. **Impact: chạm ĐẤT phải nổ ❌ (hiện chỉ nổ khi trúng người)**; AoE damage ✅; **effect nổ (cầu lửa + shockwave theo aoeRadius + rung tay) ❌T26**.
+
+**BAZOOKA ($20, mở 30s)**
+1. Equip ✅ → 2. Hold 🟡T19 (cân nhắc cầm 2 tay sau); laser sight ❌ → 3. Fire: trigger → rocket ✅, model `MS_WP_Rocket` ❌T20 → 4. Flight: arc gravity ✅ → 5. Impact: nổ AoE như grenade — cùng gap ❌T26.
+
+**BIGBOOM (bom nguyên tử — $25, mở 60s = finale)**
+1. Equip ✅ → 2. Hold: 🟡T19 — **interaction phải KHÁC: bom to nặng, cân nhắc cầm 2 tay/ném vồng chậm** (owner chốt) → 3. Fire: ném ✅ → 4. Flight: arc ✅ (nên nặng/chậm hơn — tune) → 5. **Impact: nổ TO — AoE lớn ✅ damage nhưng effect ❌: cần cầu nổ lớn + shockwave + flash + rung mạnh cả 2 tay + rung màn theo khoảng cách (không camera-shake vì VR — dùng haptic+ánh sáng)** T26.
+
+**LANDMINE (mìn — $12, mở 45s)**
+1. Equip ✅ → 2. Hold 🟡T19 → 3. **Fire: ném/ĐẶT → nằm đất ARM (fuseDelay) ❌ HOÀN TOÀN CHƯA — hiện bay như đạn thường** → 4. **Trigger: người đạp lên → nổ ❌** → 5. Effect nổ ❌. Cả chuỗi mine là T26 (phần nặng nhất).
+
+**SWORD (kiếm — $18, mở 20s, deflect-only)**
+1. **Equip: design = đeo sau lưng, VỚI TAY RA SAU LƯNG RÚT ❌T29** (hiện qua selector) → 2. Hold: grabbable + pose 🟡T19 → 3. Swing: chém deflect đạn đơn + mưa ✅(T5); **vung không được ra bóng — bug, fix T19** → 4. Không damage người ✅ → 5. Feedback: **trail lưỡi ❌, SFX chém ❌, haptic khi deflect trúng ❌** T28.
+
+---
+
+## 5. UI FEEDBACK INVENTORY — note hết cái thiếu (T28)
+
+| Feedback | Trạng thái |
+|---|---|
+| HUD tiền (ví hiện tại) | ❌ chỉ có RewardText "+$" bay lên lúc cộng — không thấy tổng |
+| HUD ammo / magazine | ❌ |
+| Máu bản thân | 🟡 HealthUI 5 cục gắn avatar — cần kiểm góc nhìn chính mình có thấy không |
+| Score A-B / round / thời gian hiệp / countdown warmup | ❌ không UI nào (prefab `MS_ScoreBoard` có sẵn chưa dùng) |
+| Đã đổi vũ khí (haptic+SFX+label) | ❌ = T21 |
+| Icon vũ khí trong shop | ❌ = T22 |
+| Unlock-time đếm ngược trên slot khóa | 🟡 có overlay mờ, không có số giây |
+| Không đủ tiền (rung/nháy đỏ khi grab hụt) | ❌ |
+| Bắt bóng thành công (event `BallCaughtEvent` ĐÃ fire, không ai nghe) | ❌ VFX/SFX/haptic |
+| Deflect thành công | ❌ |
+| Đạn mình được buff khi xuyên ring (ngoài chữ EFFECTIVE! trên ring) | ❌ đổi màu đạn/trail theo element |
+| Giết địch / bị giết / thắng-thua hiệp / thắng trận | ❌ toàn bộ |
+
+---
+
+## 6. T25 — TRAINING RANGE (map test thuần cho owner) ⭐ ưu tiên theo yêu cầu
+
+**Mục tiêu:** khu tập bắn kiểu training — test ring + mọi vũ khí không tốn tiền, không cần vào trận.
+**Làm gì:**
+- **Vị trí:** dựng ngay trong hub `01_TOSSZONE_Main` (hub = sân tập, đúng chất Gorilla-Tag; khỏi thêm scene/build index). Nếu owner muốn scene riêng `03_Training` thì nói lại.
+- **Hàng nút RING:** 5-6 cube mesh có collider (mỗi nút 1 loại: Băng/Lửa/Đạn Mưa/Tốc Độ/Chắn + 1 nút "random x8"), chọt tay + bóp trigger → spawn ring loại đó trước mặt (RingSpawner API thêm `SpawnSpecific(element, tier)`); nút thêm để test **spawn NHIỀU ring** (capacity 8 đã hỗ trợ, chưa test >3).
+- **Hàng nút VŨ KHÍ:** 7 cube (mỗi vũ khí 1 nút) — chọt + trigger → equip FREE (không tiền/unlock). Cần cờ `CombatSession.TrainingMode` (KHÔNG dùng cheat DEV-only — phải chạy cả build thường) + fire `MinigameEnteredEvent` tại hub để catalog sống ngoài arena.
+- **Targets:** 2-3 DummyAvatar đứng các khoảng cách + tường để test đạn xuyên/nổ.
+- Nút = pattern chung với 2 nút selector T18 (poke detection dùng chung 1 component `PokeButton3D`).
+**Verify:** vào hub → chọt nút Gun → súng vào tay free → bắn dummy; chọt nút ring Lửa → ring hiện → ném xuyên → đạn lửa → vùng lửa; chọt "x8" → 8 ring cùng lúc không lỗi.
+**Deps:** T18 (PokeButton3D dùng chung), T19 (equip ra grabbable). Làm NGAY SAU T18/T19.
+
+---
+
+## 7. Task list cập nhật (thứ tự đề xuất Session 12+)
+
+T19 held-grabbable → T18 selector poke/cone/hologram → **T25 training range** → T20 projectile visuals →
+T26 weapon phases (nổ chạm đất + effect AoE + landmine arm/trigger + laser + magazine + costPerUse + isUncatchable)
+→ T27 ring effects thật (Shield, VelocityScale áp flight, stack≤3, scale theo Tier) → T28 HUD/feedback pack →
+T21 equip feedback → T22 icons → T29 kiếm rút sau lưng → backlog: heckle khán đài, T23 matchmaking, T24 host-migration.
+
+---
+
+## 8. Trạng thái verify còn nợ từ T17 (làm cùng đợt test build)
 - Round-end/win-condition + respawn đúng sân với 2 client thật (bị Photon rate-limit chặn — chạy 1 phiên dài thay vì connect/disconnect nhiều lần).
 - T12 buff-ring cross-authority (người không-master ném xuyên ring).
 - Dummy passive khi 2 người thật (đã verify giả lập, cần xác nhận 2 máy thật).
