@@ -1,3 +1,6 @@
+> 🗄️ **ĐÓNG BĂNG tại Session 10** — trạng thái trong file này KHÔNG còn đúng (T1-T17 đã xong hết ở Session 11).
+> Task tracking hiện hành: `../HANDOFF.md` + `../TASKS_WEAPON_UX.md`.
+
 # TOSSZONE — Master Task List (audit + hướng đã sửa)
 
 > Cập nhật: Session 10 (2026-07-01). Đây là danh sách tổng đã audit theo THỰC TẾ chạy được, thay cho

@@ -1,6 +1,6 @@
 # TOSSZONE — Weapon UX Rework (kế hoạch Session 12)
 
-> Chốt từ feedback owner 2026-07-02 cuối Session 11. Đọc kèm `TASKS_DETAIL.md` (T1-T17 đã xong) và
+> Chốt từ feedback owner 2026-07-02 cuối Session 11. Đọc kèm `deprecated/TASKS_DETAIL.md` (T1-T17 đã xong) và
 > `T17_Test_Report.html` (checklist test 2 người). Mai chạy theo thứ tự T19 → T18 → T20 → T21/T22.
 
 ---
@@ -73,7 +73,7 @@ Master thoát → trận hiện tại chết. `FusionNet` đã expose `HostMigra
 > ⚠️ **ĐÍNH CHÍNH sau khi owner đưa GDD PDF chính chủ** (đã chép thành `GDD_Core_Reference.md` — NGUỒN
 > CHÂN LÝ mới): bản audit đầu tiên của phần này dựa trên code + Combat_Minigame_Design cũ nên có dòng SAI —
 > **GDD không hề có ring Shield**; vòng thứ 5 là **Tăng Kích Thước (Area)**. Các dòng dưới đã sửa theo GDD.
-> Toàn bộ lệch GDD lớn hơn (kinh tế/mạng/sân/vũ khí/lobby) xem mục 9.
+> Toàn bộ lệch GDD lớn hơn (kinh tế/mạng/sân/vũ khí/lobby) xem `GDD_Core_Reference.md` (các dòng ⚠️) + task T30/T31/T32 ở mục 7.
 
 Grep xác nhận: các field sau tồn tại trong config nhưng **KHÔNG CÓ DÒNG CODE NÀO ĐỌC** (design data chết):
 

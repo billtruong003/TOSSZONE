@@ -1,3 +1,6 @@
+> ✅ **ĐÃ BUILD** — S1-S3 (mechanic/held-ball/projectile) ship từ S5-S6; S4-S7 (feel + juice) xong ở T15 Session 11.
+> Giữ làm reference tune feel (levers trong ThrowConfig). S8-S9 (hit feedback đầy đủ + 2-player tune) nằm trong T28 + checklist build.
+
 # TOSSZONE — Throw Mechanic Spec (M4 §2): Mechanic + Feel/Juice — **LOCKED**
 
 **Status:** SPEC LOCKED 2026-06-26 (session 4) for implementation. Supersedes the prose in

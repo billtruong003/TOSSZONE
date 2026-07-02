@@ -8,16 +8,14 @@
 |---|---|
 | **HANDOFF.md** (file này) | Đầu mỗi session — trạng thái + test flow |
 | **GDD_Core_Reference.md** | ⭐ NGUỒN CHÂN LÝ thiết kế (chép từ GDD PDF owner 2026-07-02) — thắng mọi doc khác khi mâu thuẫn. LƯU Ý: không có ring Shield (vòng 5 = Tăng Kích Thước), Băng = freeze không damage, 6 vũ khí (có Bom X, không sword/mine), kinh tế/mạng/sân khác code hiện tại |
-| **TASKS_MASTER.md** | Danh sách task sống (đã audit). Chọn việc tiếp theo ở đây |
-| **TASKS_DETAIL.md** | Chi tiết "làm gì" từng task T1-T17 (✅ XONG HẾT session 11) |
-| **TASKS_WEAPON_UX.md** | ⭐ KẾ HOẠCH SESSION 12: map vision-vs-hiện-trạng weapon UX + task T18-T24 |
-| **T17_Test_Report.html** | Audit verify T1-T17 + checklist test 2 người khi build (mở bằng browser) |
+| **TASKS_WEAPON_UX.md** | ⭐ KẾ HOẠCH HIỆN HÀNH (Session 12+): task T18-T32, audit design-vs-code, spec từng vũ khí, UI inventory |
+| **T17_Test_Report.html** | Checklist test 2 người khi build (mở bằng browser) |
+| **BillGameCore_Usage.md** | Bản đồ framework: service nào dùng ở đâu + phần đã đắp thêm (tái dùng project khác) + gotchas |
 | **Fusion_Shared_Mode_Gotchas.md** | BẮT BUỘC đọc trước khi viết/sửa bất kỳ networking code nào |
-| **Burst_Projectile_System_Design.md** | Trước khi đụng đạn mưa / pool / GPU instancing (hướng đã chốt) |
+| **Burst_Projectile_System_Design.md** | ✅ đã build — reference khi đụng đạn mưa/GPU instancing |
+| **Throw_Mechanic_Spec.md** | ✅ đã build — reference tune feel ném (levers ThrowConfig) |
 | **Network_Architecture_Lessons.md** | Hiểu netcode + avatar IK + input + scene-load (bài học bền) |
-| **Combat_Minigame_Design.md** | Thiết kế combat/vũ khí (7 vũ khí, win-condition, buff ring) |
-| **Throw_Mechanic_Spec.md** | Spec cơ chế ném (peak-velocity, feel/juice) |
-| `deprecated/` | Docs bị THAY HƯỚNG (không phải "đã xong"). Vẫn có thiết kế chưa build — vd `Networking_Architecture.md` chứa `Bill.Players` + additive scene chưa làm (xem TASKS_MASTER mục F) |
+| `deprecated/` | Hồ sơ cũ. Đáng chú ý: `TASKS_DETAIL.md` (T1-T17 ✅ xong hết), `TASKS_MASTER.md` (đóng băng S10), `Combat_Minigame_Design.md` (bị GDD supersede — CHỨA LỖI ring Shield; còn giá trị phần Sword/heckle/catch chờ owner chốt T31) |
 
 Stack: Unity 6000.3 · URP · Quest/Android · Fusion 2.0.12 Shared Mode (NO Physics Addon) · BillGameCore · AutoHand.
 Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) return "WRONG PROJECT";` (folder tên TOSSZONE, KHÔNG phải ThrowingShot).

@@ -1,3 +1,6 @@
+> ✅ **HOÀN THÀNH TOÀN BỘ T1-T17 (Session 11, 2026-07-02)** — mỗi task 1 commit, xem `git log` prefix "T<số>:".
+> Giữ làm hồ sơ tham chiếu. Task hiện hành: `../TASKS_WEAPON_UX.md`. Thiết kế chuẩn: `../GDD_Core_Reference.md`.
+
 # TOSSZONE — Chi tiết từng task còn lại
 
 > Bản chi tiết "làm gì" cho mỗi task chưa xong. Danh sách tổng + trạng thái: `TASKS_MASTER.md`.

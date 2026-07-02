@@ -1,3 +1,6 @@
+> ✅ **ĐÃ BUILD** — MVP (T4 S10) + dead-mask/catch/deflect/stacking/culling (T4-T8 Session 11). Hướng kiến trúc LOCKED, giữ làm reference.
+> Còn mở: RenderMeshIndirect + compute cull (cần Quest thật verify stereo — xem TASKS_WEAPON_UX mục còn nợ).
+
 # Burst Projectile System — thiết kế đạn số lượng lớn (locked)
 
 > Trạng thái: ĐỊNH HƯỚNG ĐÃ CHỐT. Chưa build. Đọc trước khi làm bất cứ thứ gì liên quan tới

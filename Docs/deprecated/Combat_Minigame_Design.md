@@ -1,3 +1,8 @@
+> ⚠️ **SUPERSEDED bởi `../GDD_Core_Reference.md`** (GDD PDF chính chủ, 2026-07-02) — khi mâu thuẫn, GDD thắng.
+> **LỖI ĐÃ BIẾT trong doc này:** "Ring Chắn Đạn (Shield)" KHÔNG tồn tại trong GDD — vòng thứ 5 là **Tăng Kích Thước (Area)**;
+> Băng theo GDD = FREEZE không gây damage. Doc này còn giá trị ở các phần KHÔNG có trong GDD:
+> Sword/LandMine/heckle/catch chi tiết — coi là extension chờ owner chốt (T31 trong TASKS_WEAPON_UX).
+
 # TOSSZONE — Minigame Combat & Weapon Design (v2 — bản tổng hợp)
 
 > **Status:** DESIGN (chưa code). **Consolidates** vision cũ + mới: `M4_Gameplay_Design.md` §2-5 (throw/ammo/teams),
