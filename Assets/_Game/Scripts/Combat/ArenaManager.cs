@@ -172,15 +172,15 @@ namespace TossZone.Combat
             StartRound();
         }
 
+        /// <summary>Team of a player: 0 = A, 1 = B (alternating by PlayerId). Single source of truth for team
+        /// membership — used by both <see cref="GetSpawnPosition"/> and <see cref="AwardScore"/> so they can
+        /// never disagree. No networked field needed: every client already knows every PlayerId, so this is a
+        /// pure deterministic function, not state that needs replicating.</summary>
+        public static int GetTeam(PlayerRef player) => player.PlayerId % 2;
+
         private void AwardScore(PlayerRef winner)
         {
-            // Naive: check if winner is client 0 (team A) or 1 (team B).
-            int idx = 0;
-            foreach (PlayerRef pr in Runner.ActivePlayers)
-            {
-                if (pr == winner) { if (idx == 0) ScoreA++; else ScoreB++; break; }
-                idx++;
-            }
+            if (GetTeam(winner) == 0) ScoreA++; else ScoreB++;
         }
 
         private void ResetAllCombat()
@@ -189,11 +189,11 @@ namespace TossZone.Combat
                 pc.ResetForRound();
         }
 
-        /// <summary>World spawn position for a player, by team (PlayerId % 2 → A/B). Used by respawn.
+        /// <summary>World spawn position for a player, by team (see <see cref="GetTeam"/>). Used by respawn.
         /// Falls back to this object's position when spawn points aren't wired.</summary>
         public Vector3 GetSpawnPosition(PlayerRef player)
         {
-            Transform[] pts = (player.PlayerId % 2 == 0) ? _spawnPointsA : _spawnPointsB;
+            Transform[] pts = (GetTeam(player) == 0) ? _spawnPointsA : _spawnPointsB;
             if (pts != null && pts.Length > 0 && pts[0] != null) return pts[0].position;
             return transform.position;
         }
