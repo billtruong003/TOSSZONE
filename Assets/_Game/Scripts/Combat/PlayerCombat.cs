@@ -52,7 +52,14 @@ namespace TossZone.Combat
         public override void Spawned()
         {
             AllInstances.Add(this);
-            if (HasStateAuthority)
+            // T17 fix: gating on HasStateAuthority alone raced with DummyAvatar.Spawned() setting IsPlayer=false
+            // on a SIBLING component — Fusion doesn't order Spawned() across NetworkBehaviours on the same
+            // object, so PlayerCombat.Spawned() could run first and wrongly claim Local for the scene dummy
+            // (both it and a real player have HasStateAuthority=true in solo/master testing). InputAuthority is
+            // set by Fusion at spawn time and is already correct by the time ANY component's Spawned() runs —
+            // scene objects like DummyAvatar always have InputAuthority == None (same distinguishing signal
+            // NetworkProjectile's hit-test already relies on), so this is order-independent.
+            if (HasStateAuthority && Object.InputAuthority != PlayerRef.None)
             {
                 Local = this;
                 if (Health <= 0) Health = MaxHealth;

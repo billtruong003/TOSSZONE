@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>TOSSZONE — T17 Audit &amp; Test Plan (2-player)</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a; --text: #dfe3ea; --muted: #8b93a3;
+    --green: #4ade80; --yellow: #facc15; --red: #f87171; --blue: #60a5fa; --accent: #a78bfa;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0 0 80px; line-height: 1.55; }
+  header { padding: 32px 40px 20px; border-bottom: 1px solid var(--border); }
+  header h1 { margin: 0 0 6px; font-size: 26px; }
+  header .sub { color: var(--muted); font-size: 14px; }
+  main { max-width: 980px; margin: 0 auto; padding: 0 40px; }
+  h2 { font-size: 20px; margin-top: 44px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 16px; color: var(--blue); margin-top: 28px; }
+  p { color: var(--text); }
+  code, .mono { font-family: "Cascadia Code", Consolas, monospace; font-size: 13px; background: #0b0d11; padding: 1px 6px; border-radius: 4px; color: #eab676; }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  tr:hover { background: #1b1f28; }
+  .tag { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .ok { background: rgba(74,222,128,0.15); color: var(--green); }
+  .partial { background: rgba(250,204,21,0.15); color: var(--yellow); }
+  .no { background: rgba(248,113,113,0.15); color: var(--red); }
+  .info { background: rgba(96,165,250,0.15); color: var(--blue); }
+  .box { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin: 16px 0; }
+  .box.warn { border-color: rgba(250,204,21,0.4); }
+  .box.crit { border-color: rgba(248,113,113,0.4); }
+  ol.steps li, ul.checklist li { margin-bottom: 8px; }
+  ul.checklist { list-style: none; padding-left: 4px; }
+  ul.checklist li::before { content: "☐ "; color: var(--muted); }
+  .kbd { display: inline-block; padding: 1px 7px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; font-family: monospace; font-size: 12px; background: #1b1f28; }
+  .flow { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+  .flow .step { background: #1b1f28; border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; font-size: 13px; }
+  .flow .arrow { color: var(--muted); }
+  footer { max-width: 980px; margin: 60px auto 0; padding: 20px 40px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>TOSSZONE — Audit &amp; Test Plan cho T17 (2-player thật)</h1>
+  <div class="sub">Tổng hợp sau khi hoàn thành T1–T16 (đã commit) + phần verify 2-client thật của T17 qua ParrelSync. Build Quest thật để bạn tự làm — tài liệu này liệt kê chính xác cái gì đã kiểm chứng, cái gì chưa, và checklist để test khi có 2 máy/2 người.</div>
+</header>
+
+<main>
+
+<h2>1. Những gì ĐÃ verify thật (đáng tin cậy)</h2>
+<p>Verify qua Unity MCP trong suốt phiên làm việc — phần lớn là test logic/code trực tiếp (gọi method qua reflection, kiểm tra state trước/sau), không phải "chơi thử bằng mắt". Bảng dưới liệt kê mức độ tin cậy từng task.</p>
+
+<table>
+<tr><th>Task</th><th>Nội dung</th><th>Mức verify</th><th>Ghi chú</th></tr>
+<tr><td>T1</td><td>Bắn vũ khí (Gun/Bazooka/Grenade...)</td><td><span class="tag partial">Logic only</span></td><td>Damage/AoE áp dụng đúng qua code review + reflection test. Chưa bắn thật bằng tay VR.</td></tr>
+<tr><td>T2</td><td>WristWeaponSelector UI</td><td><span class="tag partial">Logic only</span></td><td>Catalog tự resolve đúng. Chưa test cử chỉ ngửa tay thật.</td></tr>
+<tr><td>T3</td><td>Team A/B + win-condition</td><td><span class="tag partial">Một phần live</span></td><td><code>realPlayerCount&gt;=2</code> đã confirm thỏa mãn với 2 client thật hôm nay. Chưa thấy <code>EndRound</code>/<code>AwardScore</code> tự fire live (bị Photon rate-limit chặn giữa chừng — xem mục 4).</td></tr>
+<tr><td>T4</td><td>Catch đạn trong burst rain</td><td><span class="tag ok">Verify kỹ</span></td><td>RPC catch + ammo +1 xác nhận đúng qua test cô lập.</td></tr>
+<tr><td>T5</td><td>Kiếm chém lệch hướng đạn</td><td><span class="tag partial">Logic only</span></td><td>API TryDeflectAlong/ResolveDeflect đúng theo code, chưa test vung kiếm thật.</td></tr>
+<tr><td>T6</td><td>Dead-mask (xóa viên trúng khỏi mọi client)</td><td><span class="tag ok">Verify kỹ</span></td><td>Bit set/clear + renderer bỏ qua viên chết — đúng.</td></tr>
+<tr><td>T7</td><td>Burst nhân số qua nhiều ring Multi</td><td><span class="tag ok">Verify kỹ</span></td><td>Toán nhân chính xác (2×40=80), dedupe ring không double-stack.</td></tr>
+<tr><td>T8</td><td>Distance culling khi render mưa đạn</td><td><span class="tag ok">Verify kỹ</span></td><td>Viên gần render, viên xa bị cull đúng — test bằng camera giả.</td></tr>
+<tr><td>T9</td><td>Ring spawn random + trôi trong vùng giữa</td><td><span class="tag ok">Verify kỹ</span></td><td>Phát hiện + sửa bug NetworkTransform khiến ring không di chuyển thật.</td></tr>
+<tr><td>T10</td><td>Tường băng / vùng lửa</td><td><span class="tag ok">Verify kỹ</span></td><td>Fire tick damage + Ice touch-once + melt-by-other-projectile đều đúng.</td></tr>
+<tr><td>T11</td><td>Ring rarity theo thời gian + chống trùng Tier 4-5</td><td><span class="tag ok">Verify kỹ</span></td><td>Phân bố khớp trọng số thiết kế; anti-dup 0/500 lọt.</td></tr>
+<tr><td>T12</td><td>Buff-ring RPC (multi-client)</td><td><span class="tag partial">Một phần live</span></td><td>Regression solo confirm đúng. <b>Case cross-authority thật (ring-authority ≠ đạn-authority) CHƯA test trực tiếp với 2 client hôm nay</b> — nên test thủ công (mục 5).</td></tr>
+<tr><td>T13</td><td>Bill.Players + additive scene</td><td><span class="tag partial">Một phần live</span></td><td>Registry Local/Get/All đúng. Additive scene load chưa test thật (tránh rủi ro phá scene sản xuất).</td></tr>
+<tr><td>T14</td><td>Dọn AutoHand spam + audio listener</td><td><span class="tag ok">Verify kỹ</span></td><td>Null-check fix xác nhận hết crash. AudioListener vốn đã sạch.</td></tr>
+<tr><td>T15</td><td>Juice (haptic/VFX/impact)</td><td><span class="tag ok">Verify kỹ</span></td><td>Tất cả spawn/return pool đúng, phản ứng đúng với hit thật từ bot.</td></tr>
+<tr><td>T16</td><td>Map blockout (2 sân + tường vô hình)</td><td><span class="tag ok">Verify kỹ</span></td><td>Test vật lý thật: player bị chặn, đạn xuyên qua — đúng như thiết kế.</td></tr>
+<tr><td>T17</td><td>2 client thật (hôm nay)</td><td><span class="tag ok">Live thật</span></td><td>2 Unity Editor (main + ParrelSync clone) join CÙNG session Fusion, thấy nhau, <b>bắn trúng nhau qua RPC thật → máu đồng bộ đúng cả 2 phía (5→3)</b>, tôn trọng đúng luật authority Shared Mode.</td></tr>
+</table>
+
+<h2>2. Vấn đề hạ tầng gặp phải hôm nay</h2>
+<div class="box crit">
+  <b>Photon Cloud rate-limit / <code>DisconnectedByPluginLogic</code></b>
+  <p>Sau nhiều lần connect/disconnect trong ngày (session dài, test đi test lại nhiều lần), Photon bắt đầu ngắt kết nối ngay cả khi chỉ 1 client — kể cả session mới hoàn toàn. Đây <b>không phải bug code</b>, là giới hạn phía server Photon (nhiều khả năng App ID đang dùng free/dev tier có quota connect/phút). Vì vậy phần round-end/respawn live chưa test xong được.</p>
+  <p><b>Đề xuất:</b> đợi vài phút tới vài chục phút cho quota reset trước khi bạn tự test, hoặc kiểm tra App ID trên Photon Dashboard xem có đúng loại phù hợp cho dev testing không.</p>
+</div>
+
+<h2>3. Lấy weapon vào tay — hướng dẫn (và 1 gap quan trọng)</h2>
+<div class="flow">
+  <div class="step">Ngửa cổ tay TRÁI lên (lòng bàn tay hướng xuống sàn)</div><span class="arrow">→</span>
+  <div class="step">Bảng chọn vũ khí hiện ra trên cổ tay</div><span class="arrow">→</span>
+  <div class="step">Gạt joystick trái sang trái/phải để đổi vũ khí</div><span class="arrow">→</span>
+  <div class="step">Bóp grip tay trái để xác nhận (mua nếu chưa sở hữu)</div>
+</div>
+<p>Mặc định người chơi luôn có <b>Rock (đá)</b> equipped sẵn (index -1) — cầm tay phải + bóp grip là "nạp đạn" (ball hiện trong tay), vung tay ra sau rồi vung tới trước để ném.</p>
+
+<div class="box warn">
+  <b>⚠️ Gap đã phát hiện khi audit:</b> <code>WeaponConfig</code> hiện <b>không có field model 3D cho vũ khí</b>. Khi equip Gun/Bazooka/Grenade... (khác Rock), tay người chơi <b>không hiện súng/vật thể gì cả</b> — code chỉ bắn logic (raycast/spawn đạn) từ 1 điểm cố định trên cổ tay (<code>_muzzle</code>), hoàn toàn vô hình. Đây là lý do bạn thấy "tay chưa có gì". Không phải lỗi setup — đây là tính năng model-tay-cầm-vũ-khí <b>chưa được xây</b> (nằm ngoài phạm vi 17 task đã liệt kê ban đầu). Cần thêm 1 task riêng nếu muốn có model vũ khí hiện trên tay.</p>
+</div>
+
+<h2>4. Cheat commands mới thêm (hỗ trợ test)</h2>
+<p>Mở console bằng phím <span class="kbd">~</span> (dấu backtick) — <b>chỉ hoạt động khi có bàn phím</b> (Editor, ParrelSync desktop, hoặc Quest Link/Air Link qua PC có bàn phím). Quest độc lập (standalone) không có bàn phím thì không mở được console này trừ khi ghép bàn phím Bluetooth.</p>
+<table>
+<tr><th>Lệnh</th><th>Tác dụng</th></tr>
+<tr><td><code>money 500</code></td><td>Cộng $500 cho người chơi local, không trừ gì (bỏ qua kinh tế thật)</td></tr>
+<tr><td><code>unlockall</code></td><td>Sở hữu toàn bộ vũ khí trong catalog hiện tại, không tốn tiền</td></tr>
+<tr><td><code>equip 1</code></td><td>Equip thẳng slot theo index, bỏ qua điều kiện mua/unlockTime</td></tr>
+<tr><td><code>help</code></td><td>Xem toàn bộ lệnh có sẵn (kể cả lệnh gốc của framework: pool, services, fps, timescale...)</td></tr>
+</table>
+<p class="mono" style="font-size:12px;color:var(--muted)">Chỉ biên dịch trong Editor / Development Build — tự động loại bỏ khỏi bản Release.</p>
+
+<h2>5. Checklist test 2 người (khi bạn tự build)</h2>
+
+<h3>Setup</h3>
+<ul class="checklist">
+  <li>2 máy Quest (hoặc 1 Quest + 1 PC qua Quest Link) cùng build APK mới nhất, cùng vào chung session (kiểm tra <code>sessionName</code> trong log nếu nghi ngờ không cùng phòng).</li>
+  <li>Nếu build Development Build: có thể ghép bàn phím Bluetooth vào 1 máy để mở cheat console hỗ trợ test nhanh.</li>
+</ul>
+
+<h3>Cơ bản (đã verify logic, cần xác nhận bằng mắt/tay thật)</h3>
+<ul class="checklist">
+  <li>2 người thấy nhau di chuyển mượt, đúng vị trí thật (không lệch/giật).</li>
+  <li>Held ball (bóng cầm tay) hiện đúng tay, đúng lúc — người kia phải thấy được khi mình đang cầm bóng.</li>
+  <li>Ném trúng nhau → máu giảm đúng bên bị trúng, KHÔNG giảm nhầm bên ném.</li>
+  <li>Bắn Gun/Bazooka/Grenade trúng người kia → damage/AoE đúng như config (nhớ: sẽ KHÔNG thấy súng trên tay, xem mục 3).</li>
+</ul>
+
+<h3>Vòng chơi / thắng thua (T3 — chưa live-test được hôm nay)</h3>
+<ul class="checklist">
+  <li>Một người bị dồn máu về 0 → hiệp kết thúc đúng lúc, người còn sống thắng.</li>
+  <li>Người thắng được cộng điểm đúng team (kiểm tra ScoreA/ScoreB tăng đúng bên).</li>
+  <li>Sau khi hiệp kết thúc (~4s) → hiệp mới tự bắt đầu, máu 2 người reset về đầy, ví tiền về $0.</li>
+  <li>Người chết được respawn sau vài giây, teleport về ĐÚNG sân của team mình (không lạc sang sân đối phương).</li>
+  <li><b>Edge case:</b> 2 người cùng về 0 máu cùng lúc (trận hòa) — code hiện tại KHÔNG cộng điểm cho ai cả khi <code>winner == None</code>. Xem có đúng ý muốn không.</li>
+  <li><b>Edge case:</b> hết giờ hiệp (timeout) mà chưa ai chết — người máu cao hơn thắng, bằng nhau thì hòa (không cộng điểm). Test thử để xác nhận.</li>
+</ul>
+
+<h3>Buff ring (T12 — case cross-authority chưa test hôm nay)</h3>
+<ul class="checklist">
+  <li>Người KHÔNG PHẢI master (thường là người vào phòng thứ 2) ném đạn xuyên ring buff → buff vẫn áp dụng đúng (đây là chính xác case T12 sửa, cần xác nhận thật).</li>
+  <li>Ring Multi (đạn mưa) do người không-master kích hoạt → burst rain vẫn xuất hiện + đạn gốc biến mất đúng.</li>
+</ul>
+
+<h3>Vật lý / map (T16)</h3>
+<ul class="checklist">
+  <li>Không thể đi bộ băng qua sân đối phương (tường vô hình chặn đúng).</li>
+  <li>Đạn/bóng ném vẫn bay xuyên tường bình thường sang sân đối phương.</li>
+  <li>Ring vẫn trôi bình thường trong vùng giữa, không kẹt vào tường.</li>
+</ul>
+
+<h3>Hiệu năng / cảm giác thật trên Quest (chỉ làm được trên máy thật)</h3>
+<ul class="checklist">
+  <li>FPS ổn định khi 2 người cùng bắn/ném nhiều (đặc biệt lúc có burst rain lớn — xem T8, hiện dùng DrawMeshInstanced, chưa nâng cấp RenderMeshIndirect).</li>
+  <li>Độ trễ mạng giữa 2 headset thật (không phải localhost như test hôm nay) — có giật/lag khi né đạn không.</li>
+  <li>Haptic/VFX (T15) cảm giác đúng nhịp, không bị trễ rõ rệt.</li>
+</ul>
+
+<h2>6. Việc chưa làm / để ngỏ có chủ đích</h2>
+<table>
+<tr><th>Việc</th><th>Lý do để ngỏ</th></tr>
+<tr><td>Model vũ khí trên tay (Gun/Bazooka/...)</td><td>Ngoài phạm vi 17 task gốc — phát hiện khi audit hôm nay, cần task riêng.</td></tr>
+<tr><td>Arm-swing locomotion kiểu Gorilla Tag</td><td>Quyết định thiết kế: không cần, giữ joystick. AutoHand đã có sẵn hệ Climbable nếu sau này cần bám tường — chỉ cần gắn <code>Grabbable+Climbable</code> lên tường thật khi có map.</td></tr>
+<tr><td>Additive scene loading thật (T13)</td><td>Chỉ build cơ chế (Bill.Players + FusionNet.LoadSceneAdditive), chưa test live để tránh phá 2 scene sản xuất đang hoạt động tốt.</td></tr>
+<tr><td>RenderMeshIndirect + GPU compute cull (T8 nâng cao)</td><td>Cần máy Quest thật để verify đúng single-pass-stereo, để dành session có headset.</td></tr>
+</table>
+
+</main>
+
+<footer>
+  TOSSZONE — báo cáo tạo tự động bởi phiên làm việc hoàn thành T1–T17. Toàn bộ code đã commit vào git (xem log commit theo từng T-số để đọc chi tiết quyết định kỹ thuật).
+</footer>
+
+</body>
+</html>

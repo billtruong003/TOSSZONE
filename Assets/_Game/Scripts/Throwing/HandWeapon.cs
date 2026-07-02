@@ -93,6 +93,33 @@ namespace TossZone.Throwing
             bool isBallistic = _activeConfig == null || _activeConfig.fireMode == FireMode.ThrowBallistic;
             if (_throwController != null) _throwController.enabled = isBallistic;
             _hasPrevBladePos = false;   // don't sweep from a stale blade position after switching weapons
+
+            // T17: ThrowBallistic weapons (Rock/Grenade/BigBoom/LandMine) show their held visual via
+            // ThrowController instead (see ThrowController.RefreshHeldModel) — HandWeapon only owns the visual
+            // for weapons IT actively fires (Gun/Bazooka/Sword). Was previously entirely unwired: WeaponConfig
+            // already had heldPrefab/handSource authored, nothing ever read them.
+            UpdateHeldModel(isBallistic ? null : _activeConfig);
+        }
+
+        private GameObject _heldModel;
+        private WeaponConfig _heldModelConfig;
+
+        private void UpdateHeldModel(WeaponConfig cfg)
+        {
+            if (_heldModelConfig == cfg) return;   // already showing the right thing (or correctly nothing)
+            if (_heldModel != null) { Destroy(_heldModel); _heldModel = null; }
+            _heldModelConfig = cfg;
+            if (cfg == null || cfg.handSource != HandSource.AppearInHand || cfg.heldPrefab == null) return;
+
+            Transform parent = _muzzle != null ? _muzzle.parent : transform;
+            _heldModel = Instantiate(cfg.heldPrefab, parent);
+            _heldModel.transform.localPosition = Vector3.zero;
+            _heldModel.transform.localRotation = Quaternion.identity;
+        }
+
+        private void OnDestroy()
+        {
+            if (_heldModel != null) Destroy(_heldModel);
         }
 
         // ── Deflect: sword sweep vs both single NetworkProjectiles (collider) and burst-rain projectiles

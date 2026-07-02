@@ -22,7 +22,7 @@ MonoBehaviour:
   cooldown: 0.5
   magazine: 0
   handSource: 0
-  heldPrefab: {fileID: 0}
+  heldPrefab: {fileID: 6448152446237785353, guid: 2d769635b5ec0a9409e5ac9cb1a2ab20, type: 3}
   fireMode: 3
   throwConfig: {fileID: 0}
   projectilePrefab: {fileID: 0}

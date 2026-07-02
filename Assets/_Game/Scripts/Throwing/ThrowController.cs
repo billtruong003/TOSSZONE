@@ -56,6 +56,7 @@ namespace TossZone.Throwing
         private PlayerRig _rig;
         private Transform _wrist, _head, _root, _heldBall;
         private float _heldBaseScale = 1f;
+        private int _lastEquippedIndex = -999;
         private System.Action _onRefillCb;                  // cached → no per-throw delegate alloc
         private System.Action<BallLandedEvent> _onBallLandedCb;
         private Vector3 _lastWristPos;
@@ -105,7 +106,7 @@ namespace TossZone.Throwing
             if (_wrist == null) return;
 
             if (_projectilePrefab != null) Bill.Pool.Register(PoolKey, _projectilePrefab, 8);
-            CreateHeldBall();
+            RefreshHeldModel();
             _onRefillCb = OnRefill;
             _onBallLandedCb = OnBallLanded;
             Bill.Events.Subscribe<BallLandedEvent>(_onBallLandedCb);
@@ -121,6 +122,17 @@ namespace TossZone.Throwing
 
         private void Tick()
         {
+            // T17: swap the held visual to match whichever ThrowBallistic weapon is equipped (Rock/Grenade/
+            // BigBoom/LandMine) — was always the same generic ball regardless of equip. Rock resolves to a
+            // null WeaponConfig by design (ResolveEquippedConfig) and falls back to _heldBallPrefab, same as
+            // before this change.
+            int equippedIdx = PlayerCombat.Local != null ? PlayerCombat.Local.EquippedIndex : -999;
+            if (equippedIdx != _lastEquippedIndex)
+            {
+                _lastEquippedIndex = equippedIdx;
+                RefreshHeldModel();
+            }
+
             float dt = Time.deltaTime;
             Vector3 wp = _wrist.position;
             Vector3 rp = _root.position;
@@ -329,14 +341,36 @@ namespace TossZone.Throwing
             return sum / n;
         }
 
-        private void CreateHeldBall()
+        /// <summary>T17: rebuild the held visual for whichever ThrowBallistic weapon is currently equipped
+        /// (Rock/Grenade/BigBoom/LandMine all share this swing-throw path). WeaponConfig.heldPrefab was
+        /// authored per-weapon but nothing ever read it — every ThrowBallistic weapon showed the same generic
+        /// ball regardless of which one was equipped. Rock resolves to a null WeaponConfig by design
+        /// (<see cref="ResolveEquippedConfig"/> returns null for the default index -1) and falls back to
+        /// <see cref="_heldBallPrefab"/>, matching the pre-T17 behavior exactly for Rock.</summary>
+        private void RefreshHeldModel()
         {
             if (!_showVisualHeldBall) return;   // a ThrowBallHolder provides the real grabbable visual instead
+            bool wasShown = _heldBall != null && _heldBall.gameObject.activeSelf;
+            if (_heldBall != null) { Destroy(_heldBall.gameObject); _heldBall = null; }
+
+#if PHOTON_FUSION
+            WeaponConfig cfg = ResolveEquippedConfig();
+            GameObject prefab = (cfg != null && cfg.handSource == HandSource.AppearInHand && cfg.heldPrefab != null)
+                ? cfg.heldPrefab : _heldBallPrefab;
+#else
+            GameObject prefab = _heldBallPrefab;
+#endif
+            CreateHeldBallFrom(prefab);
+            ShowHeld(wasShown);
+        }
+
+        private void CreateHeldBallFrom(GameObject prefab)
+        {
             if (_heldBall != null) return;
             GameObject ball;
-            if (_heldBallPrefab != null)
+            if (prefab != null)
             {
-                ball = Instantiate(_heldBallPrefab);                 // prefab path — keep its own scale/material (you tune it)
+                ball = Instantiate(prefab);                 // prefab path — keep its own scale/material (you tune it)
                 ball.name = "HeldBall(throw)";
                 _heldBaseScale = ball.transform.localScale.x;
             }
