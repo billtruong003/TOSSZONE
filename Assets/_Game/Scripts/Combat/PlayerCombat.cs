@@ -138,6 +138,15 @@ namespace TossZone.Combat
         /// <summary>Authority: equip a weapon slot (index into the per-minigame catalog).</summary>
         public void EquipWeapon(int slotIndex) { if (HasStateAuthority) EquippedIndex = slotIndex; }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        /// <summary>T17 cheat-console support (see CombatCheats.cs) — grants money with no economy checks.
+        /// Testing only; compiled out of release builds.</summary>
+        public void AddMoneyCheat(int amount) { if (HasStateAuthority) AddMoney(amount); }
+
+        /// <summary>T17 cheat-console support — owns a weapon slot with no cost deducted. Testing only.</summary>
+        public void OwnCheat(int slotIndex) { if (HasStateAuthority) OwnedMask |= (1 << slotIndex); }
+#endif
+
         /// <summary>Authority: consume 1 ammo unit. Returns false if out of ammo.</summary>
         public bool UseAmmo()
         {
