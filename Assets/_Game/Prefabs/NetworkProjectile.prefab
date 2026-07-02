@@ -183,6 +183,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 32768
   _lifetime: 5
+  _zonePrefab: {fileID: 5891929525054182573, guid: 235c549ac985e7a40b1d53ebb5badf1e, type: 3}
   _Multiplier: 0
   _VelocityScale: 0
   _AreaScale: 0

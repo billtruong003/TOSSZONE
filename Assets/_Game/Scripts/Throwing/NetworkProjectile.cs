@@ -31,6 +31,9 @@ namespace TossZone.Throwing
                  "despawn early on BallLanded). Prevents bot/orphan projectiles from leaking forever.")]
         [SerializeField] private float _lifetime = 5f;
 
+        [Tooltip("T10 — shared BuffZone prefab, spawned at the hit point when Element is Ice/Fire.")]
+        [SerializeField] private NetworkObject _zonePrefab;
+
         /// <summary>Who fired this — excluded from its own hits + rewarded on a landed hit.</summary>
         [Networked] public PlayerRef Shooter { get; set; }
 
@@ -160,8 +163,24 @@ namespace TossZone.Throwing
             if (hitAny)
             {
                 _hasHit = true;
+                if (Element == (int)RingElement.Ice || Element == (int)RingElement.Fire) SpawnElementZone();
                 if (PlayerCombat.Local != null) PlayerCombat.Local.RewardHit();
             }
+        }
+
+        /// <summary>T10: Ice/Fire shots leave a persistent <see cref="BuffZone"/> hazard at the hit point — see
+        /// Combat_Minigame_Design.md §10.</summary>
+        private void SpawnElementZone()
+        {
+            if (_zonePrefab == null) return;
+            int element = Element;
+            float radius = _hitRadius * Mathf.Max(1f, AreaScale);
+            NetworkId selfId = Object.Id;
+            Runner.Spawn(_zonePrefab, transform.position, Quaternion.identity, PlayerRef.None,
+                (runner, o) =>
+                {
+                    if (o.TryGetComponent(out BuffZone zone)) zone.Configure(element, radius, selfId);
+                });
         }
     }
 }
