@@ -168,7 +168,23 @@ namespace BillGameCore
             _scroll.Add(_output); _panel.Add(_scroll);
 
             _input = new TextField(); _input.style.marginLeft = _input.style.marginRight = 8; _input.style.marginBottom = 6; _input.style.marginTop = 4; _input.style.fontSize = 12;
-            _input.RegisterCallback<KeyDownEvent>(e => { if (e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter) { Execute(_input.value); _input.value = ""; _input.Focus(); e.StopPropagation(); } });
+            _input.RegisterCallback<KeyDownEvent>(e =>
+            {
+                if (e.keyCode != KeyCode.Return && e.keyCode != KeyCode.KeypadEnter) return;
+                string cmd = _input.value;
+                e.StopPropagation();
+                // Clearing the field IN the KeyDown dispatch leaves the runtime text editor's selection indices
+                // pointing into the old string — the next typed character then hits DeleteSelection →
+                // Substring(startIndex > length) → ArgumentOutOfRangeException. Defer the reset until after the
+                // event fully dispatches and normalize the caret explicitly.
+                _input.schedule.Execute(() =>
+                {
+                    _input.SetValueWithoutNotify(string.Empty);
+                    _input.SelectAll();   // on an empty string this collapses caret+selection to index 0
+                    _input.Focus();
+                });
+                Execute(cmd);
+            });
             _panel.Add(_input);
         }
 

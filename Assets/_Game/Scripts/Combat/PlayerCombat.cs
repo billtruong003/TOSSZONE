@@ -152,6 +152,10 @@ namespace TossZone.Combat
 
         /// <summary>T17 cheat-console support — owns a weapon slot with no cost deducted. Testing only.</summary>
         public void OwnCheat(int slotIndex) { if (HasStateAuthority) OwnedMask |= (1 << slotIndex); }
+
+        /// <summary>T17 cheat-console support — full heal without the round reset ResetForRound would drag in
+        /// (money/weapons kept). Testing only.</summary>
+        public void HealCheat() { if (HasStateAuthority) Health = MaxHealth; }
 #endif
 
         /// <summary>Authority: consume 1 ammo unit. Returns false if out of ammo.</summary>

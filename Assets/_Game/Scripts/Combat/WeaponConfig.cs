@@ -41,6 +41,11 @@ namespace TossZone.Combat
         [BillInfoBox("AppearInHand = grip là hiện trong tay (ball). GrabFromHologram = grab ra từ hologram (súng).")]
         public HandSource handSource = HandSource.AppearInHand;
         public GameObject heldPrefab;
+        [BillInfoBox("Offset cầm tay (cosmetic): pivot mỗi asset MS_WP_* mỗi khác nên model gắn thô vào cổ tay " +
+                     "sẽ lệch/ngược — chỉnh 3 giá trị này cho từng vũ khí tới khi nhìn đúng.")]
+        public Vector3 holdPositionOffset = Vector3.zero;
+        public Vector3 holdRotationOffset = Vector3.zero;
+        [BillSlider(0.1f, 3f)] public float holdScale = 1f;
 
         [BillTitle("Bắn + damage")]
         [BillInfoBox("ThrowBallistic = ném (peak-velocity). ProjectileLaunch = bắn projectile. Hitscan = raycast. Melee = kiếm.")]

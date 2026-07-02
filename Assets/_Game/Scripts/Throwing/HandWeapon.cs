@@ -69,7 +69,14 @@ namespace TossZone.Throwing
 
         private void Update()
         {
-            if (_combat == null || _runner == null) return;
+            if (_combat == null || _runner == null)
+            {
+                // Proxy path (T17): Initialize() only ever runs on the owner, but EquippedIndex is [Networked] —
+                // read it straight off the sibling PlayerCombat so OTHER clients still see this avatar's equipped
+                // weapon model. Display only; all fire/deflect logic below stays owner-exclusive.
+                UpdateProxyHeldModel();
+                return;
+            }
 
             int equipped = _combat.EquippedIndex;
             if (equipped != _lastEquippedIndex) OnEquipChanged(equipped);
@@ -103,6 +110,24 @@ namespace TossZone.Throwing
 
         private GameObject _heldModel;
         private WeaponConfig _heldModelConfig;
+        private PlayerCombat _proxyCombat;
+
+        private void UpdateProxyHeldModel()
+        {
+            if (_proxyCombat == null) _proxyCombat = GetComponentInParent<PlayerCombat>();
+            if (_proxyCombat == null || _proxyCombat.Object == null || !_proxyCombat.Object.IsValid) return;
+            if (_proxyCombat.HasStateAuthority) return;   // owner drives via Initialize/OnEquipChanged instead
+
+            int equipped = _proxyCombat.EquippedIndex;
+            if (equipped == _lastEquippedIndex) return;
+            _lastEquippedIndex = equipped;
+
+            WeaponConfig cfg = GetConfig(equipped);
+            bool isBallistic = cfg == null || cfg.fireMode == FireMode.ThrowBallistic;
+            // ThrowBallistic held visuals on proxies stay the NetworkAvatar HoldingBall sphere (existing path);
+            // this only mirrors the Gun/Bazooka/Sword models.
+            UpdateHeldModel(isBallistic ? null : cfg);
+        }
 
         private void UpdateHeldModel(WeaponConfig cfg)
         {
@@ -111,10 +136,42 @@ namespace TossZone.Throwing
             _heldModelConfig = cfg;
             if (cfg == null || cfg.handSource != HandSource.AppearInHand || cfg.heldPrefab == null) return;
 
+            // Owner: parent to the LOCAL rig wrist (tracking-rate, smooth against the real hand). Proxies have
+            // no rig — they use the avatar's NT-synced wrist node (the muzzle's parent) instead.
             Transform parent = _muzzle != null ? _muzzle.parent : transform;
-            _heldModel = Instantiate(cfg.heldPrefab, parent);
-            _heldModel.transform.localPosition = Vector3.zero;
-            _heldModel.transform.localRotation = Quaternion.identity;
+            PlayerRig rig = _combat != null ? PlayerRig.Local : null;
+            Transform rigWrist = rig != null ? (_rightHand ? rig.WristR : rig.WristL) : null;
+            if (rigWrist != null) parent = rigWrist;
+
+            _heldModel = SpawnHeldVisual(cfg, parent);
+        }
+
+        /// <summary>Spawn a purely-cosmetic copy of <paramref name="cfg"/>.heldPrefab under
+        /// <paramref name="parent"/>, with the per-weapon hold offsets applied. The MS_WP_* prefabs are full
+        /// AutoHand Grabbable props (Rigidbody + Collider + Grabbable, and GrabbableBase.Awake() ADDS a
+        /// GrabbablePoseCombiner + hooks Application.quitting the moment a live copy wakes) — so the copy is
+        /// instantiated under an INACTIVE holder (children of an inactive parent never Awake) and stripped with
+        /// DestroyImmediate BEFORE activation. A deferred Destroy-after-Instantiate ran Awake first and leaked
+        /// the auto-added PoseCombiner — that's the "missing components + leftover junk" state this replaces.</summary>
+        internal static GameObject SpawnHeldVisual(WeaponConfig cfg, Transform parent)
+        {
+            if (cfg == null || cfg.heldPrefab == null) return null;
+            var holder = new GameObject("HeldVisual(" + cfg.id + ")");
+            holder.SetActive(false);
+            holder.transform.SetParent(parent, false);
+
+            GameObject model = Instantiate(cfg.heldPrefab, holder.transform);
+            foreach (MonoBehaviour mb in model.GetComponentsInChildren<MonoBehaviour>(true)) DestroyImmediate(mb);
+            foreach (Collider col in model.GetComponentsInChildren<Collider>(true)) DestroyImmediate(col);
+            if (model.TryGetComponent(out Rigidbody rb)) DestroyImmediate(rb);
+
+            model.transform.localPosition = cfg.holdPositionOffset;
+            model.transform.localRotation = Quaternion.Euler(cfg.holdRotationOffset);
+            if (!Mathf.Approximately(cfg.holdScale, 1f))
+                model.transform.localScale *= Mathf.Max(0.01f, cfg.holdScale);
+
+            holder.SetActive(true);
+            return holder;
         }
 
         private void OnDestroy()

@@ -46,6 +46,21 @@ namespace TossZone.Combat
                 if (local == null || !local.HasStateAuthority) return;
                 local.EquipWeapon(index);
             }, "Equip catalog slot index directly, bypassing buy/unlock-time gates (testing only)");
+
+            cc.Register("heal", () =>
+            {
+                PlayerCombat local = PlayerCombat.Local;
+                if (local != null && local.HasStateAuthority) local.HealCheat();
+            }, "Restore the local player to full health (testing only)");
+
+            // Button panel (DevCombatPanel) — spawned here instead of living in a scene so release builds
+            // (where the class is compiled out) have no missing-script references.
+            if (Object.FindFirstObjectByType<DevCombatPanel>() == null)
+            {
+                var go = new GameObject("[DevCombatPanel]");
+                Object.DontDestroyOnLoad(go);
+                go.AddComponent<DevCombatPanel>();
+            }
         }
     }
 }

@@ -74,9 +74,22 @@ namespace TossZone.Throwing
 
         private void OnDisable()
         {
-            LocalHoldingBall = false;
+            // HandWeapon disables this controller when a non-ballistic weapon (Gun/Bazooka/Sword) is equipped —
+            // without hiding the held ball here, the rock ball stayed visible in the hand NEXT TO the new
+            // weapon's model (two visuals at once).
+            _state = ThrowState.Empty;
+            ShowHeld(false);
             if (_ready && Bill.IsReady && _onBallLandedCb != null)
                 Bill.Events.Unsubscribe<BallLandedEvent>(_onBallLandedCb);
+        }
+
+        private void OnEnable()
+        {
+            // Pairs with OnDisable's unsubscribe: switching Gun → back to Rock re-enables this controller, but
+            // TryInit only subscribes once (_ready guard) — without this, landing haptics + the networked
+            // projectile despawn silently stopped working after the first weapon switch.
+            if (_ready && Bill.IsReady && _onBallLandedCb != null)
+                Bill.Events.Subscribe<BallLandedEvent>(_onBallLandedCb);
         }
 
         private void Update()
@@ -354,16 +367,33 @@ namespace TossZone.Throwing
         {
             if (!_showVisualHeldBall) return;   // a ThrowBallHolder provides the real grabbable visual instead
             bool wasShown = _heldBall != null && _heldBall.gameObject.activeSelf;
-            if (_heldBall != null) { Destroy(_heldBall.gameObject); _heldBall = null; }
+            if (_heldBall != null)
+            {
+                // PulseHeld's yoyo tween may still be running on the old ball — kill it BEFORE Destroy or
+                // BillTween keeps ticking a dead Transform (same MissingReferenceException class the BuffRing
+                // consume tween hit earlier this project).
+                BillTween.KillTarget(_heldBall);
+                Destroy(_heldBall.gameObject);
+                _heldBall = null;
+            }
 
 #if PHOTON_FUSION
             WeaponConfig cfg = ResolveEquippedConfig();
-            GameObject prefab = (cfg != null && cfg.handSource == HandSource.AppearInHand && cfg.heldPrefab != null)
-                ? cfg.heldPrefab : _heldBallPrefab;
-#else
-            GameObject prefab = _heldBallPrefab;
+            if (cfg != null && cfg.handSource == HandSource.AppearInHand && cfg.heldPrefab != null)
+            {
+                // Weapon-specific visual: cosmetic stripped copy with per-weapon hold offsets (shared spawner
+                // with HandWeapon — see SpawnHeldVisual for why a raw Instantiate of MS_WP_* props is unsafe).
+                GameObject holder = HandWeapon.SpawnHeldVisual(cfg, _wrist);
+                if (holder != null)
+                {
+                    _heldBall = holder.transform;
+                    _heldBaseScale = 1f;   // offsets/scale live on the model INSIDE the holder
+                    ShowHeld(wasShown);
+                    return;
+                }
+            }
 #endif
-            CreateHeldBallFrom(prefab);
+            CreateHeldBallFrom(_heldBallPrefab);
             ShowHeld(wasShown);
         }
 
