@@ -40,6 +40,14 @@ namespace TossZone.Combat
             if (_combat != null && _combat.Health <= 0) return;
             if (!ThrowTimer.Expired(Runner)) return;
 
+            // T17: the dummy is a SOLO practice target — with 2+ real players in the match it goes passive so
+            // it doesn't third-party the 1v1 (its stray hits kept killing testers, whose respawn round-reset
+            // then wiped their equipped weapon mid-test).
+            int realPlayers = 0;
+            foreach (PlayerCombat pc in PlayerCombat.AllInstances)
+                if (pc.IsPlayer) realPlayers++;
+            if (realPlayers >= 2) { ScheduleNextThrow(); return; }
+
             PlayerCombat target = FindNearestPlayer();
             if (target != null) FireAt(target);
 

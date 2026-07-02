@@ -29,9 +29,12 @@ namespace TossZone.Network
             FusionNet net = FusionNet.Instance;
             if (net == null || !net.IsRunning) return;
 
-            _used = true;
-            net.LoadScene(_arenaSceneIndex); // master-only inside FusionNet; clients follow
-            Debug.Log("[Portal] Requested load of arena scene " + _arenaSceneIndex);
+            // LoadScene is master-only (FusionNet guards it) — a NON-master walking through gets refused, and
+            // burning _used on that refusal would permanently disarm this client's portal. Only latch after a
+            // successful request; non-master walk-throughs stay retriable no-ops (they ride along automatically
+            // when the master loads).
+            if (net.LoadScene(_arenaSceneIndex)) _used = true;
+            Debug.Log("[Portal] Arena load requested (accepted=" + _used + ", master-only).");
 #endif
         }
     }

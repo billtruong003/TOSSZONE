@@ -30,7 +30,7 @@ namespace TossZone.Combat
             WeaponConfig[] catalog = CombatSession.Instance != null ? CombatSession.Instance.CurrentCatalog : null;
             if (catalog == null) return;   // not in a combat minigame yet
 
-            GUILayout.BeginArea(new Rect(Screen.width - 250, 10, 240, 460), GUI.skin.box);
+            GUILayout.BeginArea(new Rect(Screen.width - 250, 10, 240, 540), GUI.skin.box);
             GUILayout.Label("DEV Weapons — F1 ẩn/hiện | equipped: " + combat.EquippedIndex);
 
             if (GUILayout.Button((combat.EquippedIndex < 0 ? "► " : "") + "Rock (mặc định)"))
@@ -55,6 +55,23 @@ namespace TossZone.Combat
             if (GUILayout.Button("Heal")) combat.HealCheat();
             if (GUILayout.Button("+5 Ammo")) combat.Ammo += 5;
             GUILayout.EndHorizontal();
+
+            // Dummy control — driver toggle + full despawn. Only the state authority (master) can actually
+            // drive these; on a non-master client the buttons are shown disabled instead of silently no-op'ing.
+            DummyBotDriver bot = FindFirstObjectByType<DummyBotDriver>();
+            if (bot != null)
+            {
+                bool isAuthority = bot.Object != null && bot.Object.IsValid && bot.Object.HasStateAuthority;
+                GUI.enabled = isAuthority;
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button(bot.enabled ? "Dummy bot: ON" : "Dummy bot: OFF"))
+                    bot.enabled = !bot.enabled;
+                if (GUILayout.Button("Xoá Dummy") && bot.Runner != null)
+                    bot.Runner.Despawn(bot.Object);
+                GUILayout.EndHorizontal();
+                GUI.enabled = true;
+                if (!isAuthority) GUILayout.Label("(chỉ master điều khiển được dummy)");
+            }
             GUILayout.EndArea();
         }
     }
