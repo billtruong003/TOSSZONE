@@ -69,6 +69,7 @@ namespace TossZone.Throwing
         private ThrowState _state;
         private bool _onCooldown;
         private bool _ready;
+        private bool _windBackTriggered;   // edge-detect: fire wind-up juice once per backward flick, not every frame
 
         private void OnDisable()
         {
@@ -151,7 +152,16 @@ namespace TossZone.Throwing
                 case ThrowState.Loaded:
                     if (!grip) { Cancel(); break; }
                     // A backward flick re-arms: reset the peak so the next forward swing is its own throw.
-                    if (fwdVel < -_config.windBackSpeed) _peakFwdVel = 0f;
+                    if (fwdVel < -_config.windBackSpeed)
+                    {
+                        // Wind-up juice (§4.1) — once per flick, not every frame while past the threshold.
+                        if (!_windBackTriggered) { Haptic(_config.hapticWind, 0.05f); PulseHeld(); _windBackTriggered = true; }
+                        _peakFwdVel = 0f;
+                    }
+                    else
+                    {
+                        _windBackTriggered = false;
+                    }
                     // Track the forward-swing peak (speed + the velocity vector captured at that instant).
                     if (fwdVel > _peakFwdVel) { _peakFwdVel = fwdVel; _peakArmVel = smoothVel; }
                     // FIRE at the natural release point: once a real swing has peaked and started to slow down.
@@ -187,7 +197,8 @@ namespace TossZone.Throwing
             SpawnProjectile(origin, v0, power);
 
             Haptic(_config.hapticRelease, 0.06f);
-            if (!string.IsNullOrEmpty(_config.throwSfx)) Bill.Audio.Play(_config.throwSfx);
+            if (!string.IsNullOrEmpty(_config.throwSfx)) Bill.Audio.PlayPitched(_config.throwSfx, Mathf.Lerp(0.85f, 1.25f, power));
+            ReleaseFlash.Show(origin, power);
             Bill.Events.Fire(new BallThrownEvent { Origin = origin, Direction = dir, Power = power });
 
             ShowHeld(false);
@@ -210,7 +221,8 @@ namespace TossZone.Throwing
             Vector3 v0 = _head.forward * (_config.maxLaunchSpeed * 0.6f);
             SpawnProjectile(origin, v0, 0.6f);
             Haptic(_config.hapticRelease, 0.06f);
-            if (!string.IsNullOrEmpty(_config.throwSfx)) Bill.Audio.Play(_config.throwSfx);
+            if (!string.IsNullOrEmpty(_config.throwSfx)) Bill.Audio.PlayPitched(_config.throwSfx, Mathf.Lerp(0.85f, 1.25f, 0.6f));
+            ReleaseFlash.Show(origin, 0.6f);
             Bill.Events.Fire(new BallThrownEvent { Origin = origin, Direction = _head.forward, Power = 0.6f });
             Debug.Log("[Throw] DEBUG throw fired.");
         }
@@ -231,6 +243,7 @@ namespace TossZone.Throwing
         private void OnBallLanded(BallLandedEvent e)
         {
             Haptic(_config.hapticImpact, 0.05f);
+            ImpactBurst.Show(e.Position, e.Power);
 #if PHOTON_FUSION
             DespawnNetworkProjectile();
 #endif

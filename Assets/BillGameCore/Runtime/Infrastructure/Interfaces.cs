@@ -78,6 +78,9 @@ namespace BillGameCore
         void Play(string key, UnityEngine.Vector3 position);
         void Play(string key, float volume);
         void Play(string key, UnityEngine.Vector3 position, float volume);
+        /// <summary>Play with an extra pitch multiplier on top of the AudioLibrary entry's own pitch+variation
+        /// (e.g. scale SFX pitch by throw/hit power for juice).</summary>
+        void PlayPitched(string key, float pitchMultiplier, float volume = 1f);
         void PlayMusic(string key);
         void PlayMusic(string key, float fadeDuration);
         void StopMusic(float fadeDuration = 0f);

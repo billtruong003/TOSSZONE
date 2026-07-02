@@ -33,18 +33,19 @@ namespace BillGameCore
         AudioSource Inactive => _isA ? _musicB : _musicA;
         float ChVol(AudioChannel ch) => (_vol.TryGetValue(AudioChannel.Master, out var m) ? m : 1f) * (_vol.TryGetValue(ch, out var c) ? c : 1f);
 
-        public void Play(string key) => PlaySFX(key, Vector3.zero, 1f, false);
-        public void Play(string key, Vector3 pos) => PlaySFX(key, pos, 1f, true);
-        public void Play(string key, float vol) => PlaySFX(key, Vector3.zero, vol, false);
-        public void Play(string key, Vector3 pos, float vol) => PlaySFX(key, pos, vol, true);
+        public void Play(string key) => PlaySFX(key, Vector3.zero, 1f, false, 1f);
+        public void Play(string key, Vector3 pos) => PlaySFX(key, pos, 1f, true, 1f);
+        public void Play(string key, float vol) => PlaySFX(key, Vector3.zero, vol, false, 1f);
+        public void Play(string key, Vector3 pos, float vol) => PlaySFX(key, pos, vol, true, 1f);
+        public void PlayPitched(string key, float pitchMultiplier, float vol = 1f) => PlaySFX(key, Vector3.zero, vol, false, pitchMultiplier);
 
-        void PlaySFX(string key, Vector3 pos, float volMul, bool spatial)
+        void PlaySFX(string key, Vector3 pos, float volMul, bool spatial, float pitchMul)
         {
             var e = Resolve(key); if (e == null) return;
             var s = GetSFXSource(); if (s == null) return;
             s.clip = e.clip;
             s.volume = e.volume * volMul * ChVol(AudioChannel.SFX);
-            s.pitch = e.pitch + Random.Range(-e.pitchVariation, e.pitchVariation);
+            s.pitch = (e.pitch + Random.Range(-e.pitchVariation, e.pitchVariation)) * pitchMul;
             s.loop = e.loop;
             s.spatialBlend = spatial ? 1f : 0f;
             if (spatial) s.transform.position = pos;

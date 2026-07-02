@@ -31,6 +31,21 @@ MonoBehaviour:
     warmCount: 5
     maxSize: 20
     autoReturnTime: 0
+  - key: releaseflash
+    prefab: {fileID: 4388041850873228958, guid: 39ac79b5e02a8a447813dd3136cdb2f6, type: 3}
+    warmCount: 4
+    maxSize: 20
+    autoReturnTime: 0
+  - key: impactburst
+    prefab: {fileID: 6075663798167517485, guid: e75dafeaea2d39f4683b2199b3653dd8, type: 3}
+    warmCount: 4
+    maxSize: 20
+    autoReturnTime: 0
+  - key: bouncenumber
+    prefab: {fileID: 1735180138563378336, guid: f69b6596ed5b43d44a3696f88a959751, type: 3}
+    warmCount: 6
+    maxSize: 20
+    autoReturnTime: 0
   defaultAudioLibrary: {fileID: 0}
   masterVolume: 1
   musicVolume: 0.8
