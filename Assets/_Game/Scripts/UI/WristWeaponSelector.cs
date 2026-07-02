@@ -34,8 +34,8 @@ namespace TossZone.UI
         public void Initialize(PlayerCombat combat)
         {
             _combat  = combat;
-            _catalog = CombatSession.Instance != null ? CombatSession.Instance.CurrentCatalog : null;
             _viewIndex = 0;
+            TryResolveCatalog();
             RefreshSlots();
             SetVisible(false);
         }
@@ -44,12 +44,25 @@ namespace TossZone.UI
         {
             if (_combat == null) return;
 
+            // Initialize() can run before ArenaManager fires MinigameEnteredEvent (avatar spawns before the
+            // scene's combat authority attaches) — CombatSession.CurrentCatalog would still be null at that
+            // point. Keep resolving until it appears, self-healing instead of staying permanently broken.
+            if (_catalog == null && TryResolveCatalog()) RefreshSlots();
+
             // Show selector when wrist is turned (palm up heuristic: local Y down is towards floor).
             bool palmUp = transform.up.y < -0.3f;
             if (palmUp != _visible) SetVisible(palmUp);
             if (!_visible) return;
 
             HandleNavigation();
+        }
+
+        private bool TryResolveCatalog()
+        {
+            WeaponConfig[] cat = CombatSession.Instance != null ? CombatSession.Instance.CurrentCatalog : null;
+            if (cat == null) return false;
+            _catalog = cat;
+            return true;
         }
 
         private void HandleNavigation()
