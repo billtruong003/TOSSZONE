@@ -190,12 +190,18 @@ namespace TossZone.Combat
         }
 
         /// <summary>World spawn position for a player, by team (see <see cref="GetTeam"/>). Used by respawn.
-        /// Falls back to this object's position when spawn points aren't wired.</summary>
+        /// T16: picks randomly among the team's spawn points (a spread-out area, not one fixed spot) so
+        /// teammates don't stack on top of each other. Falls back to this object's position when spawn points
+        /// aren't wired.</summary>
         public Vector3 GetSpawnPosition(PlayerRef player)
         {
             Transform[] pts = (GetTeam(player) == 0) ? _spawnPointsA : _spawnPointsB;
-            if (pts != null && pts.Length > 0 && pts[0] != null) return pts[0].position;
-            return transform.position;
+            if (pts == null || pts.Length == 0) return transform.position;
+            // Deterministic-enough: each client resolving its OWN respawn independently just needs a plausible
+            // spot, not perfect cross-client agreement (this only positions the LOCAL rig — see NetworkAvatar.
+            // TeleportToSpawn — never networked state).
+            int idx = UnityEngine.Random.Range(0, pts.Length);
+            return pts[idx] != null ? pts[idx].position : transform.position;
         }
     }
 }

@@ -105,7 +105,7 @@ GameObject:
   - component: {fileID: 540913976062951534}
   - component: {fileID: 5061561829744397283}
   - component: {fileID: 5355675377979284605}
-  m_Layer: 0
+  m_Layer: 12
   m_Name: NetworkProjectile
   m_TagString: Untagged
   m_Icon: {fileID: 0}
