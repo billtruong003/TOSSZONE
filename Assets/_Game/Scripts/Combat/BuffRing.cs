@@ -30,6 +30,10 @@ namespace TossZone.Combat
         [Tooltip("Gravity applied to the Multi-ring burst rain (arc). Higher = falls faster.")]
         [SerializeField] private float _burstGravity = 2f;
 
+        [Tooltip("Wander speed knob (T9) — higher = the ring roams its zone box faster. Only used when a " +
+                 "RingSpawner zone is resolved; otherwise falls back to the old fixed up/down drift.")]
+        [SerializeField] private float _wanderFrequency = 0.15f;
+
         private static readonly int _colorId = Shader.PropertyToID("_BaseColor");
         private MaterialPropertyBlock _block;
 
@@ -43,6 +47,14 @@ namespace TossZone.Combat
         private BuffRingConfig _config;
         private Vector3 _originPos;
         private Tween _driftTween;
+
+        // T9 wander: resolved locally from RingSpawner.Instance (identical scene data on every client, no
+        // networking needed). Position is a deterministic function of Object.Id + Runner.SimulationTime — every
+        // client (authority AND proxies) computes the SAME path each frame, unlike the old per-client BillTween
+        // sin drift whose phase depended on when that client's own Spawned() happened to fire.
+        private bool _hasWanderZone;
+        private Vector3 _wanderCenter;
+        private Vector3 _wanderHalfExtents;
         // Set the INSTANT consumption starts (not when the 0.25s shrink tween's despawn finally completes) — the
         // ring stays alive/visible/collidable during that shrink, so without this guard it could be consumed
         // AGAIN by another ball or by a burst re-sampling it every tick (T7 hit this: without the guard a single
@@ -67,7 +79,38 @@ namespace TossZone.Combat
 
             _originPos = transform.position;
             PlayBounceIn();
-            StartDrift();
+
+            // T9: prefer wandering the shared "vùng giữa" box (every client resolves the same RingSpawner scene
+            // data); fall back to the old fixed up/down drift for a ring placed outside RingSpawner's flow.
+            if (RingSpawner.Instance != null)
+            {
+                _wanderCenter = RingSpawner.Instance.ZoneCenter;
+                _wanderHalfExtents = RingSpawner.Instance.ZoneHalfExtents;
+                _hasWanderZone = true;
+            }
+            else
+            {
+                StartDrift();
+            }
+        }
+
+        private void Update()
+        {
+            if (!_hasWanderZone || Runner == null) return;
+            transform.position = WanderPosition((float)Runner.SimulationTime);
+        }
+
+        /// <summary>Deterministic wander path inside the zone box — same seed (Object.Id) + same clock
+        /// (Runner.SimulationTime) on every client, so authority and proxies render the ring in the same place
+        /// without replicating a single extra byte.</summary>
+        private Vector3 WanderPosition(float simTime)
+        {
+            float seed = (Object.Id.Raw % 10000) * 0.1013f;
+            float f = simTime * _wanderFrequency;
+            float nx = Mathf.PerlinNoise(seed, f) * 2f - 1f;
+            float ny = Mathf.PerlinNoise(f, seed) * 2f - 1f;
+            float nz = Mathf.PerlinNoise(seed + 5.5f, f + 5.5f) * 2f - 1f;
+            return _wanderCenter + new Vector3(nx * _wanderHalfExtents.x, ny * _wanderHalfExtents.y, nz * _wanderHalfExtents.z);
         }
 
         public override void Despawned(NetworkRunner runner, bool hasState)
@@ -187,6 +230,7 @@ namespace TossZone.Combat
             // so without this it could be re-consumed again before the despawn actually removes it (see the
             // _consumed field comment).
             _consumed = true;
+            _hasWanderZone = false;   // freeze position for the shrink — don't wander away mid-despawn
 
             // "EFFECTIVE!" flash on label then shrink ring to zero and despawn.
             if (_label != null) _label.text = "EFFECTIVE!";

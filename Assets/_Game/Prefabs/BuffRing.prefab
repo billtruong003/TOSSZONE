@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 150319547552668659}
   - component: {fileID: 1063065025808422149}
   - component: {fileID: 4259340142261129433}
-  - component: {fileID: 3639097038545692669}
   - component: {fileID: 1679279049636444878}
   m_Layer: 0
   m_Name: BuffRing
@@ -76,26 +75,8 @@ MonoBehaviour:
   Flags: 262145
   NestedObjects: []
   NetworkedBehaviours:
-  - {fileID: 3639097038545692669}
   - {fileID: 1679279049636444878}
   ForceRemoteRenderTimeframe: 0
---- !u!114 &3639097038545692669
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3674325289655010843}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
-  _stateAuthorityChangeErrorCorrectionDelta: 0
-  SyncScale: 0
-  SyncParent: 0
-  _autoAOIOverride: 1
-  DisableSharedModeInterpolation: 0
 --- !u!114 &1679279049636444878
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -117,6 +98,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 96d2df8ea04b3984e838933b11c428e5, type: 2}
   - {fileID: 11400000, guid: 79ea68b5d5e2e7140a208d67f7a6fc55, type: 2}
   - {fileID: 11400000, guid: a120d85ff934782459c918a2b4c0e68e, type: 2}
+  _burstGravity: 2
+  _wanderFrequency: 0.15
   _Element: 0
 --- !u!1 &4308871812770537861
 GameObject:

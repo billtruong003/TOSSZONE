@@ -386,6 +386,7 @@ MonoBehaviour:
   _mesh: {fileID: 0}
   _material: {fileID: 0}
   _scale: 0.12
+  _maxRenderDistance: 80
 --- !u!114 &772337261
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -403,6 +404,8 @@ MonoBehaviour:
   _lifetime: 4
   _hitRadius: 0.35
   _damage: 1
+  _ringPassRadius: 0.4
+  _ringCheckSampleCount: 24
 --- !u!114 &772337262
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -536,10 +539,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 96d2df8ea04b3984e838933b11c428e5, type: 2}
   - {fileID: 11400000, guid: 79ea68b5d5e2e7140a208d67f7a6fc55, type: 2}
   - {fileID: 11400000, guid: a120d85ff934782459c918a2b4c0e68e, type: 2}
-  _spawnPoints:
-  - {fileID: 1873267311}
-  - {fileID: 804859354}
-  - {fileID: 1146368805}
+  _zoneCenter: {fileID: 804859354}
+  _zoneSize: {x: 8, y: 1, z: 6}
+  _slotCount: 3
 --- !u!114 &1358483357
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -611,6 +613,7 @@ MonoBehaviour:
   _roundDuration: 120
   _warmupDuration: 5
   _roundEndDuration: 4
+  _minigameId: arena
   _spawnPointsA:
   - {fileID: 379173921}
   _spawnPointsB:
