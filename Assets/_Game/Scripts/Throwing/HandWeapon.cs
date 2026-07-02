@@ -107,8 +107,12 @@ namespace TossZone.Throwing
 
             NetworkObject proj = _runner.Spawn(prefab, _muzzle.position,
                 Quaternion.LookRotation(_muzzle.forward), _runner.LocalPlayer);
-            if (proj != null && proj.TryGetComponent(out NetworkProjectile np))
-                np.Shooter = _runner.LocalPlayer;
+            if (proj == null || !proj.TryGetComponent(out NetworkProjectile np)) return;
+
+            np.Shooter = _runner.LocalPlayer;
+            // Gun: muzzleSpeed fast + gravity 0 (straight line). Bazooka/Grenade: gravity > 0 arcs down.
+            np.Launch(_muzzle.forward * _activeConfig.muzzleSpeed, _activeConfig.projectileGravity, _activeConfig.damage);
+            if (_activeConfig.aoeRadius > 0f) np.SetAoe(_activeConfig.aoeRadius);
         }
 
         private void FireHitscan()
@@ -125,6 +129,9 @@ namespace TossZone.Throwing
 
         private void FireMelee()
         {
+            // Sword: attacksPlayers=false → deflect-only (see HandDeflector / T5), no direct swing damage.
+            if (!_activeConfig.attacksPlayers) return;
+
             Transform center = _bladeTip != null ? _bladeTip : transform;
             int count = Physics.OverlapSphereNonAlloc(center.position, MeleeRadius,
                 _overlap, 1 << LayerHittable);

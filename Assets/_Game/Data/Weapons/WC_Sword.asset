@@ -33,6 +33,6 @@ MonoBehaviour:
   fuseDelay: 0
   projectileGravity: 0
   laserSight: 0
-  attacksPlayers: 1
+  attacksPlayers: 0
   canDeflect: 1
   isUncatchable: 0

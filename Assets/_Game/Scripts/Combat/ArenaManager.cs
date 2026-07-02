@@ -1,6 +1,7 @@
 #if PHOTON_FUSION
 using BillGameCore;
 using Fusion;
+using TossZone.Minigame;
 using UnityEngine;
 
 namespace TossZone.Combat
@@ -24,6 +25,10 @@ namespace TossZone.Combat
         [SerializeField] private float _roundDuration = 120f;
         [SerializeField] private float _warmupDuration = 5f;
         [SerializeField] private float _roundEndDuration = 4f;
+        [Tooltip("Must match a MinigameDef.id under Resources/Minigames/ — CombatSession reads its weaponCatalog "
+                + "from this id. Nothing else in the real join flow (portal / direct-play gate) calls "
+                + "MinigameManager.Enter(), so THIS is what turns combat 'on' for weapon equip/fire.")]
+        [SerializeField] private string _minigameId = "arena";
 
         [Header("Scene refs")]
         [SerializeField] private Transform[] _spawnPointsA;
@@ -42,9 +47,21 @@ namespace TossZone.Combat
         public override void Spawned()
         {
             _winsNeeded = (_bestOf + 1) / 2;
+
+            // Fire on EVERY client (not just authority) — Bill.Events is a local, per-process bus, and
+            // CombatSession (which resolves the weapon catalog for HandWeapon/WristWeaponSelector) needs to
+            // react locally on each client. Nothing else in the real join flow fires this: PortalMatchmaker
+            // just does a Fusion scene load, and ArenaNetworkLoadGate only fixes up dormant scene objects.
+            if (Bill.IsReady) Bill.Events.Fire(new MinigameEnteredEvent { Id = _minigameId });
+
             if (!HasStateAuthority) return;
             Phase = MatchPhase.Warmup;
             PhaseTimer = TickTimer.CreateFromSeconds(Runner, _warmupDuration);
+        }
+
+        public override void Despawned(NetworkRunner runner, bool hasState)
+        {
+            if (Bill.IsReady) Bill.Events.Fire(new MinigameExitedEvent { Id = _minigameId });
         }
 
         public override void FixedUpdateNetwork()

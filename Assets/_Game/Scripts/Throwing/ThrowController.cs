@@ -1,4 +1,5 @@
 using BillGameCore;
+using TossZone.Combat;
 using TossZone.Player;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -253,7 +254,29 @@ namespace TossZone.Throwing
             {
                 np.Shooter = _runner.LocalPlayer;
                 np.LinkTo(localProj);
+
+                // ThrowBallistic weapons other than the default Rock (Grenade/BigBoom/LandMine) still fly via
+                // this swing-throw path — apply their configured damage/AoE so they aren't silently identical
+                // to a plain Rock throw.
+                WeaponConfig cfg = ResolveEquippedConfig();
+                if (cfg != null)
+                {
+                    if (cfg.damage > 0) np.SetDamage(cfg.damage);
+                    if (cfg.aoeRadius > 0f) np.SetAoe(cfg.aoeRadius);
+                }
             }
+        }
+
+        /// <summary>The currently equipped WeaponConfig (null = index -1 / Rock / default — the projectile's own
+        /// base damage applies). Reads the LOCAL player's combat state; only meaningful for the throw authority.</summary>
+        private WeaponConfig ResolveEquippedConfig()
+        {
+            PlayerCombat combat = PlayerCombat.Local;
+            if (combat == null) return null;
+            int idx = combat.EquippedIndex;
+            if (idx < 0) return null;
+            WeaponConfig[] catalog = CombatSession.Instance != null ? CombatSession.Instance.CurrentCatalog : null;
+            return (catalog != null && idx < catalog.Length) ? catalog[idx] : null;
         }
 
         private void DespawnNetworkProjectile()

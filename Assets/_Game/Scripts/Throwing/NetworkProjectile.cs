@@ -41,7 +41,11 @@ namespace TossZone.Throwing
         [Networked] public int Element { get; set; }         // 0 None · 1 Ice · 2 Fire
 
         private bool _hasHit;
+        private bool _isAoe;
         private float _age;
+        private float _customGravity;
+        private int _damageOverride;
+        private Rigidbody _rb;
         private static readonly Collider[] _overlap = new Collider[8];
 
         /// <summary>
@@ -50,13 +54,47 @@ namespace TossZone.Throwing
         /// </summary>
         public void LinkTo(Transform localProj) => _localProjectile = localProj;
 
+        /// <summary>
+        /// Direct-fire path (HandWeapon: Gun/Bazooka/Grenade/BigBoom) — no local BillTween projectile involved.
+        /// Sets an initial Rigidbody velocity and a manual per-tick gravity (0 = straight line, e.g. Gun;
+        /// &gt;0 = arcs down, e.g. Bazooka/Grenade). Gravity is integrated by hand rather than
+        /// <c>Rigidbody.useGravity</c> so it stays authority-only and deterministic (project has no Physics Addon).
+        /// </summary>
+        public void Launch(Vector3 velocity, float gravity, int damage = 0)
+        {
+            _customGravity = gravity;
+            if (damage > 0) SetDamage(damage);
+            if (_rb != null)
+            {
+                _rb.isKinematic = false;
+                _rb.useGravity = false;
+                _rb.linearVelocity = velocity;
+            }
+        }
+
+        /// <summary>Override this shot's damage (e.g. the ThrowBallistic path — Grenade/BigBoom/LandMine — sets
+        /// this from the currently equipped WeaponConfig; the prefab's own <see cref="_baseDamage"/> stays the
+        /// default for Rock / anything that doesn't call this).</summary>
+        public void SetDamage(int damage) => _damageOverride = damage;
+
+        /// <summary>Explosive weapons (BigBoom/Grenade): damage EVERY player in <paramref name="radiusMeters"/>,
+        /// not just the first found. Expressed via the existing AreaScale hook (also used by buff rings).</summary>
+        public void SetAoe(float radiusMeters)
+        {
+            _isAoe = true;
+            if (_hitRadius > 0.0001f) AreaScale = Mathf.Max(AreaScale, radiusMeters / _hitRadius);
+        }
+
         public override void Spawned()
         {
             // Reset per-life plain state — a pooled instance keeps stale fields from its previous life
             // (Fusion resets [Networked] state, but not these). Without this a reused projectile carries
             // _hasHit=true (never hits again) or a leftover _localProjectile link.
             _hasHit = false;
+            _isAoe = false;
             _age = 0f;
+            _customGravity = 0f;
+            _damageOverride = 0;
             _localProjectile = null;
 
             _mr = GetComponentInChildren<Renderer>();
@@ -70,12 +108,15 @@ namespace TossZone.Throwing
                 if (VelocityScale <= 0f) VelocityScale = 1f;
                 if (AreaScale <= 0f) AreaScale = 1f;
             }
-            // Physics-driven path (DummyBotDriver): authority runs Rigidbody, proxies use kinematic NT.
-            if (TryGetComponent(out Rigidbody rb))
+            // Physics-driven path (DummyBotDriver / HandWeapon.Launch): authority runs Rigidbody, proxies use
+            // kinematic NT.
+            _rb = GetComponent<Rigidbody>();
+            if (_rb != null)
             {
-                rb.isKinematic = !HasStateAuthority;
-                rb.linearVelocity = Vector3.zero;   // clear stale velocity on pooled reuse
-                rb.angularVelocity = Vector3.zero;
+                _rb.isKinematic = !HasStateAuthority;
+                _rb.useGravity = false;             // gravity integrated manually (see FixedUpdateNetwork)
+                _rb.linearVelocity = Vector3.zero;   // clear stale velocity on pooled reuse
+                _rb.angularVelocity = Vector3.zero;
             }
         }
 
@@ -89,11 +130,21 @@ namespace TossZone.Throwing
 
             // Mirror BillTween-driven position when linked to a local ThrowProjectile (player throw path).
             if (_localProjectile != null)
+            {
                 transform.SetPositionAndRotation(_localProjectile.position, _localProjectile.rotation);
+            }
+            else if (_rb != null && _customGravity != 0f)
+            {
+                // Direct-fire path (HandWeapon.Launch): manual per-tick gravity integration, not
+                // Rigidbody.useGravity — keeps the arc authority-only/deterministic (no Physics Addon).
+                _rb.linearVelocity += Vector3.down * _customGravity * Runner.DeltaTime;
+            }
 
             // Hit detection runs on the authority regardless of how the projectile moves.
             if (_hasHit) return;
+            int dmg = _damageOverride > 0 ? _damageOverride : _baseDamage;
             int n = Physics.OverlapSphereNonAlloc(transform.position, _hitRadius * AreaScale, _overlap, _hittableMask, QueryTriggerInteraction.Collide);
+            bool hitAny = false;
             for (int i = 0; i < n; i++)
             {
                 PlayerCombat victim = _overlap[i] != null ? _overlap[i].GetComponentInParent<PlayerCombat>() : null;
@@ -102,10 +153,14 @@ namespace TossZone.Throwing
                 // Scene objects (DummyAvatar) have InputAuthority = None, so they are never excluded
                 // even when the master client is the shooter — fixing solo-test blocking.
                 if (victim.Object.InputAuthority == Shooter) continue;
+                victim.RPC_TakeHit(dmg, transform.position, Shooter);
+                hitAny = true;
+                if (!_isAoe) break;   // single-target weapons stop at the first victim; AoE hits everyone in range
+            }
+            if (hitAny)
+            {
                 _hasHit = true;
-                victim.RPC_TakeHit(_baseDamage, transform.position, Shooter);
                 if (PlayerCombat.Local != null) PlayerCombat.Local.RewardHit();
-                break;
             }
         }
     }
