@@ -194,31 +194,36 @@ namespace TossZone.Combat
             if (!HasStateAuthority || _config == null || _consumed) return;
             if (!other.TryGetComponent(out NetworkProjectile proj)) return;
             if (proj.Object == null || !proj.Object.IsValid) return;
-            if (!proj.Object.HasStateAuthority) return;
 
             ApplyBuff(proj);
             PlayConsumeAnim();
         }
 
+        /// <summary>T12 — Shared Mode (Fusion_Shared_Mode_Gotchas.md §1): this ring's authority (the round's
+        /// master, per RingSpawner spawning with PlayerRef.None) is NOT necessarily the projectile's own
+        /// authority (the shooter). Only an object's own State Authority may write its [Networked] state or
+        /// despawn it — writing proj.VelocityScale/AreaScale/Element or calling proj.Runner.Despawn directly here
+        /// silently no-ops for any shooter other than the ring's own authority (this is exactly what "solo
+        /// testing only" was masking). Route both through RPCs targeted at the projectile's authority instead.</summary>
         private void ApplyBuff(NetworkProjectile proj)
         {
             // Multi ring → convert the single ball into a data-driven BURST (the "rain") aimed along its travel,
             // then consume the original. The burst is DATA, not N NetworkObjects (see ProjectileBurstSystem).
+            // SpawnBurst writes to ProjectileBurstSystem, which THIS client (the ring's authority) already owns —
+            // no cross-authority issue there. Despawning the projectile itself needs the RPC (see above).
             if (_config.element == RingElement.Multi && ProjectileBurstSystem.Instance != null)
             {
                 int count = Mathf.Max(2, _config.multiplier);
                 ProjectileBurstSystem.Instance.SpawnBurst(
                     proj.transform.position, proj.transform.forward, count, _burstGravity, (int)_config.element, proj.Shooter);
-                if (proj.Runner != null && proj.Object != null && proj.Object.IsValid) proj.Runner.Despawn(proj.Object);
+                proj.RPC_RequestSelfDespawn();
                 return;
             }
 
-            if (_config.velocityScale > 1f)
-                proj.VelocityScale = Mathf.Max(proj.VelocityScale, _config.velocityScale);
-            if (_config.areaScale > 1f)
-                proj.AreaScale = Mathf.Max(proj.AreaScale, _config.areaScale);
-            if (_config.element != RingElement.None)
-                proj.Element = (int)_config.element;
+            float velocityScale = _config.velocityScale > 1f ? _config.velocityScale : 0f;
+            float areaScale = _config.areaScale > 1f ? _config.areaScale : 0f;
+            int element = _config.element != RingElement.None ? (int)_config.element : 0;
+            proj.RPC_ApplyRingBuff(velocityScale, areaScale, element);
         }
 
         /// <summary>Called by <see cref="ProjectileBurstSystem"/> (authority) when a data-driven rain burst

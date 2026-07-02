@@ -88,6 +88,27 @@ namespace TossZone.Throwing
             if (_hitRadius > 0.0001f) AreaScale = Mathf.Max(AreaScale, radiusMeters / _hitRadius);
         }
 
+        /// <summary>T12 — Shared Mode: only THIS projectile's own State Authority may write its [Networked]
+        /// fields (Fusion_Shared_Mode_Gotchas.md §1). A BuffRing's authority (the round's master) may differ from
+        /// the shooter who owns this projectile in multi-client, so it can't set VelocityScale/AreaScale/Element
+        /// directly — it asks via this RPC instead, which Fusion routes to whichever client actually holds
+        /// authority. 0 means "leave this field unchanged" for velocityScale/areaScale/element.</summary>
+        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+        public void RPC_ApplyRingBuff(float velocityScale, float areaScale, int element)
+        {
+            if (velocityScale > 1f) VelocityScale = Mathf.Max(VelocityScale, velocityScale);
+            if (areaScale > 1f) AreaScale = Mathf.Max(AreaScale, areaScale);
+            if (element != 0) Element = element;
+        }
+
+        /// <summary>T12 — same authority rule: only this projectile's own State Authority may despawn it.
+        /// BuffRing (Multi ring) calls this after spawning the burst rain that replaces this single ball.</summary>
+        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+        public void RPC_RequestSelfDespawn()
+        {
+            if (Runner != null && Object != null && Object.IsValid) Runner.Despawn(Object);
+        }
+
         public override void Spawned()
         {
             // Reset per-life plain state — a pooled instance keeps stale fields from its previous life
