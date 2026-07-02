@@ -91,6 +91,8 @@
 
 ---
 
+> Chi tiết "làm gì" từng task (mục tiêu / file / verify / deps): **`TASKS_DETAIL.md`**.
+
 ## Thứ tự đề xuất
 
 1. **Player respawn** (C) — khép vòng chơi solo.

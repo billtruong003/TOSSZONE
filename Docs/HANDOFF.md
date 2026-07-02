@@ -8,6 +8,7 @@
 |---|---|
 | **HANDOFF.md** (file này) | Đầu mỗi session — trạng thái + test flow |
 | **TASKS_MASTER.md** | Danh sách task sống (đã audit). Chọn việc tiếp theo ở đây |
+| **TASKS_DETAIL.md** | Chi tiết "làm gì" từng task còn lại (mục tiêu/file/verify/deps) |
 | **Fusion_Shared_Mode_Gotchas.md** | BẮT BUỘC đọc trước khi viết/sửa bất kỳ networking code nào |
 | **Burst_Projectile_System_Design.md** | Trước khi đụng đạn mưa / pool / GPU instancing (hướng đã chốt) |
 | **Network_Architecture_Lessons.md** | Hiểu netcode + avatar IK + input + scene-load (bài học bền) |
