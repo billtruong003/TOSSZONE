@@ -35,6 +35,12 @@ namespace TossZone.Combat
         [SerializeField] private float _lifetime = 4f;
         [SerializeField] private float _hitRadius = 0.35f;
         [SerializeField] private int _damage = 1;
+        [Tooltip("Approximates the ring's torus opening for burst-stacking (T7) — a burst has no collider to " +
+                 "trigger BuffRing.OnTriggerEnter normally, so we check projectile-to-ring-center distance instead.")]
+        [SerializeField] private float _ringPassRadius = 0.4f;
+        [Tooltip("Per-tick, per-burst cap on how many projectiles are checked against rings — the cone is " +
+                 "spatially clustered so a sample is representative; avoids an O(count) scan at 4096.")]
+        [SerializeField] private int _ringCheckSampleCount = 24;
 
         [Networked, Capacity(MaxBursts)] private NetworkArray<Burst> Bursts => default;
 
@@ -178,6 +184,10 @@ namespace TossZone.Combat
         {
             if (!HasStateAuthority) return;
 
+            // Cache once per tick, not per burst — there are normally 0-2 active bursts and 3-5 rings, so this
+            // is cheap regardless, but no reason to redo it per burst in the same tick.
+            BuffRing[] rings = null;
+
             for (int s = 0; s < Bursts.Length; s++)
             {
                 Burst b = Bursts.Get(s);
@@ -189,6 +199,19 @@ namespace TossZone.Combat
                     b.Active = false;
                     Bursts.Set(s, b);   // Dead bits reset for free next SpawnBurst (fresh struct literal = 0)
                     continue;
+                }
+
+                // Stacking (T7): a burst passing through a Multi ring multiplies Count (e.g. 12x12x12). Bursts
+                // have no collider so they can't trigger BuffRing.OnTriggerEnter normally — sample a subset of
+                // projectile positions against each live Multi ring's center instead.
+                if (b.Count < MaxProjectilesPerBurst)
+                {
+                    rings ??= FindObjectsByType<BuffRing>(FindObjectsSortMode.None);
+                    if (TryStackThroughRing(ref b, t, rings, out BuffRing consumedRing))
+                    {
+                        Bursts.Set(s, b);
+                        consumedRing.TryConsumeByBurst();
+                    }
                 }
 
                 // Hit test each projectile vs real players (cheap distance check; cap the per-tick scan AND
@@ -217,6 +240,39 @@ namespace TossZone.Combat
                 }
                 if (dirty) Bursts.Set(s, b);
             }
+        }
+
+        /// <summary>T7 stacking: sample up to <see cref="_ringCheckSampleCount"/> live projectile positions of
+        /// <paramref name="b"/> against every active Multi ring; on the first pass-through, multiply Count
+        /// (clamped to <see cref="MaxProjectilesPerBurst"/>) and report which ring to consume. One stack per
+        /// tick per burst — the ring is removed from the scene by the caller before the next tick can re-trigger,
+        /// so no extra "already consumed this ring" bookkeeping is needed on the burst itself.</summary>
+        private bool TryStackThroughRing(ref Burst b, float t, BuffRing[] rings, out BuffRing consumedRing)
+        {
+            consumedRing = null;
+            if (rings == null || rings.Length == 0) return false;
+
+            int scan = Mathf.Min(b.Count, DeadMaskBits, _ringCheckSampleCount);
+            float rSq = _ringPassRadius * _ringPassRadius;
+
+            for (int r = 0; r < rings.Length; r++)
+            {
+                BuffRing ring = rings[r];
+                if (ring == null || ring.Object == null || !ring.Object.IsValid || ring.Element != RingElement.Multi) continue;
+                Vector3 ringPos = ring.transform.position;
+
+                for (int i = 0; i < scan; i++)
+                {
+                    if (IsDead(b, i)) continue;
+                    if ((ProjectilePosition(b, i, t) - ringPos).sqrMagnitude > rSq) continue;
+
+                    int newCount = Mathf.Min(b.Count * Mathf.Max(2, ring.StackMultiplier), MaxProjectilesPerBurst);
+                    b.Count = newCount;
+                    consumedRing = ring;
+                    return true;
+                }
+            }
+            return false;
         }
 
         // ── Local queries (catch / deflect) — call from a client, then RPC the result to authority ──────────

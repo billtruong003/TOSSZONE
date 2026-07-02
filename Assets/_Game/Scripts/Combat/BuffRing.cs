@@ -35,12 +35,25 @@ namespace TossZone.Combat
 
         [Networked] public RingElement Element { get; set; }
 
+        /// <summary>This ring's configured multiplier (RC_Multi.multiplier) — used by
+        /// <see cref="ProjectileBurstSystem"/> when a data-driven rain burst stacks through this ring (T7).
+        /// Falls back to 2 if the config hasn't resolved yet (shouldn't normally happen for an active ring).</summary>
+        public int StackMultiplier => _config != null ? _config.multiplier : 2;
+
         private BuffRingConfig _config;
         private Vector3 _originPos;
         private Tween _driftTween;
+        // Set the INSTANT consumption starts (not when the 0.25s shrink tween's despawn finally completes) — the
+        // ring stays alive/visible/collidable during that shrink, so without this guard it could be consumed
+        // AGAIN by another ball or by a burst re-sampling it every tick (T7 hit this: without the guard a single
+        // rain burst re-triggered the same still-shrinking ring for several ticks, multiplying Count each time
+        // and blowing straight through the 4096 cap instead of stacking exactly once).
+        private bool _consumed;
 
         public override void Spawned()
         {
+            _consumed = false;   // defensive reset (matches NetworkProjectile's per-life pattern) in case
+                                  // this prefab is ever pooled later — a fresh instance already starts false.
             _block = new MaterialPropertyBlock();
             // The prefab carries a convex ColliderRing mesh collider (not a SphereCollider); take whatever
             // Collider is present and make sure it's a trigger. GetComponent<SphereCollider>() here threw a
@@ -126,7 +139,7 @@ namespace TossZone.Combat
 
         private void OnTriggerEnter(Collider other)
         {
-            if (!HasStateAuthority || _config == null) return;
+            if (!HasStateAuthority || _config == null || _consumed) return;
             if (!other.TryGetComponent(out NetworkProjectile proj)) return;
             if (proj.Object == null || !proj.Object.IsValid) return;
             if (!proj.Object.HasStateAuthority) return;
@@ -156,8 +169,25 @@ namespace TossZone.Combat
                 proj.Element = (int)_config.element;
         }
 
+        /// <summary>Called by <see cref="ProjectileBurstSystem"/> (authority) when a data-driven rain burst
+        /// passes through this ring (T7 — stacking, e.g. 12×12×12). Bursts have no collider so they can't hit
+        /// <see cref="OnTriggerEnter"/> normally; only Multi rings cause stacking (only Multi has meaning for a
+        /// burst that's already a rain — other elements would need per-projectile buff state the mass burst
+        /// doesn't carry, out of scope here). Returns true if this ring was actually consumed.</summary>
+        public bool TryConsumeByBurst()
+        {
+            if (!HasStateAuthority || _config == null || _consumed || Element != RingElement.Multi) return false;
+            PlayConsumeAnim();
+            return true;
+        }
+
         private void PlayConsumeAnim()
         {
+            // Mark consumed IMMEDIATELY — the ring stays alive/visible/collidable for the ~0.25s shrink below,
+            // so without this it could be re-consumed again before the despawn actually removes it (see the
+            // _consumed field comment).
+            _consumed = true;
+
             // "EFFECTIVE!" flash on label then shrink ring to zero and despawn.
             if (_label != null) _label.text = "EFFECTIVE!";
 
