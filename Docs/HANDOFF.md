@@ -8,7 +8,9 @@
 |---|---|
 | **HANDOFF.md** (file này) | Đầu mỗi session — trạng thái + test flow |
 | **TASKS_MASTER.md** | Danh sách task sống (đã audit). Chọn việc tiếp theo ở đây |
-| **TASKS_DETAIL.md** | Chi tiết "làm gì" từng task còn lại (mục tiêu/file/verify/deps) |
+| **TASKS_DETAIL.md** | Chi tiết "làm gì" từng task T1-T17 (✅ XONG HẾT session 11) |
+| **TASKS_WEAPON_UX.md** | ⭐ KẾ HOẠCH SESSION 12: map vision-vs-hiện-trạng weapon UX + task T18-T24 |
+| **T17_Test_Report.html** | Audit verify T1-T17 + checklist test 2 người khi build (mở bằng browser) |
 | **Fusion_Shared_Mode_Gotchas.md** | BẮT BUỘC đọc trước khi viết/sửa bất kỳ networking code nào |
 | **Burst_Projectile_System_Design.md** | Trước khi đụng đạn mưa / pool / GPU instancing (hướng đã chốt) |
 | **Network_Architecture_Lessons.md** | Hiểu netcode + avatar IK + input + scene-load (bài học bền) |
@@ -21,7 +23,40 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 
 ---
 
-## Session 10 — 2026-07-01 (session vừa xong)
+## Session 11 — 2026-07-02 (session vừa xong) — T1-T17 XONG HẾT
+
+Chạy trọn 17 task của TASKS_DETAIL.md, mỗi task build + verify qua MCP + commit riêng (đọc `git log` theo
+prefix "T<số>:" để xem chi tiết từng quyết định). Điểm nhấn:
+
+- **T1-T7:** weapons fire + selector + team + dead-mask networked + catch burst + sword deflect + burst stacking.
+  Fix 2 bug tồn đọng lớn: `CombatSession.CurrentCatalog` không bao giờ được nạp trong flow thật (ArenaManager
+  giờ fire `MinigameEnteredEvent`), và BuffRing double-consume trong 0.25s shrink-tween (`_consumed` guard).
+- **T8:** distance culling cho burst renderer (RenderMeshIndirect + compute cull HOÃN — cần Quest thật verify stereo).
+- **T9-T11:** ring spawn random trong zone box + wander deterministic (fix bug NetworkTransform ghim ring đứng yên)
+  + tier rarity theo cửa sổ thời gian + chống trùng Tier 4-5.
+- **T12:** buff-ring áp qua RPC về authority của đạn (trước chỉ đúng khi solo/master).
+- **T13:** `Bill.Players` registry + `FusionNet.LoadSceneAdditive` (BillGameCore, tái dùng được project khác).
+- **T14:** fix crash `CollisionTracker` AutoHand (null-check) + **gỡ .gitignore AutoHand, commit cả pack vào repo**.
+- **T15:** juice S4-S7 (haptic 3 tầng, SFX pitch theo lực, ReleaseFlash/ImpactBurst/BounceNumber pool, CombatJuice).
+- **T16:** map blockout — 2 sân kín 14×12 (xanh/đỏ) + tường vô hình chặn NGƯỜI cho ĐẠN xuyên (layer
+  PlayerWall×Projectile tắt collision) + spawn 3 điểm/đội random.
+- **T17:** 2-client THẬT qua ParrelSync clone: cùng session, thấy nhau, bắn trúng đồng bộ máu đúng 2 phía.
+  Còn nợ: round-end/respawn live (Photon free-tier RATE-LIMIT `DisconnectedByPluginLogic` khi connect/disconnect
+  nhiều — chạy phiên dài thay vì nhiều phiên ngắn), T12 cross-authority thật.
+- **Bug thật tìm ra & fix trong lúc verify:** `PlayerCombat.Local` race trỏ nhầm DummyAvatar (gate bằng
+  `InputAuthority != None`); portal đốt `_used` khi non-master bước qua (giờ chỉ latch khi load được chấp nhận);
+  dummy tự PASSIVE khi ≥2 người thật; CheatConsole crash gõ phím (clear TextField giữa KeyDown).
+- **Dev tooling mới:** `DevCombatPanel` (nút equip từng vũ khí + $100/Heal/Ammo + bật tắt/xóa dummy, F1 toggle),
+  cheat console lệnh `money/unlockall/equip/heal`, phím debug `T` ném / `G` grip / `F` trigger, gizmos debug
+  (muzzle ray, quỹ đạo ném, bán kính AoE, đường quét kiếm).
+- **CUỐI SESSION — feedback owner đổi hướng weapon UX:** flow selector hiện tại SAI so với vision (nút chọt vật
+  lý + view-cone + grab hologram), kiếm vung vẫn ra bóng (root cause: `ThrowBallHolder` không đọc EquippedIndex),
+  mọi đạn đều là bóng vàng generic. **→ Toàn bộ map + task T18-T24 nằm ở `TASKS_WEAPON_UX.md` — SESSION 12 BẮT
+  ĐẦU TỪ ĐÓ (thứ tự: T19 → T18 → T20 → T21/T22).**
+
+---
+
+## Session 10 — 2026-07-01
 
 Verify toàn bộ minigame (session 9-9c), fix bug, rồi build 4 task + chốt hướng đạn mưa.
 
@@ -52,14 +87,18 @@ Verify toàn bộ minigame (session 9-9c), fix bug, rồi build 4 task + chốt 
 | Network pool + hết leak đạn | ✅ (Task 2) |
 | Burst System (đạn mưa data-oriented + GPU instance + hit RPC) | ✅ MVP (Task 4) |
 | Ring Multi → burst | ✅ wired |
-| Weapons bắn (gun/grenade/bazooka...) | 🟡 code + config, chưa fire |
-| WristWeaponSelector | 🟡 code, chưa có prefab |
-| Catch / Sword deflect | ⬜ chưa (burst follow-up) |
-| Team A/B + win-condition BO1/3/5 | ⬜ chưa |
-| Buff zones (tường băng, vùng lửa) | ⬜ chưa (mới là config) |
-| 2-player thật (ParrelSync) | ⬜ chưa test |
+| Weapons bắn (gun/grenade/bazooka...) + model trên tay | ✅ chạy (model = cosmetic, T19 nâng lên Grabbable thật) |
+| WristWeaponSelector | 🟡 chạy nhưng SAI FLOW theo vision owner → rework T18 |
+| Catch / Sword deflect | ✅ (T4/T5) — kiếm còn bug ra bóng → T19 |
+| Team A/B + win-condition BO1/3/5 | ✅ code (T3) — round-end live 2 máy chưa verify |
+| Buff zones (tường băng, vùng lửa) | ✅ (T10) |
+| Ring rules + zone drift | ✅ (T9/T11) |
+| Map blockout 2 sân + tường | ✅ (T16) |
+| Juice (haptic/VFX/impact) | ✅ (T15) |
+| 2-player thật (ParrelSync) | ✅ core verify (T17) — checklist còn lại trong T17_Test_Report.html |
+| Per-weapon projectile visuals | ❌ mọi đạn là bóng generic → T20 |
 
-Chi tiết + thứ tự → `TASKS_MASTER.md`.
+Việc tiếp theo → **`TASKS_WEAPON_UX.md`** (T18-T24, thứ tự T19 → T18 → T20 → T21/T22).
 
 ---
 
@@ -106,9 +145,12 @@ Nếu scene objects dormant khi play thẳng (gate chưa fire): gọi tay `BillG
 
 ---
 
-## Việc tiếp theo (→ TASKS_MASTER.md)
+## Việc tiếp theo (→ TASKS_WEAPON_UX.md)
 
-Thứ tự đề xuất còn lại: hoàn thiện burst (stack qua nhiều ring, dead-mask + catch/deflect, RenderMeshIndirect + compute cull cho VR stereo) → weapons fire + wrist selector → team + win-condition → buff zones → 2-player verify → build Quest.
+T1-T17 xong hết. Session 12 = weapon UX rework theo vision owner: **T19** (held grabbable thật, fix kiếm-ra-bóng)
+→ **T18** (selector nút chọt + view-cone + grab hologram) → **T20** (đạn bay đúng model) → T21/T22 (feedback +
+icon). Backlog BillCore: T23 matchmaking API, T24 host migration. Song song: owner build APK test 2 máy theo
+checklist `T17_Test_Report.html`.
 
 ---
 
@@ -131,4 +173,6 @@ Thứ tự đề xuất còn lại: hoàn thiện burst (stack qua nhiều ring,
 - **S7** dọn merge, weapon system (7 WeaponConfig), combat foundation (PlayerCombat + hit + buff-hook).
 - **S8** HealthUI, DummyAvatar (bot target), hit-detection guard fix.
 - **S9-9c** full minigame pass: CombatSession, HandWeapon, CatchController, BuffRing/RingSpawner, ArenaManager, DummyBotDriver, WristWeaponSelector, RewardText; scene + prefab + data asset setup + ref audit.
-- **S10** verify toàn bộ + 5 bug fix + player respawn + network pool + burst system (xem trên).
+- **S10** verify toàn bộ + 5 bug fix + player respawn + network pool + burst system.
+- **S11** T1-T17 XONG HẾT (17 task + ~10 bug thật tìm & fix) + dev tooling + map blockout + 2-client verify;
+  cuối session owner chốt rework weapon UX → `TASKS_WEAPON_UX.md` (T18-T24) cho session 12.
