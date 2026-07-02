@@ -54,7 +54,7 @@
 
 <table>
 <tr><th>Task</th><th>Nội dung</th><th>Mức verify</th><th>Ghi chú</th></tr>
-<tr><td>T1</td><td>Bắn vũ khí (Gun/Bazooka/Grenade...)</td><td><span class="tag partial">Logic only</span></td><td>Damage/AoE áp dụng đúng qua code review + reflection test. Chưa bắn thật bằng tay VR.</td></tr>
+<tr><td>T1</td><td>Bắn vũ khí (Gun/Bazooka/Grenade...)</td><td><span class="tag partial">Logic only</span></td><td>Damage/AoE áp dụng đúng qua code review + reflection test. Chưa bắn thật bằng tay VR. <b>Cập nhật:</b> model vũ khí trên tay đã nối dây + verify đúng (xem mục 3) — không còn "tay trống" như audit đầu.</td></tr>
 <tr><td>T2</td><td>WristWeaponSelector UI</td><td><span class="tag partial">Logic only</span></td><td>Catalog tự resolve đúng. Chưa test cử chỉ ngửa tay thật.</td></tr>
 <tr><td>T3</td><td>Team A/B + win-condition</td><td><span class="tag partial">Một phần live</span></td><td><code>realPlayerCount&gt;=2</code> đã confirm thỏa mãn với 2 client thật hôm nay. Chưa thấy <code>EndRound</code>/<code>AwardScore</code> tự fire live (bị Photon rate-limit chặn giữa chừng — xem mục 4).</td></tr>
 <tr><td>T4</td><td>Catch đạn trong burst rain</td><td><span class="tag ok">Verify kỹ</span></td><td>RPC catch + ammo +1 xác nhận đúng qua test cô lập.</td></tr>
@@ -89,8 +89,9 @@
 </div>
 <p>Mặc định người chơi luôn có <b>Rock (đá)</b> equipped sẵn (index -1) — cầm tay phải + bóp grip là "nạp đạn" (ball hiện trong tay), vung tay ra sau rồi vung tới trước để ném.</p>
 
-<div class="box warn">
-  <b>⚠️ Gap đã phát hiện khi audit:</b> <code>WeaponConfig</code> hiện <b>không có field model 3D cho vũ khí</b>. Khi equip Gun/Bazooka/Grenade... (khác Rock), tay người chơi <b>không hiện súng/vật thể gì cả</b> — code chỉ bắn logic (raycast/spawn đạn) từ 1 điểm cố định trên cổ tay (<code>_muzzle</code>), hoàn toàn vô hình. Đây là lý do bạn thấy "tay chưa có gì". Không phải lỗi setup — đây là tính năng model-tay-cầm-vũ-khí <b>chưa được xây</b> (nằm ngoài phạm vi 17 task đã liệt kê ban đầu). Cần thêm 1 task riêng nếu muốn có model vũ khí hiện trên tay.</p>
+<div class="box" style="border-color:rgba(74,222,128,0.4)">
+  <b>✅ Đã sửa (sau khi audit ban đầu sai):</b> Lúc đầu tôi báo nhầm là "WeaponConfig không có field model" — bạn chỉ ra đúng là <code>heldPrefab</code> + <code>handSource</code> đã tồn tại sẵn (kèm đủ prefab <code>MS_WP_*</code>), chỉ là <b>chưa có code nào đọc chúng</b>. Đã nối dây xong: <code>HandWeapon</code> hiện model đúng cho Gun/Bazooka/Sword khi equip; <code>ThrowController</code> hiện đúng model cho từng vũ khí ném (Rock/Grenade/BigBoom/LandMine) thay vì luôn dùng 1 quả bóng chung. Sword lúc đó thiếu <code>heldPrefab</code> (NULL) — đã wire vào <code>lightsword.prefab</code> theo path bạn cho. Đã verify: equip Gun → model <code>MS_WP_Gun</code> hiện đúng tay; equip Grenade → mesh <code>MS_WP_Grenade</code> đúng.</p>
+  <p>Nhân tiện phát hiện thêm 1 bug thật trong lúc test: <code>PlayerCombat.Local</code> (biến static trỏ tới người chơi local) đôi khi bị trỏ NHẦM vào <code>DummyAvatar</code> (bot) do race condition giữa 2 component chạy <code>Spawned()</code> không theo thứ tự đảm bảo. Đã sửa bằng cách check <code>InputAuthority</code> thay vì chỉ check <code>HasStateAuthority</code>. Bug này lặng lẽ làm hỏng cả tính năng đổi vũ khí lẫn cheat console nếu dính phải — đã fix và verify lại 2 lần (session mới hoàn toàn) đều đúng.</p>
 </div>
 
 <h2>4. Cheat commands mới thêm (hỗ trợ test)</h2>
@@ -117,7 +118,7 @@
   <li>2 người thấy nhau di chuyển mượt, đúng vị trí thật (không lệch/giật).</li>
   <li>Held ball (bóng cầm tay) hiện đúng tay, đúng lúc — người kia phải thấy được khi mình đang cầm bóng.</li>
   <li>Ném trúng nhau → máu giảm đúng bên bị trúng, KHÔNG giảm nhầm bên ném.</li>
-  <li>Bắn Gun/Bazooka/Grenade trúng người kia → damage/AoE đúng như config (nhớ: sẽ KHÔNG thấy súng trên tay, xem mục 3).</li>
+  <li>Bắn Gun/Bazooka/Grenade trúng người kia → damage/AoE đúng như config. Model vũ khí giờ đã hiện đúng trên tay (mục 3) — xác nhận model đúng loại vũ khí đang cầm, không lệch/không thiếu.</li>
 </ul>
 
 <h3>Vòng chơi / thắng thua (T3 — chưa live-test được hôm nay)</h3>
@@ -153,7 +154,7 @@
 <h2>6. Việc chưa làm / để ngỏ có chủ đích</h2>
 <table>
 <tr><th>Việc</th><th>Lý do để ngỏ</th></tr>
-<tr><td>Model vũ khí trên tay (Gun/Bazooka/...)</td><td>Ngoài phạm vi 17 task gốc — phát hiện khi audit hôm nay, cần task riêng.</td></tr>
+<tr><td>Model vũ khí GrabFromHologram (hologram + grab tay thật)</td><td>Có 1 bộ WeaponConfig thứ 2 mồ côi (<code>Assets/_Game/Weapons/*.asset</code>, không được game dùng) thiết kế theo hướng "grab từ hologram" thay vì tự hiện trong tay. Không xoá, chỉ chưa dùng — cân nhắc dọn hoặc hoàn thiện sau nếu muốn kiểu tương tác đó.</td></tr>
 <tr><td>Arm-swing locomotion kiểu Gorilla Tag</td><td>Quyết định thiết kế: không cần, giữ joystick. AutoHand đã có sẵn hệ Climbable nếu sau này cần bám tường — chỉ cần gắn <code>Grabbable+Climbable</code> lên tường thật khi có map.</td></tr>
 <tr><td>Additive scene loading thật (T13)</td><td>Chỉ build cơ chế (Bill.Players + FusionNet.LoadSceneAdditive), chưa test live để tránh phá 2 scene sản xuất đang hoạt động tốt.</td></tr>
 <tr><td>RenderMeshIndirect + GPU compute cull (T8 nâng cao)</td><td>Cần máy Quest thật để verify đúng single-pass-stereo, để dành session có headset.</td></tr>
