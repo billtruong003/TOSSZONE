@@ -17,8 +17,19 @@ namespace TossZone.Player
     /// end at the wrist. Grab/throw is purely local on the toon hands, so nothing about it crosses the wire.
     /// Replaces the old NetworkPlayerRig (which spawned the whole rig on every client).
     /// </summary>
-    public class NetworkAvatar : NetworkBehaviour
+    public class NetworkAvatar : NetworkBehaviour, IBillPlayer
     {
+        // ── IBillPlayer (T13 — BillGameCore reusable player registry) ──────────────────
+        // Bridges the existing NetworkAvatar/PlayerCombat.Local pattern into Bill.Players instead of replacing
+        // it: every ThrowController/HandWeapon/CatchController/PlayerCombat call built through T1-T12 keeps
+        // working unchanged, while new gameplay code (and future projects reusing BillGameCore) can go through
+        // the framework-level Bill.Players.Local/Get/All API instead of hunting for a project-specific type.
+        PlayerRef IBillPlayer.PlayerRef => Object != null ? Object.InputAuthority : PlayerRef.None;
+        bool IBillPlayer.IsLocal => HasStateAuthority;
+        Transform IBillPlayer.Head => _headNode;
+        Transform IBillPlayer.HandLeft => _wristLNode;
+        Transform IBillPlayer.HandRight => _wristRNode;
+
         public const int ColorCount = 8;
         private const string SelfLayerName = "RemoteVisual";   // own avatar layer: main cam culls it, mirror renders it
 
@@ -114,6 +125,7 @@ namespace TossZone.Player
                 SetMeshLayer(0); // proxy → Default so every other player's main camera renders it
             }
             ApplyColor();
+            BillPlayers.Register(this);
         }
 
         public override void Despawned(NetworkRunner runner, bool hasState)
@@ -121,6 +133,7 @@ namespace TossZone.Player
             // Released only when this avatar is genuinely despawned (session end / explicit despawn) — NOT on a
             // scene load, so the surviving avatar keeps the slot and is reused. Self-heals if it ever is removed.
             if (Local == this) Local = null;
+            BillPlayers.Unregister(this);
         }
 
         public override void FixedUpdateNetwork()

@@ -27,6 +27,32 @@ namespace BillGameCore
         public static AnalyticsTracker Analytics => ServiceLocator.Get<AnalyticsTracker>();
 #endif
 
+#if PHOTON_FUSION
+        /// <summary>
+        /// Live player registry (local + remote), Shmackle-style: <c>Bill.Players.Local.HandRight</c>,
+        /// <c>Bill.Players.Get(playerRef)</c>, <c>Bill.Players.All</c>. Thin forwarder over the standalone
+        /// <see cref="BillPlayers"/> static (kept separate so it's usable without the ServiceLocator/Bill facade
+        /// too). Populated by whichever NetworkBehaviour implements <see cref="IBillPlayer"/> and registers
+        /// itself — this class holds no state of its own.
+        /// </summary>
+        public static class Players
+        {
+            public static IBillPlayer Local => BillPlayers.Local;
+            public static System.Collections.Generic.IReadOnlyList<IBillPlayer> All => BillPlayers.All;
+            public static IBillPlayer Get(Fusion.PlayerRef playerRef) => BillPlayers.Get(playerRef);
+            public static event System.Action<IBillPlayer> PlayerRegistered
+            {
+                add => BillPlayers.PlayerRegistered += value;
+                remove => BillPlayers.PlayerRegistered -= value;
+            }
+            public static event System.Action<IBillPlayer> PlayerUnregistered
+            {
+                add => BillPlayers.PlayerUnregistered += value;
+                remove => BillPlayers.PlayerUnregistered -= value;
+            }
+        }
+#endif
+
         public static bool IsReady => ServiceLocator.IsInitialized;
 
         /// <summary>

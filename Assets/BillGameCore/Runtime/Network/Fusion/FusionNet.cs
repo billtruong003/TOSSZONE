@@ -205,6 +205,30 @@ namespace BillGameCore
             return true;
         }
 
+        /// <summary>
+        /// T13 — load a scene ADDITIVELY (existing scenes + their NetworkObjects stay live), e.g. a minigame
+        /// scene loaded on top of a persistent hub. Separate from <see cref="LoadScene"/> (Single mode) so the
+        /// existing hub↔arena flow is completely untouched by this — opt-in only. Per
+        /// Docs/deprecated/Networking_Architecture.md §2: don't reach for this until something genuinely needs
+        /// the hub and a minigame coexisting; a straight <see cref="LoadScene"/> transition is simpler otherwise.
+        /// </summary>
+        public bool LoadSceneAdditive(int buildIndex, bool setActive = false)
+        {
+            if (!IsRunning) { Warn("LoadSceneAdditive before running."); return false; }
+            if (!IsHost) { Warn("LoadSceneAdditive called by non-authoritative peer — ignored (only host/master loads)."); return false; }
+            _runner.LoadScene(SceneRef.FromIndex(buildIndex), LoadSceneMode.Additive, setActiveOnLoad: setActive);
+            return true;
+        }
+
+        /// <summary>T13 — unload a scene previously loaded via <see cref="LoadSceneAdditive"/>.</summary>
+        public bool UnloadSceneAdditive(int buildIndex)
+        {
+            if (!IsRunning) { Warn("UnloadSceneAdditive before running."); return false; }
+            if (!IsHost) { Warn("UnloadSceneAdditive called by non-authoritative peer — ignored (only host/master unloads)."); return false; }
+            _runner.UnloadScene(SceneRef.FromIndex(buildIndex));
+            return true;
+        }
+
         // ─────────────────────────────────────────────────────────────
         // Spawn / despawn
         // ─────────────────────────────────────────────────────────────
