@@ -13,23 +13,35 @@ namespace TossZone.EditorFixes
     /// in the taskbar). Proven via Win32 EnumWindows: every blank window belongs to a worker PID,
     /// never to the main editor. NOT caused by BillGameCore or Meta XR.
     ///
-    /// Fix strategy (two layers):
-    ///  1. Persist project settings so idle workers shut themselves down: StandbyImportWorkerCount = 0
-    ///     and a short idle-shutdown delay. Fields are located by name through SerializedObject so the
-    ///     fix survives Unity renaming/moving them (they are absent from EditorSettings.asset until set).
-    ///  2. After every import batch, force the worker pool back down (AssetDatabase.ForceToDesiredWorkerCount,
-    ///     called via reflection) — dead workers take their leaked windows with them.
+    /// Fix strategy (verified on 6000.3.8f1 — EditorSettings has NO *ImportWorker* fields and the
+    /// registry holds no worker EditorPrefs, so persisting a setting is impossible on this build;
+    /// the session-scoped AssetDatabase API is the only lever):
+    ///  1. On load, set AssetDatabase.DesiredWorkerCount = 0 (reflection) — no out-of-process import
+    ///     workers means no leaked windows at all. Imports fall back in-process (slower on huge
+    ///     reimports; use Tools ▸ TOSSZONE ▸ Fix ▸ Enable Parallel Import before one, it auto-reverts
+    ///     next editor restart).
+    ///  2. Trim the pool (ForceToDesiredWorkerCount) after every import batch AND every 30 s, so any
+    ///     worker Unity spawns anyway dies immediately — taking its leaked windows with it.
+    ///  3. Legacy layer: if a future Unity build re-exposes *ImportWorker* fields on EditorSettings,
+    ///     pin them via SerializedObject discovery (currently a no-op).
     /// </summary>
     [InitializeOnLoad]
     public static class ImportWorkerGhostWindowFix
     {
         const string AppliedGuardKey = "TossZone.ImportWorkerFix.SessionApplied";
-        const int DesiredWorkers = 2;      // enough for parallel import bursts
+        const int DesiredWorkers = 0;      // 0 = no background import workers -> zero ghost windows
         const int StandbyWorkers = 0;      // no idle workers lingering (each one = leaked blank windows)
         const int IdleShutdownMs = 5000;   // workers exit 5 s after an import finishes
+        const double TrimIntervalSeconds = 30d;
+
+        static double _nextTrimTime;
 
         static ImportWorkerGhostWindowFix()
         {
+            // Re-subscribe on EVERY domain reload (managed subscriptions don't survive one) …
+            EditorApplication.update += TrimPeriodically;
+
+            // … but only log/apply the one-shot setup once per editor session.
             if (SessionState.GetBool(AppliedGuardKey, false))
             {
                 return;
@@ -44,22 +56,65 @@ namespace TossZone.EditorFixes
         [MenuItem("Tools/TOSSZONE/Fix/Kill Idle Import Workers Now", priority = 43)]
         public static void KillIdleWorkersNow()
         {
+            SetDesiredWorkerCount(DesiredWorkers, verbose: false);
             bool forced = ForceToDesiredWorkerCount();
             Debug.Log(forced
                 ? "[TOSSZONE Fix] Đã ép Unity đóng các AssetImportWorker thừa — cửa sổ trắng của chúng sẽ biến mất."
                 : "[TOSSZONE Fix] Không tìm thấy AssetDatabase.ForceToDesiredWorkerCount trên phiên bản Unity này.");
         }
 
+        [MenuItem("Tools/TOSSZONE/Fix/Enable Parallel Import (big reimport — ghost windows return)", priority = 44)]
+        public static void EnableParallelImport()
+        {
+            SetDesiredWorkerCount(4, verbose: true);
+            Debug.Log("[TOSSZONE Fix] Bật lại 4 import worker cho đợt reimport lớn. Trim định kỳ đang TẮT tạm; " +
+                      "restart Unity (hoặc menu Kill Idle Import Workers Now) để về chế độ không-cửa-sổ.");
+            EditorApplication.update -= TrimPeriodically;   // don't fight the user's explicit choice
+        }
+
         static void Apply(bool verbose)
         {
-            int patched = PatchEditorSettings(verbose);
+            int patched = PatchEditorSettings(verbose: false);
+            bool desiredSet = SetDesiredWorkerCount(DesiredWorkers, verbose);
             ForceToDesiredWorkerCount();
             if (verbose)
             {
-                Debug.Log($"[TOSSZONE Fix] Import-worker ghost-window fix: {patched} setting(s) persisted " +
-                          $"(standby={StandbyWorkers}, desired={DesiredWorkers}, idleShutdown={IdleShutdownMs}ms). " +
-                          "Worker rảnh sẽ tự thoát → hết cửa sổ trắng tích tụ. Menu: Tools ▸ TOSSZONE ▸ Fix.");
+                Debug.Log($"[TOSSZONE Fix] Import-worker ghost-window fix: DesiredWorkerCount→{DesiredWorkers} " +
+                          $"({(desiredSet ? "OK" : "API KHÔNG CÓ — fix không hoạt động, báo Claude")}), " +
+                          $"trim mỗi {TrimIntervalSeconds}s + sau mỗi import, legacy settings patched={patched}. " +
+                          "Menu: Tools ▸ TOSSZONE ▸ Fix.");
             }
+        }
+
+        /// <summary>AssetDatabase.DesiredWorkerCount is session-scoped on 6000.3 (nothing to persist),
+        /// so this runs on every editor load. Reflection keeps it compile-safe across Unity versions.</summary>
+        static bool SetDesiredWorkerCount(int count, bool verbose)
+        {
+            PropertyInfo prop = typeof(AssetDatabase).GetProperty(
+                "DesiredWorkerCount", BindingFlags.Public | BindingFlags.Static);
+            if (prop == null || !prop.CanWrite)
+            {
+                return false;
+            }
+            int before = (int)prop.GetValue(null);
+            prop.SetValue(null, count);
+            int after = (int)prop.GetValue(null);
+            if (verbose && after != count)
+            {
+                Debug.LogWarning($"[TOSSZONE Fix] DesiredWorkerCount bị Unity clamp: yêu cầu {count}, thực tế {after} (trước đó {before}).");
+            }
+            return true;
+        }
+
+        static void TrimPeriodically()
+        {
+            if (EditorApplication.timeSinceStartup < _nextTrimTime)
+            {
+                return;
+            }
+            _nextTrimTime = EditorApplication.timeSinceStartup + TrimIntervalSeconds;
+            SetDesiredWorkerCount(DesiredWorkers, verbose: false);
+            ForceToDesiredWorkerCount();
         }
 
         /// <summary>Finds every int property on the EditorSettings singleton whose name mentions
