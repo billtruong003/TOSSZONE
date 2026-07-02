@@ -206,6 +206,9 @@ namespace TossZone.Throwing
             float speed = Mathf.Clamp(swingVel.magnitude * _config.velocityScale, _config.minLaunchSpeed, _config.maxLaunchSpeed);
             Vector3 v0 = dir * speed;
             float power = Mathf.Clamp01(speed / Mathf.Max(_config.maxLaunchSpeed, 0.01f));
+#if UNITY_EDITOR
+            DrawTrajectoryDebug(origin, v0);
+#endif
             SpawnProjectile(origin, v0, power);
 
             Haptic(_config.hapticRelease, 0.06f);
@@ -431,5 +434,41 @@ namespace TossZone.Throwing
             if (dev.isValid && dev.TryGetHapticCapabilities(out UnityEngine.XR.HapticCapabilities caps) && caps.supportsImpulse)
                 dev.SendHapticImpulse(0, amplitude, duration);
         }
+
+#if UNITY_EDITOR
+        /// <summary>Debug visual (T17) — draws the predicted ballistic arc the instant a throw fires, using the
+        /// exact same formula ThrowProjectile.OnFlight replays (p(t) = origin + v0·t + ½·g·t²). Scene view only.</summary>
+        private void DrawTrajectoryDebug(Vector3 origin, Vector3 v0)
+        {
+            if (_config == null) return;
+            Vector3 gravity = Vector3.down * Mathf.Max(_config.gravity, 0.01f);
+            Vector3 prev = origin;
+            const int Steps = 24;
+            const float Duration = 1.2f;
+            for (int i = 1; i <= Steps; i++)
+            {
+                float t = (i / (float)Steps) * Duration;
+                Vector3 p = origin + v0 * t + 0.5f * gravity * (t * t);
+                Debug.DrawLine(prev, p, Color.magenta, 1.5f);
+                if (p.y < origin.y - 5f) break;   // stop once it's clearly past ground level
+                prev = p;
+            }
+        }
+
+        /// <summary>Always-on so it's visible while testing with the T/G/F keyboard debug keys, not just when
+        /// selected. Wrist sphere color = state (grey Empty / green Loaded-ready / red cooldown); magenta ray =
+        /// the current swing peak direction once it clears vMinFire.</summary>
+        private void OnDrawGizmos()
+        {
+            if (_wrist == null) return;
+            Gizmos.color = _onCooldown ? Color.red : (_state == ThrowState.Empty ? Color.grey : Color.green);
+            Gizmos.DrawWireSphere(_wrist.position, 0.04f);
+            if (_config != null && _peakFwdVel >= _config.vMinFire * 0.5f)
+            {
+                Gizmos.color = Color.magenta;
+                Gizmos.DrawRay(_wrist.position, _peakArmVel.normalized * 0.25f);
+            }
+        }
+#endif
     }
 }

@@ -136,8 +136,17 @@ namespace TossZone.Throwing
             Vector3 bounceDir = (cur - _prevBladePos).normalized;
             Vector3 bounceVel = bounceDir * _deflectSpeed;
 
-            DeflectSingleProjectiles(_prevBladePos, cur, bounceVel);
-            DeflectBurstProjectiles(_prevBladePos, cur, bounceVel);
+            int deflectedSingle = DeflectSingleProjectiles(_prevBladePos, cur, bounceVel);
+            int deflectedBurst = DeflectBurstProjectiles(_prevBladePos, cur, bounceVel);
+
+#if UNITY_EDITOR
+            // Debug visual: the actual swept segment each frame, cyan normally / yellow the instant it deflects
+            // something — Scene view only (view via a keyboard test with the T/G/F debug keys). Query radius
+            // sphere at the swing midpoint for a sense of the deflect "thickness".
+            bool hit = deflectedSingle > 0 || deflectedBurst > 0;
+            Debug.DrawLine(_prevBladePos, cur, hit ? Color.yellow : Color.cyan, hit ? 0.4f : 0.15f);
+            if (hit) Debug.DrawRay((_prevBladePos + cur) * 0.5f, bounceDir * 0.3f, Color.red, 0.4f);
+#endif
 
             _prevBladePos = cur;
         }
@@ -146,29 +155,33 @@ namespace TossZone.Throwing
         /// despawn/respawn needed. MVP limitation: only redirects projectiles this client already has authority
         /// over (Shared Mode requires an async RequestStateAuthority + AllowStateAuthorityOverride hand-off to
         /// take someone else's — deferred, same class of gap as T12's buff-ring RPC).</summary>
-        private void DeflectSingleProjectiles(Vector3 from, Vector3 to, Vector3 bounceVel)
+        private int DeflectSingleProjectiles(Vector3 from, Vector3 to, Vector3 bounceVel)
         {
             Vector3 mid = (from + to) * 0.5f;
             float radius = Mathf.Max(_deflectRadius, Vector3.Distance(from, to) * 0.5f + 0.05f);
             int n = Physics.OverlapSphereNonAlloc(mid, radius, _deflectOverlap, ~0, QueryTriggerInteraction.Collide);
+            int deflected = 0;
             for (int i = 0; i < n; i++)
             {
                 if (!_deflectOverlap[i].TryGetComponent(out NetworkProjectile np)) continue;
                 if (np.Object == null || !np.Object.IsValid || !np.Object.HasStateAuthority) continue;
                 np.Shooter = _runner.LocalPlayer;
                 np.Launch(bounceVel, 0f, _activeConfig.damage);
+                deflected++;
             }
+            return deflected;
         }
 
         /// <summary>Burst-rain projectiles: split the deflected one OUT of the mass burst into a normal pooled
         /// single (<see cref="ProjectileBurstSystem.ResolveDeflect"/>) — matches the design doc's model.</summary>
-        private void DeflectBurstProjectiles(Vector3 from, Vector3 to, Vector3 bounceVel)
+        private int DeflectBurstProjectiles(Vector3 from, Vector3 to, Vector3 bounceVel)
         {
             ProjectileBurstSystem sys = ProjectileBurstSystem.Instance;
-            if (sys == null) return;
+            if (sys == null) return 0;
             int n = sys.TryDeflectAlong(from, to, _deflectRadius, _burstDeflectSlots, _burstDeflectIndices, _burstDeflectSlots.Length);
             for (int k = 0; k < n; k++)
                 sys.ResolveDeflect(_burstDeflectSlots[k], _burstDeflectIndices[k], bounceVel, _runner.LocalPlayer, _defaultNetProjPrefab);
+            return n;
         }
 
         private void OnTriggerPressed()
@@ -211,8 +224,14 @@ namespace TossZone.Throwing
         private void FireHitscan()
         {
             if (_muzzle == null) return;
-            if (!Physics.Raycast(_muzzle.position, _muzzle.forward, out RaycastHit hit,
-                _hitscanRange, _hitscanMask)) return;
+            bool didHit = Physics.Raycast(_muzzle.position, _muzzle.forward, out RaycastHit hit,
+                _hitscanRange, _hitscanMask);
+#if UNITY_EDITOR
+            // Debug visual: the actual raycast — green = hit something, red = missed to full range.
+            Debug.DrawRay(_muzzle.position, _muzzle.forward * (didHit ? hit.distance : _hitscanRange),
+                didHit ? Color.green : Color.red, 0.5f);
+#endif
+            if (!didHit) return;
 
             PlayerCombat victim = hit.collider.GetComponentInParent<PlayerCombat>();
             if (victim == null || victim == _combat) return;
@@ -228,6 +247,9 @@ namespace TossZone.Throwing
             Transform center = _bladeTip != null ? _bladeTip : transform;
             int count = Physics.OverlapSphereNonAlloc(center.position, MeleeRadius,
                 _overlap, 1 << LayerHittable);
+#if UNITY_EDITOR
+            Debug.DrawRay(center.position, Vector3.up * 0.1f, count > 0 ? Color.yellow : Color.gray, 0.3f);
+#endif
             for (int i = 0; i < count; i++)
             {
                 PlayerCombat victim = _overlap[i].GetComponentInParent<PlayerCombat>();
@@ -253,6 +275,28 @@ namespace TossZone.Throwing
             WeaponConfig[] catalog = CombatSession.Instance.CurrentCatalog;
             return (catalog != null && index < catalog.Length) ? catalog[index] : null;
         }
+
+#if UNITY_EDITOR
+        /// <summary>Debug visual (T17) — always-on so it's visible while testing with the T/G/F keyboard debug
+        /// keys, not just when this object is selected. Yellow = muzzle position/aim (hitscan range) + melee
+        /// radius; cyan = deflect query radius at the blade tip. Editor Scene view only — stripped from builds.</summary>
+        private void OnDrawGizmos()
+        {
+            if (_muzzle != null)
+            {
+                Gizmos.color = Color.yellow;
+                Gizmos.DrawWireSphere(_muzzle.position, 0.025f);
+                Gizmos.DrawRay(_muzzle.position, _muzzle.forward * (_activeConfig != null && _activeConfig.fireMode == FireMode.Hitscan ? _hitscanRange : 0.4f));
+            }
+            if (_bladeTip != null)
+            {
+                Gizmos.color = new Color(1f, 0.35f, 0.25f, 0.5f);
+                Gizmos.DrawWireSphere(_bladeTip.position, MeleeRadius);
+                Gizmos.color = new Color(0.3f, 0.85f, 1f, 0.5f);
+                Gizmos.DrawWireSphere(_bladeTip.position, _deflectRadius);
+            }
+        }
+#endif
     }
 }
 #endif

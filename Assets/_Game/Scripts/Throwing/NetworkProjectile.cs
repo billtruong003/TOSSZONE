@@ -203,6 +203,23 @@ namespace TossZone.Throwing
                     if (o.TryGetComponent(out BuffZone zone)) zone.Configure(element, radius, selfId);
                 });
         }
+
+#if UNITY_EDITOR
+        /// <summary>Debug visual (T17) — the live hit-detection sphere (yellow while flying, orange once the AoE
+        /// scale is active, i.e. Grenade/BigBoom) so the actual blast radius used by
+        /// <see cref="Physics.OverlapSphereNonAlloc"/> above is visible, not just AreaScale's raw number.
+        /// Editor Scene view only.</summary>
+        private void OnDrawGizmos()
+        {
+            // AreaScale is a [Networked] property — only readable after Spawned() has run (Fusion throws
+            // otherwise). Gizmos can be called by the Editor before that, e.g. while sitting inactive in the
+            // pool, so guard on Object validity like the rest of this codebase does.
+            float areaScale = (Object != null && Object.IsValid) ? AreaScale : 1f;
+            float radius = (_hitRadius > 0f ? _hitRadius : 0.3f) * Mathf.Max(1f, areaScale);
+            Gizmos.color = _isAoe ? new Color(1f, 0.5f, 0f, 0.5f) : new Color(1f, 0.9f, 0.2f, 0.4f);
+            Gizmos.DrawWireSphere(transform.position, radius);
+        }
+#endif
     }
 }
 #endif
