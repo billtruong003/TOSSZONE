@@ -33,6 +33,24 @@ namespace TossZone.Combat
             _zone.radius = _catchRadius;
         }
 
+        private void Update()
+        {
+            // Burst-rain projectiles have no collider (they're data, not GameObjects — see
+            // ProjectileBurstSystem), so OnTriggerEnter never fires for them. Poll for a nearby live one each
+            // frame instead; the query is local/read-only (deterministic flight, every client agrees), only the
+            // dead-mark needs an RPC to the burst's authority. Ammo is granted immediately/locally since this
+            // client owns _combat's authority — Shared Mode rule: only the catcher writes their own PlayerCombat.
+            if (_combat == null || !_combat.HasStateAuthority) return;
+            ProjectileBurstSystem sys = ProjectileBurstSystem.Instance;
+            if (sys == null) return;
+            if (sys.TryConsumeNear(transform.position, _catchRadius, out int slot, out int i))
+            {
+                Vector3 pos = transform.position;
+                sys.RPC_RequestCatch(slot, i, pos);
+                RegisterCatch(isPower: false);
+            }
+        }
+
         private void OnTriggerEnter(Collider other)
         {
             if (_combat == null || !_combat.HasStateAuthority) return;

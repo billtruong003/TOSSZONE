@@ -82,6 +82,23 @@ namespace TossZone.Combat
             Bursts.Set(slot, b);
         }
 
+        /// <summary>Any client asks the burst's authority (the scene NetworkObject's authority = master in
+        /// Shared Mode) to resolve a catch: mark the projectile dead. Ammo is NOT granted here — Shared Mode
+        /// means only the CATCHER's own client can write their own PlayerCombat.Ammo, so the caller (this
+        /// client, immediately after firing this RPC) grants it locally/optimistically. Lightweight anti-cheat:
+        /// reject if the projectile isn't actually near the claimed catch point (latency slack ~2m).</summary>
+        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+        public void RPC_RequestCatch(int slot, int i, Vector3 claimedPos)
+        {
+            if (slot < 0 || slot >= Bursts.Length) return;
+            Burst b = Bursts.Get(slot);
+            if (!b.Active || IsDead(b, i)) return;
+            Vector3 p = ProjectilePosition(b, i, BurstElapsed(b));
+            if ((p - claimedPos).sqrMagnitude > 4f) return;   // ~2m slack for network latency
+            SetDeadBit(ref b, i);
+            Bursts.Set(slot, b);
+        }
+
         public override void Spawned() => Instance = this;
         public override void Despawned(NetworkRunner runner, bool hasState) { if (Instance == this) Instance = null; }
 
