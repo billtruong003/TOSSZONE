@@ -8,7 +8,15 @@ namespace TossZone.Combat
     /// live projectile's position from the analytic flight formula and "stamps" them all with
     /// <see cref="Graphics.DrawMeshInstanced"/> — one draw call per 1023 projectiles instead of one renderer each.
     /// Purely visual and local: reads the replicated burst data, touches no network state. MVP uses the
-    /// non-indirect path (≤1023/batch, CPU-built matrices); upgrade to RenderMeshIndirect + compute cull later.
+    /// non-indirect path (≤1023/batch, CPU-built matrices).
+    ///
+    /// T8: adds a simple distance cull vs <see cref="Camera.main"/> (XR head position) — cheap, stereo-safe
+    /// (distance is eye-independent, unlike a single-eye frustum test which could cull something visible in the
+    /// other eye and cause visible popping). Full Graphics.RenderMeshIndirect + compute-shader GPU culling is
+    /// deferred: it's only needed once burst counts genuinely exceed the current ≤1023/batch MVP path (see
+    /// Docs/Burst_Projectile_System_Design.md), and its single-pass-stereo eye-index correctness can only be
+    /// trusted on real Quest hardware ("không tin sim" per the design doc) — build it in a session with a
+    /// headset attached so it can be verified immediately instead of blind.
     /// </summary>
     public class ProjectileBurstRenderer : MonoBehaviour
     {
@@ -16,9 +24,17 @@ namespace TossZone.Combat
         [SerializeField] private Material _material;
         [SerializeField] private float _scale = 0.12f;
 
+        [Tooltip("Projectiles farther than this from the camera are skipped (0 = no distance cull).")]
+        [SerializeField] private float _maxRenderDistance = 80f;
+
         private const int BatchMax = 1023;
         private readonly Matrix4x4[] _batch = new Matrix4x4[BatchMax];
         private Material _runtimeMat;
+
+        /// <summary>Live+visible projectiles actually stamped last frame (post dead-mask, post distance cull).</summary>
+        public int LastRenderedCount { get; private set; }
+        /// <summary>Live projectiles skipped last frame purely by the distance cull (diagnostics/verification).</summary>
+        public int LastCulledCount { get; private set; }
 
         private void Awake()
         {
@@ -50,6 +66,13 @@ namespace TossZone.Combat
             Vector3 s = Vector3.one * _scale;
             var bursts = sys.ActiveBursts;
             int n = 0;
+            int rendered = 0;
+            int culled = 0;
+
+            Camera cam = Camera.main;
+            bool distanceCull = _maxRenderDistance > 0f && cam != null;
+            Vector3 camPos = distanceCull ? cam.transform.position : Vector3.zero;
+            float maxSqr = _maxRenderDistance * _maxRenderDistance;
 
             for (int bi = 0; bi < bursts.Length; bi++)
             {
@@ -61,7 +84,10 @@ namespace TossZone.Combat
                 for (int i = 0; i < count; i++)
                 {
                     if (ProjectileBurstSystem.IsDead(b, i)) continue;   // hit/caught/deflected — stop drawing it
-                    _batch[n++] = Matrix4x4.TRS(sys.ProjectilePosition(b, i, t), Quaternion.identity, s);
+                    Vector3 pos = sys.ProjectilePosition(b, i, t);
+                    if (distanceCull && (pos - camPos).sqrMagnitude > maxSqr) { culled++; continue; }
+                    rendered++;
+                    _batch[n++] = Matrix4x4.TRS(pos, Quaternion.identity, s);
                     if (n == BatchMax)
                     {
                         Graphics.DrawMeshInstanced(_mesh, 0, _material, _batch, n);
@@ -71,6 +97,8 @@ namespace TossZone.Combat
             }
 
             if (n > 0) Graphics.DrawMeshInstanced(_mesh, 0, _material, _batch, n);
+            LastRenderedCount = rendered;
+            LastCulledCount = culled;
         }
 
         private void OnDestroy()
