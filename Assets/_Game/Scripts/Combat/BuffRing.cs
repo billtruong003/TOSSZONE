@@ -39,6 +39,11 @@ namespace TossZone.Combat
 
         [Networked] public RingElement Element { get; set; }
 
+        /// <summary>T11 — rolled per-spawn by RingSpawner (1=common .. 5=rare), independent of Element. Tier 4-5
+        /// drift faster (design: "Tier 4-5 hiếm + trôi nhanh"). Defaults to 1 for rings placed outside the
+        /// RingSpawner flow.</summary>
+        [Networked] public int Tier { get; set; }
+
         /// <summary>This ring's configured multiplier (RC_Multi.multiplier) — used by
         /// <see cref="ProjectileBurstSystem"/> when a data-driven rain burst stacks through this ring (T7).
         /// Falls back to 2 if the config hasn't resolved yet (shouldn't normally happen for an active ring).</summary>
@@ -105,8 +110,11 @@ namespace TossZone.Combat
         /// without replicating a single extra byte.</summary>
         private Vector3 WanderPosition(float simTime)
         {
+            // Tier 4-5 drift noticeably faster than Tier 1-3 (design: "Tier 4-5 hiếm + trôi nhanh").
+            int tier = Mathf.Clamp(Tier, 1, 5);
+            float tierSpeedMul = 1f + (tier - 1) * 0.2f;   // Tier1=1.0x .. Tier5=1.8x
             float seed = (Object.Id.Raw % 10000) * 0.1013f;
-            float f = simTime * _wanderFrequency;
+            float f = simTime * _wanderFrequency * tierSpeedMul;
             float nx = Mathf.PerlinNoise(seed, f) * 2f - 1f;
             float ny = Mathf.PerlinNoise(f, seed) * 2f - 1f;
             float nz = Mathf.PerlinNoise(seed + 5.5f, f + 5.5f) * 2f - 1f;
@@ -148,7 +156,8 @@ namespace TossZone.Combat
         private void ApplyLabel()
         {
             if (_label == null || _config == null) return;
-            _label.text = _config.displayName;
+            int tier = Mathf.Clamp(Tier, 1, 5);
+            _label.text = tier > 1 ? _config.displayName + " T" + tier : _config.displayName;
             Color c = _config.ringColor; c.a = 0f; _label.color = c;
             // Fade label in after bounce.
             BillTween.Float(0f, 1f, 0.3f, a =>
