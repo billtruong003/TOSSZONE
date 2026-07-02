@@ -1,5 +1,4 @@
 #if PHOTON_FUSION
-using System.Collections.Generic;
 using BillGameCore;
 using Fusion;
 using UnityEngine;
@@ -12,11 +11,16 @@ namespace TossZone.Combat
     /// the whole cloud instead of N NetworkObjects. Flight is the analytic ballistic formula
     /// <c>p(t) = origin + v0·t + ½·g·t²</c> with a seeded per-projectile spread, so every client derives identical
     /// positions from the tiny replicated burst — no per-projectile sync. Rendering is local + GPU-instanced
-    /// (<see cref="ProjectileBurstRenderer"/>); only the burst spawn and hit RPCs cross the wire.
+    /// (<see cref="ProjectileBurstRenderer"/>); only the burst spawn and per-projectile resolve (hit/catch/deflect)
+    /// cross the wire.
     ///
-    /// MVP scope: data + deterministic flight + authority hit → RPC damage + instanced render. Per-projectile
-    /// dead-mask (for catch/deflect visual removal) and ring wiring are follow-ups; here the authority just
-    /// avoids double-hitting a projectile via a LOCAL set (authority-only, so no networking needed for that).
+    /// Dead-mask: each burst carries a small NETWORKED bitmask (<see cref="DeadMaskBits"/> bits) marking
+    /// individually-resolved projectiles — hit, caught, or deflected. This replaces an authority-only local
+    /// HashSet used in the first MVP pass, which only stopped the AUTHORITY from re-hitting a projectile but left
+    /// it still rendering forever on every OTHER client (a "ghost bullet" that already dealt damage). The mask is
+    /// deliberately small relative to <see cref="MaxProjectilesPerBurst"/> — realistic rain sizes (RC_Multi
+    /// multiplier ~40) are far under it; projectiles beyond the mask still hit-test correctly, they just can't be
+    /// individually erased from render once resolved (acceptable: they still despawn when the whole burst expires).
     /// </summary>
     public class ProjectileBurstSystem : NetworkBehaviour
     {
@@ -24,6 +28,7 @@ namespace TossZone.Combat
 
         public const int MaxBursts = 32;
         public const int MaxProjectilesPerBurst = 4096;   // hard cap per burst (design §7)
+        public const int DeadMaskBits = 256;              // 4 x ulong — individually-trackable per burst
 
         [SerializeField] private float _baseSpeed = 7f;
         [SerializeField] private float _spreadDegrees = 22f;
@@ -32,9 +37,6 @@ namespace TossZone.Combat
         [SerializeField] private int _damage = 1;
 
         [Networked, Capacity(MaxBursts)] private NetworkArray<Burst> Bursts => default;
-
-        // authority-only: projectiles already resolved (hit) this life, so we don't double-hit. Keyed burstSlot*BIG+i.
-        private readonly HashSet<long> _resolved = new();
 
         public struct Burst : INetworkStruct
         {
@@ -47,6 +49,37 @@ namespace TossZone.Combat
             public int SpawnTick;
             public int Element;
             public PlayerRef Shooter;
+            public ulong Dead0, Dead1, Dead2, Dead3;   // bit i set = projectile i resolved (hit/caught/deflected)
+        }
+
+        // ── Dead-mask helpers ─────────────────────────────────────────────────────────
+        public static bool IsDead(in Burst b, int i)
+        {
+            if (i < 0 || i >= DeadMaskBits) return false;   // beyond the mask: never individually erasable
+            ulong word = i < 64 ? b.Dead0 : i < 128 ? b.Dead1 : i < 192 ? b.Dead2 : b.Dead3;
+            return (word & (1UL << (i % 64))) != 0;
+        }
+
+        private static void SetDeadBit(ref Burst b, int i)
+        {
+            if (i < 0 || i >= DeadMaskBits) return;
+            ulong bit = 1UL << (i % 64);
+            if (i < 64) b.Dead0 |= bit;
+            else if (i < 128) b.Dead1 |= bit;
+            else if (i < 192) b.Dead2 |= bit;
+            else b.Dead3 |= bit;
+        }
+
+        /// <summary>Authority: mark projectile <paramref name="i"/> of burst <paramref name="slot"/> resolved
+        /// (stops rendering + hit-testing it on every client). Used by hit detection here, and by
+        /// catch (<see cref="TossZone.Combat.CatchController"/>) / deflect (sword) via their confirm RPCs.</summary>
+        public void MarkDead(int slot, int i)
+        {
+            if (!HasStateAuthority || slot < 0 || slot >= Bursts.Length) return;
+            Burst b = Bursts.Get(slot);
+            if (!b.Active) return;
+            SetDeadBit(ref b, i);
+            Bursts.Set(slot, b);
         }
 
         public override void Spawned() => Instance = this;
@@ -137,18 +170,17 @@ namespace TossZone.Combat
                 if (t >= _lifetime)
                 {
                     b.Active = false;
-                    Bursts.Set(s, b);
-                    // clear this slot's resolved entries
-                    _resolved.RemoveWhere(k => k / MaxProjectilesPerBurst == s);
+                    Bursts.Set(s, b);   // Dead bits reset for free next SpawnBurst (fresh struct literal = 0)
                     continue;
                 }
 
-                // Hit test each projectile vs real players (cheap distance check; cap the per-tick scan).
+                // Hit test each projectile vs real players (cheap distance check; cap the per-tick scan AND
+                // the dead-mask range — beyond DeadMaskBits still hit-tests, just can't be individually erased).
                 int scan = Mathf.Min(b.Count, MaxProjectilesPerBurst);
+                bool dirty = false;
                 for (int i = 0; i < scan; i++)
                 {
-                    long key = (long)s * MaxProjectilesPerBurst + i;
-                    if (_resolved.Contains(key)) continue;
+                    if (IsDead(b, i)) continue;
                     Vector3 p = ProjectilePosition(b, i, t);
 
                     foreach (PlayerCombat pc in PlayerCombat.AllInstances)
@@ -159,12 +191,96 @@ namespace TossZone.Combat
                         Vector3 chest = pc.transform.position + Vector3.up * 1.0f;
                         if ((p - chest).sqrMagnitude <= _hitRadius * _hitRadius)
                         {
-                            _resolved.Add(key);
+                            SetDeadBit(ref b, i);
+                            dirty = true;
                             pc.RPC_TakeHit(_damage, p, b.Shooter);
                             break;
                         }
                     }
                 }
+                if (dirty) Bursts.Set(s, b);
+            }
+        }
+
+        // ── Local queries (catch / deflect) — call from a client, then RPC the result to authority ──────────
+        /// <summary>Find the closest LIVE projectile within <paramref name="radius"/> of <paramref name="point"/>,
+        /// across all active bursts. Used by <see cref="CatchController"/> (T4). Local/read-only — the caller
+        /// RPCs <paramref name="burstSlot"/>/<paramref name="projIndex"/> to the authority to confirm + mark dead.</summary>
+        public bool TryConsumeNear(Vector3 point, float radius, out int burstSlot, out int projIndex)
+        {
+            burstSlot = -1; projIndex = -1;
+            float bestSq = radius * radius;
+            bool found = false;
+            for (int s = 0; s < Bursts.Length; s++)
+            {
+                Burst b = Bursts.Get(s);
+                if (!b.Active) continue;
+                float t = BurstElapsed(b);
+                int scan = Mathf.Min(b.Count, DeadMaskBits);   // only individually-trackable indices are catchable
+                for (int i = 0; i < scan; i++)
+                {
+                    if (IsDead(b, i)) continue;
+                    float sq = (ProjectilePosition(b, i, t) - point).sqrMagnitude;
+                    if (sq <= bestSq) { bestSq = sq; burstSlot = s; projIndex = i; found = true; }
+                }
+            }
+            return found;
+        }
+
+        /// <summary>Find LIVE projectiles whose current position is within <paramref name="radius"/> of the
+        /// segment <paramref name="a"/>-<paramref name="b"/> (a sword sweep). Used by the sword deflect path
+        /// (T5). Returns up to <paramref name="maxResults"/> hits into the provided buffers.</summary>
+        public int TryDeflectAlong(Vector3 a, Vector3 b, float radius, int[] outSlots, int[] outIndices, int maxResults)
+        {
+            int found = 0;
+            Vector3 ab = b - a;
+            float abLenSq = Mathf.Max(ab.sqrMagnitude, 1e-6f);
+            float rSq = radius * radius;
+
+            for (int s = 0; s < Bursts.Length && found < maxResults; s++)
+            {
+                Burst burst = Bursts.Get(s);
+                if (!burst.Active) continue;
+                float t = BurstElapsed(burst);
+                int scan = Mathf.Min(burst.Count, DeadMaskBits);
+                for (int i = 0; i < scan && found < maxResults; i++)
+                {
+                    if (IsDead(burst, i)) continue;
+                    Vector3 p = ProjectilePosition(burst, i, t);
+                    float u = Mathf.Clamp01(Vector3.Dot(p - a, ab) / abLenSq);
+                    Vector3 closest = a + ab * u;
+                    if ((p - closest).sqrMagnitude <= rSq)
+                    {
+                        outSlots[found] = s;
+                        outIndices[found] = i;
+                        found++;
+                    }
+                }
+            }
+            return found;
+        }
+
+        /// <summary>Authority: resolve a deflect — mark the projectile dead in its burst and spawn a normal
+        /// pooled single <see cref="TossZone.Throwing.NetworkProjectile"/> with the new (bounced) velocity, so it
+        /// can go on to hit its own targets (e.g. the original shooter). Splits the projectile OUT of the mass
+        /// burst into individual data, matching the design doc's deflect model.</summary>
+        public void ResolveDeflect(int slot, int i, Vector3 newVelocity, PlayerRef newShooter,
+            Fusion.NetworkObject singleProjectilePrefab)
+        {
+            if (!HasStateAuthority || slot < 0 || slot >= Bursts.Length) return;
+            Burst b = Bursts.Get(slot);
+            if (!b.Active || IsDead(b, i)) return;
+            float t = BurstElapsed(b);
+            Vector3 pos = ProjectilePosition(b, i, t);
+            SetDeadBit(ref b, i);
+            Bursts.Set(slot, b);
+
+            if (singleProjectilePrefab == null) return;
+            Fusion.NetworkObject obj = Runner.Spawn(singleProjectilePrefab, pos, Quaternion.LookRotation(newVelocity), newShooter);
+            if (obj != null && obj.TryGetComponent(out TossZone.Throwing.NetworkProjectile np))
+            {
+                np.Shooter = newShooter;
+                np.Launch(newVelocity, 0f, _damage);
             }
         }
     }

@@ -60,6 +60,7 @@ namespace TossZone.Combat
 
                 for (int i = 0; i < count; i++)
                 {
+                    if (ProjectileBurstSystem.IsDead(b, i)) continue;   // hit/caught/deflected — stop drawing it
                     _batch[n++] = Matrix4x4.TRS(sys.ProjectilePosition(b, i, t), Quaternion.identity, s);
                     if (n == BatchMax)
                     {
