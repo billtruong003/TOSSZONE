@@ -1,7 +1,14 @@
-# TOSSZONE — Weapon UX Rework (kế hoạch Session 12)
+# TOSSZONE — Weapon UX Rework (kế hoạch Session 12+)
 
 > Chốt từ feedback owner 2026-07-02 cuối Session 11. Đọc kèm `deprecated/TASKS_DETAIL.md` (T1-T17 đã xong) và
-> `T17_Test_Report.html` (checklist test 2 người). Mai chạy theo thứ tự T19 → T18 → T20 → T21/T22.
+> `T17_Test_Report.html` (checklist test 2 người).
+>
+> **TRẠNG THÁI (cập nhật cuối Session 12 — 2026-07-03):**
+> ✅ XONG: **T19** (`47718e8`) · **T18** (`c0d278a`) · **T25** (`91dfa21`) · **T20** (`7dabfe8`) — chi tiết
+> triển khai + verify trong HANDOFF.md mục Session 12 và commit message từng task.
+> ⏭ TIẾP: **T27 → T30 → T31 → T26 → T28** (thứ tự đã chốt với owner). Backlog: T21/T22/T29/T23/T24/T32.
+> 🔒 ĐÃ CHỐT với owner: T27 ⑧ ring TRÔI NGANG theo GDD · T31(a) Sword+LandMine GIỮ extension ·
+> T31(b) mua kiểu MIX per-weapon (bảng chi tiết PHẢI trình owner duyệt trước khi code).
 
 ---
 
@@ -26,7 +33,7 @@ jump (nút A) — CÓ SẴN trong `TossLocomotionInput`, chỉ chưa test máy t
 
 ## 2. Task list mới (T18-T24)
 
-### T19 — Held item = AutoHand Grabbable thật per-weapon ⬅ LÀM TRƯỚC (fix bug kiếm-ra-bóng)
+### ✅ T19 (XONG `47718e8`) — Held item = AutoHand Grabbable thật per-weapon (fix bug kiếm-ra-bóng)
 **Mục tiêu:** mỗi vũ khí equip là 1 Grabbable THẬT trong tay (auto-pose tạm), kiếm cầm kiếm, KHÔNG BAO GIỜ ra bóng khi không phải Rock.
 **Làm gì:**
 - Generalize `ThrowBallHolder` → `WeaponHolder` (hoặc thêm gate): đọc `PlayerCombat.Local.EquippedIndex` mỗi frame; grip → `ForceGrab` **đúng** instance vũ khí hiện tại (dùng `heldPrefab` GỐC — KHÔNG strip, cần Grabbable thật để auto-pose ôm ngón); Rock giữ nguyên ThrowBall như cũ.
@@ -36,7 +43,7 @@ jump (nút A) — CÓ SẴN trong `TossLocomotionInput`, chỉ chưa test máy t
 **Verify (MCP + XR sim):** equip từng vũ khí → grip → đúng model trong tay; kiếm vung KHÔNG ra bóng; Rock ném bình thường; đổi qua lại 10 lần không leak instance/exception.
 **Deps:** không. File chính: `ThrowBallHolder.cs`, `HandWeapon.cs` (tắt cosmetic cho owner).
 
-### T18 — Selector rework: nút chọt vật lý + view-cone + grab-hologram để equip
+### ✅ T18 (XONG `c0d278a`) — Selector rework: nút chọt vật lý + view-cone + grab-hologram để equip
 **Mục tiêu:** đúng flow owner mô tả (map dòng 1-3 bảng trên).
 **Làm gì:**
 - **View-cone visibility** (thay palm-up): hiện bảng khi `Vector3.Dot(cam.forward, (wrist.pos − cam.pos).normalized) > cos(halfAngle)` — camera = `Camera.main` (đầu player), `halfAngle` serialized ~20-25°, kèm khoảng cách max ~1m. Đây chính là cái "phễu" — không cần collider thật, 1 phép dot là đủ và rẻ.
@@ -46,7 +53,9 @@ jump (nút A) — CÓ SẴN trong `TossLocomotionInput`, chỉ chưa test máy t
 **Verify:** nhìn thẳng cổ tay → bảng hiện; quay đi → tắt; chọt nút → swap + haptic; grab hologram khi đủ tiền → equip + vũ khí thật vào tay; thiếu tiền → không grab được.
 **Deps:** T19 xong trước (equip xong phải có grabbable thật vào tay ngay, không thì flow cụt). File: `WristWeaponSelector.cs` (viết lại phần lớn), prefab `WristSelector` trong `NetworkAvatar.prefab` (dựng lại: 2 nút mesh + anchor hologram).
 
-### T20 — Per-weapon projectile visuals (viên bay đúng loại)
+### ✅ T20 (XONG `7dabfe8`) — Per-weapon projectile visuals (viên bay đúng loại)
+> Triển khai LỆCH spec dưới (có chủ đích, ghi trong commit): thay vì N prefab variant + N pool, dùng 1 field
+> `[Networked] VisualIndex` + mỗi client tự đắp cosmetic từ catalog (`WeaponVisuals`) — sync cause not effect.
 **Mục tiêu:** Rock bay ra cục đá, Gun bắn viên đạn (`MS_WP_Gun_Bullet`), Bazooka bắn rocket (`MS_WP_Rocket`), Grenade/BigBoom/LandMine bay đúng model — hết bóng vàng vạn năng.
 **Làm gì:**
 - 2 đường đạn cần sửa: (a) `ThrowProjectile` (BillTween local, đường ném) — thêm mesh override per-weapon (đọc từ WC mới field `projectileVisual` hoặc tái dùng `heldPrefab` mesh); (b) `NetworkProjectile` — tạo prefab variant per loại (bullet/rocket) với `NetworkPoolable` pool key riêng, gán vào `WeaponConfig.projectilePrefab` (field có sẵn, đang null).
@@ -146,7 +155,7 @@ Format mỗi phase: ✅ có · 🟡 tạm/thiếu 1 phần · ❌ chưa có.
 
 ---
 
-## 6. T25 — TRAINING RANGE (map test thuần cho owner) ⭐ ưu tiên theo yêu cầu
+## 6. ✅ T25 (XONG `91dfa21`) — TRAINING RANGE (map test thuần cho owner)
 
 **Mục tiêu:** khu tập bắn kiểu training — test ring + mọi vũ khí không tốn tiền, không cần vào trận.
 **Làm gì:**
@@ -179,8 +188,8 @@ vòng/viên** (thay Max — cần đếm số ring đã áp per-projectile); ⑤
 (khóa AutoHandPlayer move + hands) theo thời gian tier, damage giải băng, KHÔNG gây damage — tường băng
 freeze-on-touch, sống theo tier; ⑥ **Lửa** = mất 1 mạng/lần đi qua, vùng sống 1-3s theo tier (không phải
 90s); ⑦ anti-dup sửa thành: tối đa 1 vòng T4 + 1 vòng T5 đồng thời (bỏ check cùng-element); ⑧ quỹ đạo:
-GDD = trôi ngang trái↔phải — ❓owner chốt (đã có wander T9, đổi = thay `WanderPosition` bằng drift tuyến
-tính X theo tốc độ tier); ⑨ scale đường kính ring theo tier; ⑩ weight spawn dùng ĐÚNG số GDD:
+🔒 ĐÃ CHỐT (owner, 2026-07-03) = **TRÔI NGANG trái↔phải theo GDD** — thay `WanderPosition` bằng drift tuyến
+tính X theo tốc độ tier, chạm mép quay đầu; ⑨ scale đường kính ring theo tier; ⑩ weight spawn dùng ĐÚNG số GDD:
 T1-T5 = (65,25,8,2,0) / (38,26,20,10,5) / (20,25,25,20,10) theo 3 cửa sổ.
 
 ### T30 — Match & Economy theo GDD (mới)
@@ -193,9 +202,11 @@ shutdown bounty +$2/kill.
 GDD = 6 vũ khí: Đá $0/0.4s/AoE 0.8m · Súng $2/0.1s/0.35m/mở 1s · Bom Nhỏ $5/1s/1.5m/5s · Bazooka
 $8/1.2s/2.5m/10s · **Bom Chữ X $13/2.3s (vệt lửa chữ X 1.1m × 47% sâu sân)/20s — CHƯA CÓ TRONG CODE** ·
 Nuke $20/3s/4.5m/45s. Việc: sửa giá/cooldown/AoE/unlock 7 asset WC_* theo bảng; build Bom X (vệt lửa chữ
-thập = 2 BuffZone dạng hộp xoay 90°); Đá/Súng cũng có AoE nhỏ. **❓Owner chốt:** (a) Sword + LandMine —
-ngoài GDD, giữ làm extension hay bỏ? (b) BuyOnce vs PayPerUse — GDD chỉ ghi "Giá", không nói mua 1 lần
-hay per-use.
+thập = 2 BuffZone dạng hộp xoay 90°); Đá/Súng cũng có AoE nhỏ. **🔒 ĐÃ CHỐT (owner, 2026-07-03):**
+(a) Sword + LandMine **GIỮ làm extension** (roster 8 món khi thêm Bom X — T26 build đủ chuỗi mìn).
+(b) Mua kiểu **MIX per-weapon** — owner CHƯA cho bảng chi tiết: khi làm T31 phải ĐỀ XUẤT bảng
+BuyOnce/PayPerUse từng món (gợi ý khởi điểm: đồ rẻ spam PayPerUse — Súng/Bom Nhỏ; đồ đắt finale
+BuyOnce — Bazooka/Bom X/Nuke/Sword; Đá free) và hỏi owner duyệt TRƯỚC khi code.
 
 ### T32 — Lobby/Out-game epic theo GDD (backlog lớn)
 Hub 3D tương tác: HOST đấm nút → room code 5 chữ · join = ném khối chữ/bàn phím hologram · Quick Play

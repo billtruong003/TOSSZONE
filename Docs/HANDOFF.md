@@ -22,7 +22,45 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 
 ---
 
-## Session 11 — 2026-07-02 (session vừa xong) — T1-T17 XONG HẾT
+## Session 12 — 2026-07-03 (session vừa xong) — T19 → T18 → T25 → T20 XONG, verify từng task qua MCP
+
+> **PROMPT CHẠY TIẾP (paste nguyên văn vào session mới):**
+> ```
+> Đọc Docs/HANDOFF.md rồi Docs/GDD_Core_Reference.md rồi Docs/TASKS_WEAPON_UX.md.
+> Session 12 đã xong T19 → T18 → T25 → T20 (đến commit 7dabfe8). Chạy tiếp tuần tự: T27 → T30 → T31 → T26 → T28.
+> Mỗi task: build code thật, verify qua Unity MCP (set_active_instance TOSSZONE, guard WRONG PROJECT,
+> đọc console qua LogEntries), commit riêng từng task.
+> Đã chốt với t: ring TRÔI NGANG theo GDD (T27 ⑧); Sword+LandMine GIỮ làm extension; mua vũ khí kiểu
+> MIX per-weapon — khi tới T31 đề xuất bảng mix cụ thể cho t duyệt trước khi code phần liên quan.
+> Networking đọc Fusion_Shared_Mode_Gotchas.md trước. Framework đọc BillGameCore_Usage.md.
+> Đọc mục "Session 12" trong HANDOFF.md để biết gotchas mới (headless input, meta stub, Runner.Spawn window).
+> ```
+
+**4 commit (mỗi task 1 commit, chi tiết đầy đủ trong message):**
+| Commit | Task | Nội dung |
+|---|---|---|
+| `47718e8` | **T19** | `WeaponHolder` thay `ThrowBallHolder` (đã xóa): grip → force-grab ĐÚNG vũ khí đang equip làm Grabbable THẬT (auto-pose), 1 instance/vũ khí SetActive-swap, `EnsureAttached` tự retry (grab AutoHand là coroutine nhiều frame, swap nhanh có thể trượt). Kiếm cầm kiếm — HẾT bug ra bóng. Owner-side cosmetic (ThrowController sphere + HandWeapon wrist model) tự nhường khi holder sống; remote proxy giữ cosmetic. Scene: `[ThrowSystem]` (01_Main) swap component; 02_Arena thêm object `WeaponHolder`. **Data fix:** `WC_Bazooka.heldPrefab` trỏ nhầm `MS_WP_Rocket` (art đạn, không Grabbable) → `MS_WP_RocketLaucher`. Verify: cả 7 vũ khí + ball đều `+HELD`; 10 vòng swap nhanh → 8 instance, không leak. |
+| `c0d278a` | **T18** | `WristWeaponSelector` viết lại: **view-cone** (dot camera > cos 22°, ≤1m — thay palm-up, có hàm pure test 5/5 case) · **2 nút chọt** `PokeButton3D` (component dùng chung với T25: cooldown 0.4s, haptic, scale-pulse, filter `AcceptedHands` — panel cổ tay trái chỉ nhận tay PHẢI, debounce per-hand) · **hologram xoay** ở anchor giữa (material field chờ shader owner — tạm `M_HologramBlue/Denied` URP Unlit) — **đưa tay vào + bóp grip để mua/equip**, thiếu tiền/khóa = material đỏ + zone từ chối. Prefab NetworkAvatar: subtree `WristL/SelectorPhysical` (nút ±0.1m, anchor y+0.07 — vị trí first-pass, owner tune trong headset). Verify: cone đúng công thức live; poke→navigate chạy qua physics thật; grab-hologram equip rock trong 3 frame → vũ khí thật vào tay (chuỗi T18→T19 liền mạch). |
+| `91dfa21` | **T25** | Training range trong hub tại `(-8,0,4)`: 7 nút vũ khí equip FREE + 5 nút ring theo element + nút "x8 ngẫu nhiên" + 3 DummyAvatar (6-11m) + tường target. `CombatSession.TrainingMode` (KHÔNG phải dev-cheat — chạy cả release) bypass unlock-time + giá mua ở HandWeapon/WristWeaponSelector. `TrainingRangeController` tự tạo CombatSession DDOL (hub không có!), fire `MinigameEnteredEvent{arena}` → **catalog sống ngay tại hub**; ring spawner + dummy **runtime-spawn khi master** (scene NetworkObject ở hub bị DORMANT — hub không load qua Fusion). `RingSpawner.SpawnSpecific(element, tier)` — ring theo yêu cầu, ngoài slot system, không auto-respawn. Verify: bazooka bắn được ở giây 0 (unlock 30s → bypass OK); nút Lửa → 1 ring Fire tier 3; x8 → 9 ring sống không lỗi. |
+| `7dabfe8` | **T20** | Đạn bay đúng loại MỌI client: thay vì N prefab variant + N pool, dùng **1 field `[Networked] int VisualIndex`** (0=sphere, i+1=catalog index) shooter stamp trong `onBeforeSpawned`; mỗi client tự đắp cosmetic từ catalog của mình (`WeaponVisuals.SpawnProjectileVisual`, cache qua pool-life) — sync cause not effect. `ThrowProjectile.ApplyWeaponVisual` cho đường ném local. Data: WC_Gun→`MS_WP_Gun_Bullet`, WC_Bazooka→`MS_WP_Rocket`; còn lại fallback `heldPrefab` (grenade/bigboom/mìn/đá bay đúng hình). **Fix bug sẵn có:** renderer NetworkProjectile bị tắt vô điều kiện trên authority → shooter không thấy đạn Gun/Bazooka của chính mình (giờ chỉ ẩn khi LinkTo local twin). Dummy hub spawn PASSIVE (bot active giết người chơi đang tập trong vài giây — mỗi lần chết reset EquippedIndex). Verify: gun VisualIndex=2 mặc bullet + sphere tắt; bazooka=4 rocket; grenade ném = model local + mirror ẩn đúng phía authority; default (-1) vẫn sphere. |
+
+**Câu hỏi đã chốt với owner (2026-07-03):** ① Ring **TRÔI NGANG trái↔phải theo GDD** (bỏ wander Perlin — làm ở T27 ⑧). ② **Sword + LandMine GIỮ làm extension** (T26 build đủ chuỗi mìn + sword feedback). ③ Mua vũ khí kiểu **MIX per-weapon** — chưa có bảng chi tiết món nào PayPerUse/BuyOnce: **khi tới T31 phải đề xuất bảng mix cụ thể cho owner duyệt trước khi code.**
+
+**Gotchas MỚI học được session này (đọc trước khi verify MCP):**
+1. **Headless MCP play-test input:** editor không focus → InputSystem mute hết. Fix: set runtime `InputSystem.settings.backgroundBehavior = IgnoreFocus` + `editorInputBehaviorInPlayMode = AllDeviceInputAlwaysGoesToGameView`, và tạo **keyboard ẢO** (`InputSystem.AddDevice<Keyboard>("VirtualKeyboard")`) rồi `QueueStateEvent` lên nó — queue lên keyboard THẬT sẽ bị state OS ghi đè mỗi frame. Xong test **restore 2 settings** + remove device (session này đã restore). Input ảo thỉnh thoảng vẫn hụt — fallback chắc chắn nhất: invoke thẳng method private qua reflection (`OnTriggerPressed`, `DebugThrow`...).
+2. **Ghi file .cs mới bằng tool ngoài trong lúc Unity đang import** → meta stub hỏng (chỉ 2 dòng, thiếu MonoImporter) → file bị DefaultImporter nuốt: **0 compile error nhưng class không vào Assembly-CSharp**. Fix: move file ra ngoài Assets → `AssetDatabase.Refresh` → move lại → Refresh.
+3. **`Runner.IsRunning` bật TRƯỚC khi simulation cấp được id** — `Runner.Spawn` trong cửa sổ đó throw NRE từ `Simulation.GetNextId` và để lại xác object nửa vời. Gate spawn bằng `PlayerCombat.Local != null` (avatar spawn xong = qua cửa sổ).
+4. **Round reset (ArenaManager) và player chết đều reset `EquippedIndex = -1`** — test dài phải tính đến (holder tự re-grab ball là ĐÚNG hành vi).
+5. **XR Device Simulator: 2 tay cụm gần cổ tay ở rest pose** → phantom-poke các nút selector (headset thật không bị — tay để 2 bên). Filter RightOnly + debounce đã giảm; đừng hoảng khi thấy viewIndex tự trôi trong sim.
+6. **MCP bridge rớt sau domain reload nặng** ("No Unity Editor instances found") → gọi `set_active_instance 6401` lại là ổn.
+7. `.mcp.json` từng trỏ `--default-instance 6405` (chết) → đã sửa **6401**. Port đúng xem `%USERPROFILE%\.unity-mcp\unity-mcp-status-*.json`.
+8. **CatchController.OnTriggerEnter đọc `NetworkProjectile.Element` trước Spawned** → `InvalidOperationException` (pre-existing, thấy trong test) — **fix ở T26** (1 guard `Object.IsValid`).
+
+**Trạng thái local machine (KHÔNG commit các file này):** `packages-lock.json` bị flip sang `"source": "embedded"` (máy này đang có embed kit stylized — theo quy tắc mục Git bên dưới: làm xong thì push kit repo rồi XÓA embed + revert hunk lock); `Assets/Beautify*.meta` untracked (orphan meta — check .gitignore rule #4); `OpenXRPackageSettings.asset` + `LiberationSans SDF - Fallback.asset` churn editor; `.claude/settings.local.json` là permission MCP local.
+
+---
+
+## Session 11 — 2026-07-02 — T1-T17 XONG HẾT
 
 Chạy trọn 17 task của TASKS_DETAIL.md, mỗi task build + verify qua MCP + commit riêng (đọc `git log` theo
 prefix "T<số>:" để xem chi tiết từng quyết định). Điểm nhấn:
@@ -86,18 +124,19 @@ Verify toàn bộ minigame (session 9-9c), fix bug, rồi build 4 task + chốt 
 | Network pool + hết leak đạn | ✅ (Task 2) |
 | Burst System (đạn mưa data-oriented + GPU instance + hit RPC) | ✅ MVP (Task 4) |
 | Ring Multi → burst | ✅ wired |
-| Weapons bắn (gun/grenade/bazooka...) + model trên tay | ✅ chạy (model = cosmetic, T19 nâng lên Grabbable thật) |
-| WristWeaponSelector | 🟡 chạy nhưng SAI FLOW theo vision owner → rework T18 |
-| Catch / Sword deflect | ✅ (T4/T5) — kiếm còn bug ra bóng → T19 |
+| Weapons bắn (gun/grenade/bazooka...) + model trên tay | ✅ Grabbable THẬT trong tay per-weapon (T19) — remote proxy vẫn cosmetic |
+| WristWeaponSelector | ✅ rework T18: view-cone + nút chọt + grab hologram (vị trí nút/anchor owner tune trong headset; shader hologram chờ owner) |
+| Catch / Sword deflect | ✅ (T4/T5) — kiếm cầm kiếm, HẾT bug ra bóng (T19) |
 | Team A/B + win-condition BO1/3/5 | ✅ code (T3) — round-end live 2 máy chưa verify |
 | Buff zones (tường băng, vùng lửa) | ✅ (T10) |
 | Ring rules + zone drift | ✅ (T9/T11) |
 | Map blockout 2 sân + tường | ✅ (T16) |
 | Juice (haptic/VFX/impact) | ✅ (T15) |
 | 2-player thật (ParrelSync) | ✅ core verify (T17) — checklist còn lại trong T17_Test_Report.html |
-| Per-weapon projectile visuals | ❌ mọi đạn là bóng generic → T20 |
+| Per-weapon projectile visuals | ✅ (T20) — VisualIndex networked, đạn đúng model mọi client (T20 chưa test 2 máy thật — làm cùng đợt test build) |
+| Training range hub (warm-up) | ✅ (T25) — equip free + ring theo yêu cầu + x8 + 3 dummy passive |
 
-Việc tiếp theo → **`TASKS_WEAPON_UX.md`** (T18-T24, thứ tự T19 → T18 → T20 → T21/T22).
+Việc tiếp theo → **`TASKS_WEAPON_UX.md`**: **T27 → T30 → T31 → T26 → T28** (T19/T18/T25/T20 ✅ xong Session 12). Prompt chạy tiếp ở đầu mục Session 12 phía trên.
 
 ---
 
@@ -144,14 +183,33 @@ Nếu scene objects dormant khi play thẳng (gate chưa fire): gọi tay `BillG
 
 ---
 
-## Việc tiếp theo (→ TASKS_WEAPON_UX.md)
+## Việc tiếp theo (→ TASKS_WEAPON_UX.md) — cập nhật cuối Session 12
 
-T1-T17 xong hết. **Đọc `GDD_Core_Reference.md` TRƯỚC** (nguồn chân lý mới — nhiều thứ code đang lệch GDD).
-Session 12 = weapon UX rework: **T19** (held grabbable thật, fix kiếm-ra-bóng) → **T18** (selector nút chọt +
-view-cone + grab hologram) → **T25** (training range) → **T20** (đạn đúng model) → **T27** (RING OVERHAUL theo
-GDD: Shield→Area, Băng=freeze, giá trị theo Tier, stack≤3...) → **T30/T31** (match/economy/weapon theo GDD —
-2 câu hỏi chờ owner chốt trong T31). Backlog: T28 HUD, T23/T32 lobby, T24 host-migration. Song song: owner
-build APK test theo checklist `T17_Test_Report.html`.
+**Xong:** T19 ✅ T18 ✅ T25 ✅ T20 ✅ (commit `47718e8` → `7dabfe8`, mỗi task 1 commit + verify MCP).
+**Đọc `GDD_Core_Reference.md` TRƯỚC** (nguồn chân lý — nhiều thứ code vẫn lệch GDD).
+
+Chạy tiếp theo thứ tự — chi tiết từng việc trong `TASKS_WEAPON_UX.md` mục 7:
+1. **T27 — RING OVERHAUL theo GDD** (10 điểm ①-⑩ trong spec; ⑧ ĐÃ CHỐT: trôi ngang trái↔phải theo tốc độ
+   tier, bỏ wander Perlin; nhớ đổi enum `Shield`→`Area` + asset `RC_Shield`→`RC_Area`; Băng=FREEZE không
+   damage; Lửa=mất 1 mạng/lần + sống 1-3s; stack cộng dồn ≤3; ma trận tier; anti-dup 1×T4+1×T5; weight GDD).
+   Đụng nhiều [Networked] → đọc lại Fusion_Shared_Mode_Gotchas.md + refresh scope=all + reimport prefab.
+2. **T30 — Match & economy theo GDD** (90s hiệp; nghỉ 5s + đổi bên + bảng điểm; mạng 7/5/4 theo chế độ;
+   timeout so TỔNG MẠNG ĐỘI; hòa 1-1-1; +$2/s; +$5/KILL; chết +$10 + 3s bất tử; shutdown bounty +$2).
+3. **T31 — Weapon roster theo GDD** (giá/cooldown/AoE/unlock 6 món GDD; BUILD Bom Chữ X — vệt lửa chữ thập
+   = 2 BuffZone hộp xoay 90°, rộng 1.1m × dài 47% sâu sân; Đá/Súng thêm AoE nhỏ 0.8/0.35m). ĐÃ CHỐT:
+   Sword+LandMine GIỮ làm extension (8 món tổng). **MIX per-weapon: phải đề xuất bảng BuyOnce/PayPerUse
+   từng món cho owner DUYỆT trước khi code.**
+4. **T26 — Weapon phases** (nổ khi chạm ĐẤT cho grenade/bazooka/nuke; effect nổ theo aoeRadius: cầu lửa +
+   shockwave + haptic, Nuke rung mạnh 2 tay + flash; laserSight Gun/Bazooka; magazine; isUncatchable enforce
+   trong CatchController — **tiện tay fix luôn InvalidOperationException đọc Element trước Spawned, thấy
+   trong log Session 12**; chuỗi mìn ném/đặt→ARM fuseDelay→đạp→nổ; costPerUse theo bảng mix T31).
+5. **T28 — HUD/feedback inventory** (bảng đầy đủ ở TASKS_WEAPON_UX.md mục 5: ví tổng, ammo, scoreboard
+   MS_ScoreBoard, countdown unlock, catch/deflect feedback, kill/win-lose...).
+
+Backlog sau đó: T21 equip feedback (~30') · T22 icons (owner tự làm được) · T29 kiếm rút sau lưng (ngoài
+GDD) · heckle khán đài · T23 matchmaking API · T24 host-migration · T32 lobby epic.
+Song song: owner build APK test theo `T17_Test_Report.html` + tune vị trí nút selector/hologram trong headset
++ làm shader hologram (gán vào field `_hologramMat` trên WristSelector).
 
 ---
 
