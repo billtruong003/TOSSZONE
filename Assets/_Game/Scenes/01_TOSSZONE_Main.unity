@@ -1010,9 +1010,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 449423642}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fbcf9d2b229f0b04fbf2096da6db43ca, type: 3}
+  m_Script: {fileID: 11500000, guid: 15c3c6d9ed795c74ebc598cde3d563f5, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TossZone.Throwing.ThrowBallHolder
+  m_EditorClassIdentifier: Assembly-CSharp::TossZone.Throwing.WeaponHolder
   _throwBallPrefab: {fileID: 7984634097529775090, guid: cadd7f6dea8e568489d55ec2e8dbb7fa, type: 3}
   _rightHand: 1
   _editorGripKey: 21

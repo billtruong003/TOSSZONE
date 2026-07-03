@@ -22,7 +22,10 @@ MonoBehaviour:
   cooldown: 1
   magazine: 2
   handSource: 0
-  heldPrefab: {fileID: 6282549439972590425, guid: 050c5737a8432244590e76cb20be3fa9, type: 3}
+  heldPrefab: {fileID: 857307508753129797, guid: 4c8c9acd6d1e37548a78a462d4aaaf57, type: 3}
+  holdPositionOffset: {x: 0, y: 0, z: 0}
+  holdRotationOffset: {x: 0, y: 0, z: 0}
+  holdScale: 1
   fireMode: 1
   throwConfig: {fileID: 0}
   projectilePrefab: {fileID: 9091216617492591733, guid: e9c3d2cc37b0f9645959450117c020bf, type: 3}

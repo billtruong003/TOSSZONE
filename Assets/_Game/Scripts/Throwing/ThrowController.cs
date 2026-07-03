@@ -337,6 +337,11 @@ namespace TossZone.Throwing
         }
 #endif
 
+        /// <summary>T19: force the held visual to re-resolve next Tick — called by <see cref="WeaponHolder"/>
+        /// when it activates/deactivates so the cosmetic ball hands over to the real grabbable (and back)
+        /// without waiting for the next weapon change.</summary>
+        public void ReevaluateHeldVisual() => _lastEquippedIndex = -999;
+
         // ── helpers ──────────────────────────────────────────────────────────────
 
         private Vector3 FlatForward()
@@ -365,7 +370,7 @@ namespace TossZone.Throwing
         /// <see cref="_heldBallPrefab"/>, matching the pre-T17 behavior exactly for Rock.</summary>
         private void RefreshHeldModel()
         {
-            if (!_showVisualHeldBall) return;   // a ThrowBallHolder provides the real grabbable visual instead
+            if (!_showVisualHeldBall) return;   // permanently opted out in the inspector
             bool wasShown = _heldBall != null && _heldBall.gameObject.activeSelf;
             if (_heldBall != null)
             {
@@ -376,6 +381,10 @@ namespace TossZone.Throwing
                 Destroy(_heldBall.gameObject);
                 _heldBall = null;
             }
+            // T19: a ready WeaponHolder puts the REAL equipped grabbable in this hand — the parented visual
+            // would double up with it, so hand the held visual over entirely while one is active (checked
+            // AFTER the destroy so a late-activating holder also purges an already-created ball).
+            if (WeaponHolder.IsActiveFor(_rightHand)) return;
 
 #if PHOTON_FUSION
             WeaponConfig cfg = ResolveEquippedConfig();

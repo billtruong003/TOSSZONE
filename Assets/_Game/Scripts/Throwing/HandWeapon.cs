@@ -105,8 +105,16 @@ namespace TossZone.Throwing
             // ThrowController instead (see ThrowController.RefreshHeldModel) — HandWeapon only owns the visual
             // for weapons IT actively fires (Gun/Bazooka/Sword). Was previously entirely unwired: WeaponConfig
             // already had heldPrefab/handSource authored, nothing ever read them.
-            UpdateHeldModel(isBallistic ? null : _activeConfig);
+            // T19: while a ready WeaponHolder serves this hand, the OWNER holds the real grabbable instead —
+            // no cosmetic copy (remote proxies keep the cosmetic path via UpdateProxyHeldModel).
+            bool holderActive = WeaponHolder.IsActiveFor(_rightHand);
+            UpdateHeldModel(isBallistic || holderActive ? null : _activeConfig);
         }
+
+        /// <summary>T19: force the equip state to re-resolve next Update — called by <see cref="WeaponHolder"/>
+        /// when it activates/deactivates so the cosmetic wrist model hands over to the real grabbable (and
+        /// back) without waiting for the next weapon change.</summary>
+        public void ReevaluateEquip() => _lastEquippedIndex = -999;
 
         private GameObject _heldModel;
         private WeaponConfig _heldModelConfig;
