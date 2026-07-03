@@ -21,6 +21,7 @@ ExportedObj/
 *.csproj
 *.unityproj
 *.sln
+*.slnx
 *.suo
 *.tmp
 *.user
@@ -65,6 +66,10 @@ Thumbs.db
 # Owner's proprietary shader kit — resolved via the UPM git dependency in manifest.json (self-heals on clone).
 # This ignore only covers an OPTIONAL local embed of the same package under Packages/ (for in-place shader editing);
 # the embedded copy is never committed (proprietary; this repo is public). Fresh clones get it from the git dependency.
+# WARNING (Session 11 incident): if you embed, the copy MUST come from a clone of the kit repo WITH its original
+# .meta files. An export/re-import creates fresh GUIDs -> every committed material that uses kit shaders breaks
+# (this exact mistake caused the "pink materials after pull" bug). Also note: embedding flips packages-lock.json
+# to "source": "embedded" — revert that hunk before committing, or other machines churn the lock.
 /[Pp]ackages/com.billtruong.stylized-toon-world-kit/
 /[Aa]ssets/StylizedToonWorldKit/
 /[Aa]ssets/StylizedToonWorldKit.meta
@@ -82,7 +87,16 @@ Thumbs.db
 /[Aa]ssets/UnityMCP/Log/
 
 # Meta Immersive Debugger (DevAgent) — auto-generated LAN debug token, regenerated each session (machine-local secret).
+# The .meta must be ignored too: a tracked meta whose asset is ignored is an orphan on other machines —
+# Unity deletes it there, then regenerates it here with a NEW GUID -> endless churn.
 /[Aa]ssets/[Rr]esources/DevAgentSettings.asset
+/[Aa]ssets/[Rr]esources/DevAgentSettings.asset.meta
+
+# Photon Fusion sample-package archives (downloaded per machine via the Fusion menu; big, redistributable from Photon).
+/[Aa]ssets/[Pp]hoton/FusionDemos/
+/[Aa]ssets/[Pp]hoton/FusionDemos.meta
+/[Aa]ssets/[Pp]hoton/FusionMenu/
+/[Aa]ssets/[Pp]hoton/FusionMenu.meta
 
 # Native build temp (CMake RelWithDebInfo / tools) — local build artifacts.
 /.utmp/

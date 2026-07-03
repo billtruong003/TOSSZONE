@@ -155,6 +155,25 @@ build APK test theo checklist `T17_Test_Report.html`.
 
 ---
 
+## 🔄 Git / pull workflow (Session 11 — fix "pull về hư material")
+
+Root cause đã tìm ra và fix (2026-07-02): bản **embed local** của StylizedToonWorldKit trong `Packages/` được tạo bằng export/re-import nên **toàn bộ 82 GUID khác** với kit repo — trong khi mọi material đã commit reference GUID của kit repo → máy nào có embed là pink material sau pull. Embed đã bị gỡ; kit giờ resolve qua UPM git dependency trong manifest.json (đúng thiết kế).
+
+Quy tắc để pull mượt:
+
+1. **Không tự tạo embed kit bằng export/import.** Nếu cần sửa shader in-place: clone `stylized-toon-world-kit` repo → copy folder `Assets/StylizedToonWorldKit` (GIỮ NGUYÊN .meta) vào `Packages/com.billtruong.stylized-toon-world-kit/`. Xong việc thì push lên kit repo rồi XÓA embed. Lưu ý embed làm `packages-lock.json` flip sang `"source": "embedded"` — revert hunk đó trước khi commit.
+2. **Line endings:** repo đã có `.gitattributes` (Unity YAML = LF, binary được đánh dấu). Trên máy mới: `git config core.autocrlf false` (local) sau khi clone.
+3. **Merge scene/prefab:** máy này đã config UnityYAMLMerge (SmartMerge). Máy mới chạy:
+   ```
+   git config merge.unityyamlmerge.name "Unity SmartMerge (UnityYAMLMerge)"
+   git config merge.unityyamlmerge.driver "\"C:/Program Files/Unity/Hub/Editor/<UNITY_VER>/Editor/Data/Tools/UnityYAMLMerge.exe\" merge -h -p --force %O %B %A %A"
+   ```
+   rồi copy 6 dòng `merge=unityyamlmerge` vào `.git/info/attributes` (xem máy này làm mẫu — cố ý để per-machine, không commit).
+4. **Asset ignored thì .meta cũng phải ignored** (DevAgentSettings là bài học — meta orphan bị Unity xóa/tái tạo GUID mới liên tục). Sau khi thêm rule ignore mới, chạy check: meta tracked mà asset không tracked = bug.
+5. **Sau khi pull mà thấy pink/miss ref:** đừng re-assign tay rồi commit (sẽ đè GUID đúng của máy khác). Kiểm tra trước: `Packages/` có embed lạ không, `packages-lock.json` có bị flip không, AutoHand đã import chưa (paid asset, ignored — phải import từ Asset Store mỗi máy).
+
+---
+
 ## ⚠️ Gotchas quan trọng nhất
 
 1. **Đóng Teabag editor** — 2 editor làm routing MCP loạn + domain-reload giữa play. `execute_code` tự an toàn (guard TOSSZONE); `read_console`/`manage_scene` hay nhảy nhầm editor → đọc console qua `UnityEditor.LogEntries` bằng execute_code.

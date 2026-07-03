@@ -1,0 +1,112 @@
+# Normalize all text files to LF in the repo (protects against autocrlf differences between machines).
+* text=auto
+
+# Code / config
+*.cs text diff=csharp
+*.shader text
+*.hlsl text
+*.cginc text
+*.compute text
+*.uxml text
+*.uss text
+*.asmdef text
+*.asmref text
+*.rsp text
+*.json text
+*.xml text
+*.yaml text
+*.yml text
+*.md text
+*.txt text
+
+# Unity YAML assets — Unity always writes LF; keep the working tree LF too so
+# the editor, git, and diff tools all agree byte-for-byte.
+*.meta text eol=lf
+*.unity text eol=lf
+*.prefab text eol=lf
+*.mat text eol=lf
+*.asset text eol=lf
+*.anim text eol=lf
+*.controller text eol=lf
+*.overrideController text eol=lf
+*.physicMaterial text eol=lf
+*.physicsMaterial2D text eol=lf
+*.playable text eol=lf
+*.mask text eol=lf
+*.renderTexture text eol=lf
+*.cubemap text eol=lf
+*.mixer text eol=lf
+*.guiskin text eol=lf
+*.fontsettings text eol=lf
+*.terrainlayer text eol=lf
+*.spriteatlas text eol=lf
+*.spriteatlasv2 text eol=lf
+*.signal text eol=lf
+*.shadergraph text eol=lf
+*.shadersubgraph text eol=lf
+*.shadervariants text eol=lf
+*.inputactions text eol=lf
+*.lighting text eol=lf
+*.giparams text eol=lf
+*.preset text eol=lf
+
+# Exceptions: these .asset files are ALWAYS binary, even with Force Text serialization.
+LightingData.asset binary
+*LightingData.asset binary
+NavMesh.asset binary
+
+# Images
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.tga binary
+*.psd binary
+*.psb binary
+*.exr binary
+*.hdr binary
+*.tif binary
+*.tiff binary
+*.gif binary
+*.bmp binary
+*.svg binary
+*.ico binary
+
+# Models
+*.fbx binary
+*.FBX binary
+*.obj binary
+*.blend binary
+*.dae binary
+*.glb binary
+*.gltf binary
+*.3ds binary
+
+# Audio / video
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.aif binary
+*.aiff binary
+*.mp4 binary
+*.mov binary
+*.webm binary
+
+# Fonts
+*.ttf binary
+*.otf binary
+
+# Native libs / archives / misc
+*.dll binary
+*.so binary
+*.dylib binary
+*.a binary
+*.lib binary
+*.pdb binary
+*.jar binary
+*.aar binary
+*.zip binary
+*.7z binary
+*.gz binary
+*.unitypackage binary
+*.pdf binary
+*.bytes binary
