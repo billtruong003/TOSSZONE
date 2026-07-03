@@ -276,8 +276,12 @@ namespace TossZone.Throwing
                 : _defaultNetProjPrefab;
             if (prefab == null) return;
 
+            // T20: stamp which weapon's shot this is BEFORE Spawned so proxies dress it from their catalog
+            // in their first snapshot (0 = default sphere, i+1 = catalog index i).
+            int visualIndex = _lastEquippedIndex >= 0 ? _lastEquippedIndex + 1 : 0;
             NetworkObject proj = _runner.Spawn(prefab, _muzzle.position,
-                Quaternion.LookRotation(_muzzle.forward), _runner.LocalPlayer);
+                Quaternion.LookRotation(_muzzle.forward), _runner.LocalPlayer,
+                (runner, o) => { if (o.TryGetComponent(out NetworkProjectile p)) p.VisualIndex = visualIndex; });
             if (proj == null || !proj.TryGetComponent(out NetworkProjectile np)) return;
 
             np.Shooter = _runner.LocalPlayer;

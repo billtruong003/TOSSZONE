@@ -64,6 +64,16 @@ namespace TossZone.Combat
         /// <summary>Firing should deduct money each shot (vs free once owned).</summary>
         public bool IsPayPerUse => acquireMode == AcquireMode.PayPerUse;
 
+        [BillTitle("Đạn bay (T20)")]
+        [BillInfoBox("Model viên ĐẠN BAY (cosmetic đắp lên projectile, cả local lẫn remote). Trống = dùng " +
+                     "heldPrefab (Grenade/BigBoom/Mìn/Đá bay đúng hình cầm tay). Gun/Bazooka gán riêng " +
+                     "(MS_WP_Gun_Bullet / MS_WP_Rocket — viên bay khác vật cầm tay).")]
+        public GameObject projectileVisual;
+        [BillSlider(0.05f, 3f)] public float projectileVisualScale = 1f;
+
+        /// <summary>The prefab whose look the flying projectile copies (explicit override, else the held model).</summary>
+        public GameObject ProjectileVisualPrefab => projectileVisual != null ? projectileVisual : heldPrefab;
+
         [BillTitle("Hành vi đặc biệt")]
         [BillInfoBox("fuseDelay > 0 = LandMine: arm + delay trước khi nổ AoE.")]
         [BillSlider(0f, 10f)] public float fuseDelay = 0f;

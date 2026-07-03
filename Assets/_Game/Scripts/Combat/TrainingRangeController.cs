@@ -148,7 +148,14 @@ namespace TossZone.Combat
             }
             Transform spawn = _dummySpawns[_nextDummy];
             _nextDummy++;
-            if (spawn != null) runner.Spawn(_dummyPrefab, spawn.position, spawn.rotation, PlayerRef.None);
+            if (spawn != null)
+            {
+                NetworkObject o = runner.Spawn(_dummyPrefab, spawn.position, spawn.rotation, PlayerRef.None);
+                // Warm-up TARGETS, not attackers — live test: active bots killed the browsing player in
+                // seconds, and every death resets EquippedIndex. Re-enable per-dummy via DevCombatPanel (F1).
+                DummyBotDriver bot = o != null ? o.GetComponent<DummyBotDriver>() : null;
+                if (bot != null) bot.enabled = false;
+            }
         }
     }
 }

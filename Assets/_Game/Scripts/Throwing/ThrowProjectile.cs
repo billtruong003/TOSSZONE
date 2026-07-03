@@ -18,6 +18,9 @@ namespace TossZone.Throwing
 
         [SerializeField] private TrailRenderer _trail;
 
+        private GameObject _weaponVisual;
+        private TossZone.Combat.WeaponConfig _weaponVisualCfg;
+
         private ThrowConfig _config;
         private Vector3 _origin;
         private Vector3 _v0;          // launch velocity (world)
@@ -43,6 +46,24 @@ namespace TossZone.Throwing
 
         /// <summary>Mark uncatchable regardless of power state (called when weapon.isUncatchable).</summary>
         public void SetUncatchable() { IsCatchable = false; }
+
+        /// <summary>T20 — dress the flying ball as the EQUIPPED weapon's shot (Rock chunk, grenade, mine…).
+        /// Null (default equip / no model wired) keeps the plain sphere. The cosmetic is cached per config —
+        /// consecutive throws of the same weapon reuse one instance across pool lives, no per-throw
+        /// Instantiate.</summary>
+        public void ApplyWeaponVisual(TossZone.Combat.WeaponConfig cfg)
+        {
+            if (cfg != _weaponVisualCfg)
+            {
+                if (_weaponVisual != null) { Destroy(_weaponVisual); _weaponVisual = null; }
+                _weaponVisualCfg = cfg;
+                _weaponVisual = TossZone.Combat.WeaponVisuals.SpawnProjectileVisual(cfg, transform);
+            }
+            bool custom = _weaponVisual != null;
+            if (_mr == null) _mr = GetComponent<MeshRenderer>();
+            if (_mr != null) _mr.enabled = !custom;
+            if (_weaponVisual != null) _weaponVisual.SetActive(true);
+        }
 
         /// <summary>Called by CatchController when the ball enters the catch zone. Stops flight and pools.</summary>
         public void OnCaught()

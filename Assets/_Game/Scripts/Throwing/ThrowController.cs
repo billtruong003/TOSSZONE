@@ -264,6 +264,8 @@ namespace TossZone.Throwing
             ThrowProjectile proj = go.GetComponent<ThrowProjectile>();
             if (proj != null) proj.Launch(pos, velocity, power, _config);
 #if PHOTON_FUSION
+            // T20: dress the local ball as the equipped weapon's shot (null = default sphere for equip -1).
+            if (proj != null) proj.ApplyWeaponVisual(ResolveEquippedConfig());
             SpawnNetworkProjectile(pos, rot, go.transform);
 #endif
         }
@@ -289,7 +291,11 @@ namespace TossZone.Throwing
                 _runner.Despawn(_activeNetProj);
                 _activeNetProj = null;
             }
-            _activeNetProj = _runner.Spawn(_netProjectilePrefab, pos, rot);
+            // T20: stamp the equipped weapon's visual id before Spawned (proxies dress it from their catalog).
+            int equippedIdx = PlayerCombat.Local != null ? PlayerCombat.Local.EquippedIndex : -1;
+            int visualIndex = equippedIdx >= 0 ? equippedIdx + 1 : 0;
+            _activeNetProj = _runner.Spawn(_netProjectilePrefab, pos, rot, null,
+                (runner, o) => { if (o.TryGetComponent(out NetworkProjectile p)) p.VisualIndex = visualIndex; });
             NetworkProjectile np = _activeNetProj != null ? _activeNetProj.GetComponent<NetworkProjectile>() : null;
             if (np != null)
             {

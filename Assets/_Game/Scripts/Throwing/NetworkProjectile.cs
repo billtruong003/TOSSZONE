@@ -43,19 +43,31 @@ namespace TossZone.Throwing
         [Networked] public float AreaScale { get; set; }     // 1 = base hit/explosion radius
         [Networked] public int Element { get; set; }         // 0 None · 1 Ice · 2 Fire
 
+        /// <summary>T20 — which weapon's shot this projectile LOOKS like: 0 = default sphere, i+1 = weapon
+        /// catalog index i. Set by the shooter in onBeforeSpawned (so proxies see it in their first snapshot);
+        /// every client dresses the projectile from its own catalog copy — sync the cause, not the mesh.</summary>
+        [Networked] public int VisualIndex { get; set; }
+
         private bool _hasHit;
         private bool _isAoe;
         private float _age;
         private float _customGravity;
         private int _damageOverride;
         private Rigidbody _rb;
+        // T20 visual cache — survives pool lives on purpose (rebuilt only when VisualIndex changes).
+        private GameObject _visualHolder;
+        private int _appliedVisual;
         private static readonly Collider[] _overlap = new Collider[8];
 
         /// <summary>
         /// Called by the authority immediately after <see cref="Fusion.NetworkRunner.Spawn"/> so every
         /// FixedUpdateNetwork tick can copy the local projectile's position into the replicated transform.
         /// </summary>
-        public void LinkTo(Transform localProj) => _localProjectile = localProj;
+        public void LinkTo(Transform localProj)
+        {
+            _localProjectile = localProj;
+            RefreshVisibility();   // linked authority renders its LOCAL twin — hide this network copy entirely
+        }
 
         /// <summary>
         /// Direct-fire path (HandWeapon: Gun/Bazooka/Grenade/BigBoom) — no local BillTween projectile involved.
@@ -121,10 +133,14 @@ namespace TossZone.Throwing
             _damageOverride = 0;
             _localProjectile = null;
 
-            _mr = GetComponentInChildren<Renderer>();
-            // Authority sees the real local ThrowProjectile; hide the network copy to avoid doubling.
-            // Proxies keep it enabled — they have no local projectile, so this IS the ball for them.
-            if (_mr != null) _mr.enabled = !HasStateAuthority;
+            _mr = null;   // re-resolve, EXCLUDING the T20 visual holder's own renderers
+            foreach (Renderer r in GetComponentsInChildren<Renderer>(true))
+                if (_visualHolder == null || !r.transform.IsChildOf(_visualHolder.transform)) { _mr = r; break; }
+            // T20: visible by default for EVERYONE — including the shooter on the direct-fire path
+            // (Gun/Bazooka have no local twin; the old unconditional !HasStateAuthority hid the shooter's own
+            // bullet). The throw path hides this copy in LinkTo() once the local twin is registered.
+            ApplyVisualIfChanged();
+            RefreshVisibility();
             if (HasStateAuthority)
             {
                 // Default = no buff (rings / catch overwrite these before + while flying).
@@ -142,6 +158,43 @@ namespace TossZone.Throwing
                 _rb.linearVelocity = Vector3.zero;   // clear stale velocity on pooled reuse
                 _rb.angularVelocity = Vector3.zero;
             }
+        }
+
+        public override void Render()
+        {
+            // T20: VisualIndex can land a snapshot after Spawned on late-joining proxies — keep it honest.
+            ApplyVisualIfChanged();
+        }
+
+        /// <summary>T20 — (re)build the weapon cosmetic when the networked VisualIndex changes. The cosmetic is
+        /// cached across pool lives (only rebuilt on a different index). Every client resolves the model from
+        /// its own CombatSession catalog.</summary>
+        private void ApplyVisualIfChanged()
+        {
+            if (Object == null || !Object.IsValid) return;
+            int vi = VisualIndex;
+            if (vi == _appliedVisual) return;
+            _appliedVisual = vi;
+            if (_visualHolder != null) { Destroy(_visualHolder); _visualHolder = null; }
+
+            WeaponConfig cfg = null;
+            if (vi > 0)
+            {
+                WeaponConfig[] catalog = CombatSession.Instance != null ? CombatSession.Instance.CurrentCatalog : null;
+                if (catalog != null && vi - 1 < catalog.Length) cfg = catalog[vi - 1];
+            }
+            _visualHolder = WeaponVisuals.SpawnProjectileVisual(cfg, transform);
+            RefreshVisibility();
+        }
+
+        /// <summary>Who renders what: a linked authority hides this network copy entirely (its LOCAL
+        /// ThrowProjectile is the visible ball); everyone else shows the weapon cosmetic when present, else
+        /// the base sphere.</summary>
+        private void RefreshVisibility()
+        {
+            bool show = _localProjectile == null;
+            if (_mr != null) _mr.enabled = show && _visualHolder == null;
+            if (_visualHolder != null) _visualHolder.SetActive(show);
         }
 
         public override void FixedUpdateNetwork()

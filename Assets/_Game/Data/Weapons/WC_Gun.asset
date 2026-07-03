@@ -23,6 +23,9 @@ MonoBehaviour:
   magazine: 10
   handSource: 0
   heldPrefab: {fileID: 5466261016724029111, guid: 173c4a8ad58e95643956c44ad74e6c00, type: 3}
+  holdPositionOffset: {x: 0, y: 0, z: 0}
+  holdRotationOffset: {x: 0, y: 0, z: 0}
+  holdScale: 1
   fireMode: 1
   throwConfig: {fileID: 0}
   projectilePrefab: {fileID: 9091216617492591733, guid: e9c3d2cc37b0f9645959450117c020bf, type: 3}
@@ -30,6 +33,8 @@ MonoBehaviour:
   fireRate: 4
   damage: 1
   aoeRadius: 0
+  projectileVisual: {fileID: 7112048154570068090, guid: ef068821ea3bf4142a2852bd6278e00f, type: 3}
+  projectileVisualScale: 1
   fuseDelay: 0
   projectileGravity: 0
   laserSight: 1

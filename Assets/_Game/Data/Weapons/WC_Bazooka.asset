@@ -33,6 +33,8 @@ MonoBehaviour:
   fireRate: 1
   damage: 3
   aoeRadius: 2.5
+  projectileVisual: {fileID: 6282549439972590425, guid: 050c5737a8432244590e76cb20be3fa9, type: 3}
+  projectileVisualScale: 1
   fuseDelay: 0
   projectileGravity: 4.9
   laserSight: 0
