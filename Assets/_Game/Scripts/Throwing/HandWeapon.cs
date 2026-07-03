@@ -254,7 +254,7 @@ namespace TossZone.Throwing
             if (_activeConfig == null || Time.time < _cooldownEnd) return;
 
             float elapsed = CombatSession.Instance != null ? CombatSession.Instance.RoundElapsed : 0f;
-            if (elapsed < _activeConfig.unlockTime) return;
+            if (!CombatSession.TrainingModeActive && elapsed < _activeConfig.unlockTime) return;
 
             if (_activeConfig.IsPayPerUse && !_combat.UseAmmo()) return;
 

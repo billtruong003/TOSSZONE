@@ -159,7 +159,7 @@ namespace TossZone.UI
             WeaponConfig cfg = _catalog[_viewIndex];
             if (cfg == null || !IsUnlocked(cfg)) return;
 
-            if (!_combat.OwnsWeapon(_viewIndex) && cfg.cost > 0)
+            if (!CombatSession.TrainingModeActive && !_combat.OwnsWeapon(_viewIndex) && cfg.cost > 0)
             {
                 if (!_combat.TryBuyWeapon(_viewIndex, cfg.cost)) return;
             }
@@ -229,6 +229,7 @@ namespace TossZone.UI
 
         private static bool IsUnlocked(WeaponConfig cfg)
         {
+            if (CombatSession.TrainingModeActive) return true;   // T25: hub range = everything free
             float elapsed = CombatSession.Instance != null ? CombatSession.Instance.RoundElapsed : 0f;
             return cfg == null || elapsed >= cfg.unlockTime;
         }

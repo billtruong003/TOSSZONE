@@ -73,6 +73,24 @@ namespace TossZone.Combat
             }
         }
 
+        /// <summary>T25 — spawn one SPECIFIC ring on demand (training range), outside the slot system so it
+        /// never auto-respawns. Master only; returns null otherwise. Position rolls inside the zone box.</summary>
+        public NetworkObject SpawnSpecific(RingElement element, int tier)
+        {
+            if (_ringPrefab == null || Object == null || !Object.IsValid || !HasStateAuthority) return null;
+            Vector3 c = ZoneCenter, h = ZoneHalfExtents;
+            Vector3 pos = new Vector3(
+                c.x + Random.Range(-h.x, h.x),
+                c.y + Random.Range(-h.y, h.y),
+                c.z + Random.Range(-h.z, h.z));
+            int clamped = Mathf.Clamp(tier, 1, 5);
+            return Runner.Spawn(_ringPrefab, pos, Quaternion.identity, PlayerRef.None,
+                (runner, o) =>
+                {
+                    if (o.TryGetComponent(out BuffRing ring)) { ring.Element = element; ring.Tier = clamped; }
+                });
+        }
+
         public void ResetRings()
         {
             if (!HasStateAuthority) return;

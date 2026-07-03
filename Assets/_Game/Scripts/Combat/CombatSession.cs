@@ -26,6 +26,14 @@ namespace TossZone.Combat
         /// <summary>The weapon catalog for the currently active minigame (null outside a minigame).</summary>
         public WeaponConfig[] CurrentCatalog { get; private set; }
 
+        /// <summary>T25 — hub training range: unlock-time gates and purchase costs are bypassed while true.
+        /// Set by TrainingRangeController (hub scene object); cleared when it unloads. NOT a dev-only cheat —
+        /// must work in release builds (the hub doubles as the warm-up range, GDD §VII).</summary>
+        public bool TrainingMode { get; set; }
+
+        /// <summary>Null-safe static view of <see cref="TrainingMode"/> for gate checks.</summary>
+        public static bool TrainingModeActive => Instance != null && Instance.TrainingMode;
+
         private bool _roundRunning;
         private bool _subscribed;
 
