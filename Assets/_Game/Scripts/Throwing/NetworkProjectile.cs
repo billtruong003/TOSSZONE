@@ -255,7 +255,6 @@ namespace TossZone.Throwing
             {
                 _hasHit = true;
                 if (Element == (int)RingElement.Ice || Element == (int)RingElement.Fire) SpawnElementZone();
-                if (Element != (int)RingElement.Ice && PlayerCombat.Local != null) PlayerCombat.Local.RewardHit();
             }
         }
 

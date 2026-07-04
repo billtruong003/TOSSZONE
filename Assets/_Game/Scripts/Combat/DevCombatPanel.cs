@@ -49,7 +49,7 @@ namespace TossZone.Combat
             }
 
             GUILayout.Space(8);
-            GUILayout.Label("HP " + combat.Health + "/" + PlayerCombat.MaxHealth + "   $" + combat.Money + "   Ammo " + combat.Ammo);
+            GUILayout.Label("HP " + combat.Health + "/" + PlayerCombat.MaxLives + "   $" + combat.Money + "   Ammo " + combat.Ammo);
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("+$100")) combat.AddMoneyCheat(100);
             if (GUILayout.Button("Heal")) combat.HealCheat();

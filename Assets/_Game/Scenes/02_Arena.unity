@@ -931,24 +931,6 @@ MonoBehaviour:
   _zoneCenter: {fileID: 804859354}
   _zoneSize: {x: 8, y: 1, z: 6}
   _slotCount: 3
-  _tierWeights0to30:
-  - 40
-  - 30
-  - 20
-  - 7
-  - 3
-  _tierWeights31to60:
-  - 25
-  - 30
-  - 25
-  - 12
-  - 8
-  _tierWeights61to90:
-  - 15
-  - 20
-  - 25
-  - 20
-  - 20
 --- !u!114 &1358483357
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1016,10 +998,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c81ac891c6ba7f74c993ca4df453146d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TossZone.Combat.ArenaManager
-  _bestOf: 1
-  _roundDuration: 120
+  _bestOf: 3
+  _roundDuration: 90
   _warmupDuration: 5
-  _roundEndDuration: 4
+  _roundEndDuration: 5
   _minigameId: arena
   _spawnPointsA:
   - {fileID: 379173921}

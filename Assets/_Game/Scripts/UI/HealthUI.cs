@@ -27,7 +27,7 @@ namespace TossZone.UI
         public void Bind(PlayerCombat combat)
         {
             _combat = combat;
-            Refresh(PlayerCombat.MaxHealth);
+            Refresh(PlayerCombat.MaxLives);
         }
 
         private void LateUpdate()

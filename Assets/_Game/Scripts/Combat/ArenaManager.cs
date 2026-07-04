@@ -11,9 +11,6 @@ namespace TossZone.Combat
     /// Fusion (Shared Mode) assigns StateAuthority to the master client automatically.
     ///
     /// Match flow: Warmup → Playing → RoundEnd → (repeat or) MatchEnd.
-    /// Win condition (per round): all real players except one have Health ≤ 0 — that last player wins the round.
-    /// Draws (timeout) go to ScoreA if player A has more health, else ScoreB, else draw (no point awarded).
-    ///
     /// All [Networked] fields replicate to every client. Events fire on all clients via <c>Bill.Events</c>.
     /// </summary>
     public class ArenaManager : NetworkBehaviour
@@ -21,10 +18,10 @@ namespace TossZone.Combat
         public enum MatchPhase { Warmup = 0, Playing = 1, RoundEnd = 2, MatchEnd = 3 }
 
         [Header("Match rules (authoritative — mirrors MinigameDef)")]
-        [SerializeField] private int _bestOf = 1;          // 1, 3, or 5
-        [SerializeField] private float _roundDuration = 120f;
+        [SerializeField] private int _bestOf = 3;          // 1, 3, or 5
+        [SerializeField] private float _roundDuration = 90f;
         [SerializeField] private float _warmupDuration = 5f;
-        [SerializeField] private float _roundEndDuration = 4f;
+        [SerializeField] private float _roundEndDuration = 5f;
         [Tooltip("Must match a MinigameDef.id under Resources/Minigames/ — CombatSession reads its weaponCatalog "
                 + "from this id. Nothing else in the real join flow (portal / direct-play gate) calls "
                 + "MinigameManager.Enter(), so THIS is what turns combat 'on' for weapon equip/fire.")]
@@ -93,6 +90,7 @@ namespace TossZone.Combat
             Phase = MatchPhase.Playing;
             PhaseTimer = TickTimer.CreateFromSeconds(Runner, _roundDuration);
 
+            PlayerCombat.MaxLives = PlayerCombat.LivesForPlayerCount(CountRealPlayers());
             ResetAllCombat();
             _ringSpawner?.ResetRings();
 
@@ -100,12 +98,19 @@ namespace TossZone.Combat
             if (Bill.IsReady) Bill.Events.Fire(new RoundEndEvent { Round = Round - 1 });
         }
 
+        private int CountRealPlayers()
+        {
+            int count = 0;
+            foreach (PlayerCombat pc in PlayerCombat.AllInstances)
+                if (pc.IsPlayer) count++;
+            return count;
+        }
+
         private void CheckWinCondition()
         {
-            PlayerRef winner = PlayerRef.None;
             int aliveCount = 0;
             int realPlayerCount = 0;
-            PlayerCombat winnerCombat = null;
+            PlayerCombat lastAlive = null;
 
             foreach (PlayerCombat pc in PlayerCombat.AllInstances)
             {
@@ -114,56 +119,55 @@ namespace TossZone.Combat
                 if (pc.Health > 0)
                 {
                     aliveCount++;
-                    winnerCombat = pc;
-                    if (pc.Object != null) winner = pc.Object.InputAuthority;
+                    lastAlive = pc;
                 }
             }
 
             // Decide a round by elimination only once at least 2 real players are in the match. Gating on the
             // bot-inclusive AllInstances.Count let a solo player (or a bot-only arena) end the round every tick,
             // spinning Warmup→Playing→RoundEnd forever and constantly resetting combat health.
-            if (realPlayerCount >= 2 && aliveCount <= 1)
-                EndRound(winner, winnerCombat);
+            if (realPlayerCount < 2 || aliveCount > 1) return;
+
+            int winnerTeam = lastAlive != null && lastAlive.Object != null
+                ? GetTeam(lastAlive.Object.InputAuthority) : -1;
+            EndRound(winnerTeam);
         }
 
         private void OnTimeout()
         {
-            // Award point to the player with higher health; draw = no point.
-            PlayerCombat best = null;
-            int bestHp = 0;
-            bool tied = false;
-
+            int totalA = 0, totalB = 0;
             foreach (PlayerCombat pc in PlayerCombat.AllInstances)
             {
-                if (!pc.IsPlayer) continue;
-                if (pc.Health > bestHp) { bestHp = pc.Health; best = pc; tied = false; }
-                else if (pc.Health == bestHp) tied = true;
+                if (!pc.IsPlayer || pc.Object == null) continue;
+                if (GetTeam(pc.Object.InputAuthority) == 0) totalA += pc.Health;
+                else totalB += pc.Health;
             }
-
-            PlayerRef winner = (!tied && best != null && best.Object != null)
-                ? best.Object.InputAuthority
-                : PlayerRef.None;
-
-            EndRound(winner, best);
+            EndRound(totalA > totalB ? 0 : totalB > totalA ? 1 : -1);
         }
 
-        private void EndRound(PlayerRef winner, PlayerCombat winnerCombat)
+        private void EndRound(int winnerTeam)
         {
             Phase = MatchPhase.RoundEnd;
             PhaseTimer = TickTimer.CreateFromSeconds(Runner, _roundEndDuration);
 
-            // Award score (simple 2-team: A = first player, B = second player).
-            // For proper team assignment extend with a team registry.
-            if (winner != PlayerRef.None) AwardScore(winner);
+            if (winnerTeam == 0) ScoreA++;
+            else if (winnerTeam == 1) ScoreB++;
 
-            if (Bill.IsReady) Bill.Events.Fire(new RoundEndEvent { Winner = winner, Round = Round });
-
-            if (ScoreA >= _winsNeeded || ScoreB >= _winsNeeded)
+            if (Bill.IsReady) Bill.Events.Fire(new RoundEndEvent
             {
-                Phase = MatchPhase.MatchEnd;
-                int winTeam = ScoreA >= _winsNeeded ? 0 : 1;
-                if (Bill.IsReady) Bill.Events.Fire(new MatchEndEvent { WinnerTeam = winTeam });
-            }
+                WinnerTeam = winnerTeam,
+                Round = Round,
+                ScoreA = ScoreA,
+                ScoreB = ScoreB
+            });
+
+            bool decided = ScoreA >= _winsNeeded || ScoreB >= _winsNeeded;
+            bool allRoundsPlayed = Round >= _bestOf;
+            if (!decided && !allRoundsPlayed) return;
+
+            Phase = MatchPhase.MatchEnd;
+            int matchWinner = ScoreA > ScoreB ? 0 : ScoreB > ScoreA ? 1 : -1;
+            if (Bill.IsReady) Bill.Events.Fire(new MatchEndEvent { WinnerTeam = matchWinner });
         }
 
         private void AdvanceRound()
@@ -173,15 +177,9 @@ namespace TossZone.Combat
         }
 
         /// <summary>Team of a player: 0 = A, 1 = B (alternating by PlayerId). Single source of truth for team
-        /// membership — used by both <see cref="GetSpawnPosition"/> and <see cref="AwardScore"/> so they can
-        /// never disagree. No networked field needed: every client already knows every PlayerId, so this is a
-        /// pure deterministic function, not state that needs replicating.</summary>
+        /// membership — used by scoring and spawn sides so they can never disagree. No networked field needed:
+        /// every client already knows every PlayerId, so this is a pure deterministic function.</summary>
         public static int GetTeam(PlayerRef player) => player.PlayerId % 2;
-
-        private void AwardScore(PlayerRef winner)
-        {
-            if (GetTeam(winner) == 0) ScoreA++; else ScoreB++;
-        }
 
         private void ResetAllCombat()
         {
@@ -195,7 +193,8 @@ namespace TossZone.Combat
         /// aren't wired.</summary>
         public Vector3 GetSpawnPosition(PlayerRef player)
         {
-            Transform[] pts = (GetTeam(player) == 0) ? _spawnPointsA : _spawnPointsB;
+            int side = (GetTeam(player) + Mathf.Max(0, Round - 1)) % 2;
+            Transform[] pts = side == 0 ? _spawnPointsA : _spawnPointsB;
             if (pts == null || pts.Length == 0) return transform.position;
             // Deterministic-enough: each client resolving its OWN respawn independently just needs a plausible
             // spot, not perfect cross-client agreement (this only positions the LOCAL rig — see NetworkAvatar.

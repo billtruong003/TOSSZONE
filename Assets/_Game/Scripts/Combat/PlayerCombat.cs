@@ -17,7 +17,19 @@ namespace TossZone.Combat
     /// </summary>
     public class PlayerCombat : NetworkBehaviour
     {
-        public const int MaxHealth = 5;
+        public const float IncomePerSecond = 2f;
+        public const int KillReward = 5;
+        public const int CompensationPerLife = 10;
+        public const float InvulnSeconds = 3f;
+        public const int BountyPerKill = 2;
+
+        public static int MaxLives { get; set; } = 5;
+
+        public static int LivesForPlayerCount(int realPlayers)
+        {
+            int perTeam = Mathf.Max(1, (realPlayers + 1) / 2);
+            return perTeam <= 1 ? 7 : perTeam <= 3 ? 5 : 4;
+        }
 
         [Networked] public int Health { get; set; }
         [Networked] public int Money { get; set; }
@@ -28,9 +40,14 @@ namespace TossZone.Combat
         /// <summary>Ammo remaining for PayPerUse weapons.</summary>
         [Networked] public int Ammo { get; set; }
         [Networked] private TickTimer FrozenTimer { get; set; }
+        [Networked] private TickTimer InvulnTimer { get; set; }
+        [Networked] public int Bounty { get; set; }
 
         public bool IsFrozen => Object != null && Object.IsValid && Runner != null
             && !FrozenTimer.ExpiredOrNotRunning(Runner);
+
+        public bool IsInvulnerable => Object != null && Object.IsValid && Runner != null
+            && !InvulnTimer.ExpiredOrNotRunning(Runner);
 
         /// <summary>All live PlayerCombat instances on this client — polled by ArenaManager to check alive count.</summary>
         public static readonly System.Collections.Generic.List<PlayerCombat> AllInstances
@@ -42,14 +59,6 @@ namespace TossZone.Combat
         /// <summary>The local player's own combat state (the one we hold authority over). Survives scene loads
         /// (Fusion's player-object registry does NOT — gotchas §6). Mirrors <see cref="TossZone.Player.NetworkAvatar.Local"/>.</summary>
         public static PlayerCombat Local { get; private set; }
-
-        [Header("Economy (ví reset $0 mỗi hiệp)")]
-        [Tooltip("Passive income per second.")]
-        [SerializeField] private float _incomePerSecond = 1f;
-        [Tooltip("Money rewarded to the shooter per landed hit.")]
-        [SerializeField] private int _hitReward = 10;
-
-        public int HitReward => _hitReward;
 
         private float _incomeAccum;
 
@@ -66,7 +75,7 @@ namespace TossZone.Combat
             if (HasStateAuthority && Object.InputAuthority != PlayerRef.None)
             {
                 Local = this;
-                if (Health <= 0) Health = MaxHealth;
+                if (Health <= 0) Health = MaxLives;
                 if (EquippedIndex == 0) EquippedIndex = -1;   // 0 = default int, use -1 for "no override"
             }
         }
@@ -81,7 +90,7 @@ namespace TossZone.Combat
         {
             if (!HasStateAuthority) return;
             // Passive income — only the authority (the local owner) writes the networked wallet.
-            _incomeAccum += _incomePerSecond * Runner.DeltaTime;
+            _incomeAccum += IncomePerSecond * Runner.DeltaTime;
             if (_incomeAccum >= 1f)
             {
                 int add = (int)_incomeAccum;
@@ -95,13 +104,27 @@ namespace TossZone.Combat
         [Rpc(RpcSources.All, RpcTargets.All)]
         public void RPC_TakeHit(int damage, Vector3 point, PlayerRef shooter)
         {
-            int remaining = Health;
+            if (IsInvulnerable) return;
+
+            int previous = Health;
+            int remaining = Mathf.Max(0, previous - damage);
+            int livesLost = Mathf.Max(0, previous - remaining);
+            int bounty = Bounty;
+
             if (HasStateAuthority)
             {
-                remaining = Mathf.Max(0, Health - damage);
                 Health = remaining;
-                if (damage > 0) FrozenTimer = default;
+                if (livesLost > 0)
+                {
+                    FrozenTimer = default;
+                    if (IsPlayer) InvulnTimer = TickTimer.CreateFromSeconds(Runner, InvulnSeconds);
+                    Bounty = 0;
+                    AddMoney(CompensationPerLife * livesLost);
+                }
             }
+
+            if (livesLost > 0) RewardShooterLocal(shooter, livesLost, bounty);
+
             if (!Bill.IsReady) return;
             Bill.Events.Fire(new PlayerHitEvent
             {
@@ -110,8 +133,16 @@ namespace TossZone.Combat
                 Point = point,
                 IsLocalVictim = HasStateAuthority
             });
-            if (HasStateAuthority && remaining <= 0)
+            if (HasStateAuthority && remaining <= 0 && previous > 0)
                 Bill.Events.Fire(new PlayerDiedEvent { IsLocal = true });
+        }
+
+        private void RewardShooterLocal(PlayerRef shooter, int livesLost, int victimBounty)
+        {
+            if (shooter == PlayerRef.None || Local == null || Local == this) return;
+            if (Local.Object == null || !Local.Object.IsValid || Local.Object.InputAuthority != shooter) return;
+            Local.AddMoney(KillReward * livesLost + victimBounty);
+            Local.Bounty += BountyPerKill * livesLost;
         }
 
         [Rpc(RpcSources.All, RpcTargets.All)]
@@ -123,26 +154,31 @@ namespace TossZone.Combat
                 Bill.Events.Fire(new PlayerFrozenEvent { Seconds = seconds, IsLocalVictim = HasStateAuthority });
         }
 
-        /// <summary>Authority (the shooter): reward this player for a landed hit.</summary>
-        public void RewardHit()
-        {
-            if (HasStateAuthority) AddMoney(_hitReward);
-        }
-
         /// <summary>Authority: reset for a new round (called by ArenaManager).</summary>
         public void ResetForRound()
         {
             if (!HasStateAuthority) return;
-            Health = MaxHealth;
+            Health = MaxLives;
             Money = 0;
             OwnedMask = 0;
             EquippedIndex = -1;
             Ammo = 0;
+            Bounty = 0;
             FrozenTimer = default;
+            InvulnTimer = default;
             _incomeAccum = 0f;
             if (!Bill.IsReady) return;
             Bill.Events.Fire(new MoneyChangedEvent { Money = 0 });
             Bill.Events.Fire(new WeaponResetEvent());
+        }
+
+        /// <summary>Authority: refill lives only (mid-round respawn) — wallet and owned weapons persist.</summary>
+        public void RestoreLives()
+        {
+            if (!HasStateAuthority) return;
+            Health = MaxLives;
+            FrozenTimer = default;
+            InvulnTimer = default;
         }
 
         /// <summary>Authority: buy a BuyOnce weapon slot — deducts cost, sets ownership bit.</summary>
@@ -170,7 +206,7 @@ namespace TossZone.Combat
 
         /// <summary>T17 cheat-console support — full heal without the round reset ResetForRound would drag in
         /// (money/weapons kept). Testing only.</summary>
-        public void HealCheat() { if (HasStateAuthority) Health = MaxHealth; }
+        public void HealCheat() { if (HasStateAuthority) Health = MaxLives; }
 #endif
 
         /// <summary>Authority: consume 1 ammo unit. Returns false if out of ammo.</summary>

@@ -30,7 +30,7 @@ namespace TossZone.Minigame
 
         [BillTitle("Vòng lặp trận (round rules)")]
         [BillInfoBox("BO: 1 = first to win 1 round; 3 = best-of-3; 5 = best-of-5.")]
-        [BillSlider(1, 5)] public int bestOf = 1;
-        [BillSuffix("s")] public float roundDuration = 120f;
+        [BillSlider(1, 5)] public int bestOf = 3;
+        [BillSuffix("s")] public float roundDuration = 90f;
     }
 }

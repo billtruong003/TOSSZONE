@@ -174,7 +174,7 @@ namespace TossZone.Player
             if (RespawnTimer.Expired(Runner))
             {
                 RespawnTimer = default;
-                _combat.ResetForRound();          // Health -> Max (networked, PlayerDied already fired on death)
+                _combat.RestoreLives();
                 TeleportToSpawn();                // move the local rig (no-op if there's no local rig)
                 if (Bill.IsReady) Bill.Events.Fire(new PlayerRespawnedEvent { IsLocal = true });
             }

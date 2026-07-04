@@ -307,7 +307,6 @@ namespace TossZone.Throwing
             PlayerCombat victim = hit.collider.GetComponentInParent<PlayerCombat>();
             if (victim == null || victim == _combat) return;
             victim.RPC_TakeHit(_activeConfig.damage, hit.point, _runner.LocalPlayer);
-            _combat.RewardHit();
         }
 
         private void FireMelee()
@@ -326,7 +325,6 @@ namespace TossZone.Throwing
                 PlayerCombat victim = _overlap[i].GetComponentInParent<PlayerCombat>();
                 if (victim == null || victim == _combat) continue;
                 victim.RPC_TakeHit(_activeConfig.damage, center.position, _runner.LocalPlayer);
-                _combat.RewardHit();
                 break;
             }
         }
