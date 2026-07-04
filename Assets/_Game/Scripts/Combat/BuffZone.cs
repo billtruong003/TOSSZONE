@@ -17,6 +17,7 @@ namespace TossZone.Combat
         [Networked] public int Element { get; set; }
         [Networked] public NetworkId SpawnerProjectileId { get; set; }
         [Networked] public float EffectSeconds { get; set; }
+        [Networked] public Vector3 BoxHalfExtents { get; set; }
         [Networked] private TickTimer LifeTimer { get; set; }
 
         private static readonly int _colorId = Shader.PropertyToID("_BaseColor");
@@ -35,6 +36,14 @@ namespace TossZone.Combat
             if (_col != null && radius > 0f) _col.radius = radius;
         }
 
+        public void ConfigureBox(int element, Vector3 halfExtents, NetworkId spawnerProjectileId, float effectSeconds)
+        {
+            Element = element;
+            SpawnerProjectileId = spawnerProjectileId;
+            EffectSeconds = effectSeconds;
+            BoxHalfExtents = halfExtents;
+        }
+
         public override void Spawned()
         {
             _col = GetComponent<SphereCollider>();
@@ -43,6 +52,7 @@ namespace TossZone.Combat
             _fireInside.Clear();
 
             ApplyColor();
+            ApplyBoxVisual();
             if (HasStateAuthority)
                 LifeTimer = TickTimer.CreateFromSeconds(Runner, EffectSeconds > 0f ? EffectSeconds : _fallbackLifetime);
 
@@ -74,6 +84,22 @@ namespace TossZone.Combat
             _visualRenderer.SetPropertyBlock(_block);
         }
 
+        private void ApplyBoxVisual()
+        {
+            if (_visualRenderer == null || BoxHalfExtents == default) return;
+            _visualRenderer.transform.localScale = new Vector3(BoxHalfExtents.x * 2f, 0.4f, BoxHalfExtents.z * 2f);
+        }
+
+        private bool Contains(Vector3 point, float radiusSq)
+        {
+            if (BoxHalfExtents == default)
+                return (point - transform.position).sqrMagnitude <= radiusSq;
+            Vector3 local = transform.InverseTransformPoint(point);
+            return Mathf.Abs(local.x) <= BoxHalfExtents.x
+                && Mathf.Abs(local.y) <= BoxHalfExtents.y
+                && Mathf.Abs(local.z) <= BoxHalfExtents.z;
+        }
+
         public override void FixedUpdateNetwork()
         {
             if (!HasStateAuthority) return;
@@ -90,7 +116,7 @@ namespace TossZone.Combat
             {
                 if (!pc.IsPlayer || pc.Object == null || pc.Health <= 0) continue;
                 PlayerRef pr = pc.Object.InputAuthority;
-                bool inside = (pc.transform.position - transform.position).sqrMagnitude <= radiusSq;
+                bool inside = Contains(pc.transform.position, radiusSq);
 
                 if (!inside)
                 {
@@ -111,7 +137,7 @@ namespace TossZone.Combat
                 NetworkProjectile p = projs[i];
                 if (p == null || p.Object == null || !p.Object.IsValid) continue;
                 if (p.Object.Id == SpawnerProjectileId) continue;
-                if ((p.transform.position - transform.position).sqrMagnitude > radiusSq) continue;
+                if (!Contains(p.transform.position, radiusSq)) continue;
                 Runner.Despawn(Object);
                 return;
             }
@@ -119,7 +145,7 @@ namespace TossZone.Combat
             foreach (PlayerCombat pc in PlayerCombat.AllInstances)
             {
                 if (!pc.IsPlayer || pc.Object == null || pc.Health <= 0) continue;
-                if ((pc.transform.position - transform.position).sqrMagnitude > radiusSq) continue;
+                if (!Contains(pc.transform.position, radiusSq)) continue;
 
                 PlayerRef pr = pc.Object.InputAuthority;
                 if (_iceFrozenPlayers.Contains(pr)) continue;

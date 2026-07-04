@@ -15,11 +15,11 @@ MonoBehaviour:
   id: grenade
   displayName: "L\u1EF1u \u0111\u1EA1n"
   icon: {fileID: 0}
-  cost: 8
-  acquireMode: 0
+  cost: 5
+  acquireMode: 1
   costPerUse: 0
-  unlockTime: 0
-  cooldown: 0.8
+  unlockTime: 5
+  cooldown: 1
   magazine: 3
   handSource: 0
   heldPrefab: {fileID: 1553852837966599634, guid: 39abeab0075cca240b0bb3949a74f000, type: 3}

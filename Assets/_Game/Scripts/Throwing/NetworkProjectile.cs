@@ -58,6 +58,9 @@ namespace TossZone.Throwing
         private float _age;
         private float _customGravity;
         private int _damageOverride;
+        private float _crossWidth;
+        private float _crossLength;
+        private float _crossSeconds;
         private Rigidbody _rb;
         // T20 visual cache — survives pool lives on purpose (rebuilt only when VisualIndex changes).
         private GameObject _visualHolder;
@@ -106,6 +109,13 @@ namespace TossZone.Throwing
             if (_hitRadius > 0.0001f) AreaScale = Mathf.Max(AreaScale, radiusMeters / _hitRadius);
         }
 
+        public void SetCrossZones(float width, float length, float seconds)
+        {
+            _crossWidth = width;
+            _crossLength = length;
+            _crossSeconds = seconds;
+        }
+
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
         public void RPC_ApplyRingBuff(float velocityScale, float areaScale, int element, float effectSeconds)
         {
@@ -146,6 +156,9 @@ namespace TossZone.Throwing
             _age = 0f;
             _customGravity = 0f;
             _damageOverride = 0;
+            _crossWidth = 0f;
+            _crossLength = 0f;
+            _crossSeconds = 0f;
             _localProjectile = null;
             _localThrowProj = null;
 
@@ -255,6 +268,26 @@ namespace TossZone.Throwing
             {
                 _hasHit = true;
                 if (Element == (int)RingElement.Ice || Element == (int)RingElement.Fire) SpawnElementZone();
+                if (_crossWidth > 0f) SpawnCrossZones();
+            }
+        }
+
+        private void SpawnCrossZones()
+        {
+            if (_zonePrefab == null) return;
+            Vector3 half = new Vector3(_crossWidth * 0.5f, 2f, _crossLength * 0.5f);
+            float seconds = _crossSeconds;
+            Vector3 pos = new Vector3(transform.position.x, 0f, transform.position.z);
+            NetworkId selfId = Object.Id;
+            for (int i = 0; i < 2; i++)
+            {
+                Quaternion rot = Quaternion.Euler(0f, 45f + i * 90f, 0f);
+                Runner.Spawn(_zonePrefab, pos, rot, PlayerRef.None,
+                    (runner, o) =>
+                    {
+                        if (o.TryGetComponent(out BuffZone zone))
+                            zone.ConfigureBox((int)RingElement.Fire, half, selfId, seconds);
+                    });
             }
         }
 

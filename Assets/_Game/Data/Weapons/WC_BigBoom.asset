@@ -13,13 +13,13 @@ MonoBehaviour:
   m_Name: WC_BigBoom
   m_EditorClassIdentifier: Assembly-CSharp::TossZone.Combat.WeaponConfig
   id: bigboom
-  displayName: BigBoom
+  displayName: "Bom Nguyên Tử"
   icon: {fileID: 0}
-  cost: 25
-  acquireMode: 0
+  cost: 20
+  acquireMode: 1
   costPerUse: 0
-  unlockTime: 60
-  cooldown: 1.5
+  unlockTime: 45
+  cooldown: 3
   magazine: 1
   handSource: 0
   heldPrefab: {fileID: 3547095352278365093, guid: 8ccbf2602974b12429c4b634207f5654, type: 3}
@@ -29,7 +29,7 @@ MonoBehaviour:
   muzzleSpeed: 0
   fireRate: 1
   damage: 5
-  aoeRadius: 4
+  aoeRadius: 4.5
   fuseDelay: 0
   projectileGravity: 0
   laserSight: 0

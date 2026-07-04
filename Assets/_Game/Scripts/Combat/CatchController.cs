@@ -76,7 +76,7 @@ namespace TossZone.Combat
 
         private void RegisterCatch(bool isPower)
         {
-            _combat.Ammo += isPower ? 2 : 1;
+            _combat.GrantAmmo(_combat.EquippedIndex, isPower ? 2 : 1);
             if (Bill.IsReady) Bill.Events.Fire(new BallCaughtEvent { IsPower = isPower });
         }
     }

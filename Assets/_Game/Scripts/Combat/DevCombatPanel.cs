@@ -49,11 +49,12 @@ namespace TossZone.Combat
             }
 
             GUILayout.Space(8);
-            GUILayout.Label("HP " + combat.Health + "/" + PlayerCombat.MaxLives + "   $" + combat.Money + "   Ammo " + combat.Ammo);
+            GUILayout.Label("HP " + combat.Health + "/" + PlayerCombat.MaxLives + "   $" + combat.Money
+                + "   Ammo " + combat.AmmoFor(combat.EquippedIndex));
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("+$100")) combat.AddMoneyCheat(100);
             if (GUILayout.Button("Heal")) combat.HealCheat();
-            if (GUILayout.Button("+5 Ammo")) combat.Ammo += 5;
+            if (GUILayout.Button("+5 Ammo")) combat.GrantAmmo(combat.EquippedIndex, 5);
             GUILayout.EndHorizontal();
 
             // Dummy control — driver toggle + full despawn. Only the state authority (master) can actually

@@ -37,8 +37,7 @@ namespace TossZone.Combat
         [Networked] public int OwnedMask { get; set; }
         /// <summary>Currently equipped catalog index (-1 = rock / default).</summary>
         [Networked] public int EquippedIndex { get; set; }
-        /// <summary>Ammo remaining for PayPerUse weapons.</summary>
-        [Networked] public int Ammo { get; set; }
+        [Networked, Capacity(16)] private NetworkArray<int> AmmoSlots => default;
         [Networked] private TickTimer FrozenTimer { get; set; }
         [Networked] private TickTimer InvulnTimer { get; set; }
         [Networked] public int Bounty { get; set; }
@@ -162,7 +161,7 @@ namespace TossZone.Combat
             Money = 0;
             OwnedMask = 0;
             EquippedIndex = -1;
-            Ammo = 0;
+            for (int i = 0; i < AmmoSlots.Length; i++) AmmoSlots.Set(i, 0);
             Bounty = 0;
             FrozenTimer = default;
             InvulnTimer = default;
@@ -193,6 +192,25 @@ namespace TossZone.Combat
 
         public bool OwnsWeapon(int slotIndex) => (OwnedMask & (1 << slotIndex)) != 0;
 
+        public int AmmoFor(int slotIndex)
+            => slotIndex >= 0 && slotIndex < AmmoSlots.Length ? AmmoSlots.Get(slotIndex) : 0;
+
+        /// <summary>Authority: pay <paramref name="cost"/> for one magazine of a PayPerUse weapon.</summary>
+        public bool TryBuyAmmo(int slotIndex, int cost, int magazine)
+        {
+            if (!HasStateAuthority || slotIndex < 0 || slotIndex >= AmmoSlots.Length || Money < cost) return false;
+            Money -= cost;
+            AmmoSlots.Set(slotIndex, AmmoSlots.Get(slotIndex) + Mathf.Max(1, magazine));
+            if (Bill.IsReady) Bill.Events.Fire(new MoneyChangedEvent { Money = Money });
+            return true;
+        }
+
+        public void GrantAmmo(int slotIndex, int amount)
+        {
+            if (!HasStateAuthority || slotIndex < 0 || slotIndex >= AmmoSlots.Length) return;
+            AmmoSlots.Set(slotIndex, AmmoSlots.Get(slotIndex) + amount);
+        }
+
         /// <summary>Authority: equip a weapon slot (index into the per-minigame catalog).</summary>
         public void EquipWeapon(int slotIndex) { if (HasStateAuthority) EquippedIndex = slotIndex; }
 
@@ -209,12 +227,22 @@ namespace TossZone.Combat
         public void HealCheat() { if (HasStateAuthority) Health = MaxLives; }
 #endif
 
-        /// <summary>Authority: consume 1 ammo unit. Returns false if out of ammo.</summary>
-        public bool UseAmmo()
+        /// <summary>Authority: consume 1 ammo unit of a slot. Returns false if out of ammo.</summary>
+        public bool UseAmmo(int slotIndex)
         {
-            if (!HasStateAuthority || Ammo <= 0) return false;
-            Ammo--;
+            if (!HasStateAuthority || slotIndex < 0 || slotIndex >= AmmoSlots.Length) return false;
+            int ammo = AmmoSlots.Get(slotIndex);
+            if (ammo <= 0) return false;
+            AmmoSlots.Set(slotIndex, ammo - 1);
             return true;
+        }
+
+        /// <summary>Authority: consume 1 ammo, auto-buying a fresh magazine when empty. False = broke + empty.</summary>
+        public bool UseOrBuyAmmo(int slotIndex, WeaponConfig cfg)
+        {
+            if (cfg == null || !cfg.IsPayPerUse || CombatSession.TrainingModeActive) return true;
+            if (UseAmmo(slotIndex)) return true;
+            return TryBuyAmmo(slotIndex, cfg.cost, cfg.magazine) && UseAmmo(slotIndex);
         }
 
         private void AddMoney(int amount)

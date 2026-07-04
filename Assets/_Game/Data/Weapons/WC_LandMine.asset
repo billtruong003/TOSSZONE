@@ -15,8 +15,8 @@ MonoBehaviour:
   id: landmine
   displayName: "M\xECn"
   icon: {fileID: 0}
-  cost: 12
-  acquireMode: 0
+  cost: 8
+  acquireMode: 1
   costPerUse: 0
   unlockTime: 45
   cooldown: 1

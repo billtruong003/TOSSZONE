@@ -159,9 +159,17 @@ namespace TossZone.UI
             WeaponConfig cfg = _catalog[_viewIndex];
             if (cfg == null || !IsUnlocked(cfg)) return;
 
-            if (!CombatSession.TrainingModeActive && !_combat.OwnsWeapon(_viewIndex) && cfg.cost > 0)
+            if (!CombatSession.TrainingModeActive && cfg.cost > 0)
             {
-                if (!_combat.TryBuyWeapon(_viewIndex, cfg.cost)) return;
+                if (cfg.IsPayPerUse)
+                {
+                    if (_combat.AmmoFor(_viewIndex) <= 0
+                        && !_combat.TryBuyAmmo(_viewIndex, cfg.cost, cfg.magazine)) return;
+                }
+                else if (!_combat.OwnsWeapon(_viewIndex))
+                {
+                    if (!_combat.TryBuyWeapon(_viewIndex, cfg.cost)) return;
+                }
             }
             _combat.EquipWeapon(_viewIndex);   // T19 WeaponHolder grabs the real weapon into the squeezing hand
             RefreshSlots();
@@ -201,7 +209,7 @@ namespace TossZone.UI
             WeaponConfig cfg = _catalog != null && _viewIndex < _catalog.Length ? _catalog[_viewIndex] : null;
             if (cfg == null) return;
 
-            bool owned = _combat.OwnsWeapon(_viewIndex);
+            bool owned = cfg.IsPayPerUse ? _combat.AmmoFor(_viewIndex) > 0 : _combat.OwnsWeapon(_viewIndex);
             bool can = IsUnlocked(cfg) && (owned || cfg.cost <= 0 || _combat.Money >= cfg.cost);
             if (_hologramZone != null) _hologramZone.Interactable = can;
 

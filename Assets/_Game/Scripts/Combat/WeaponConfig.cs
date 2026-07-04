@@ -27,14 +27,14 @@ namespace TossZone.Combat
         public Sprite icon;
 
         [BillTitle("Economy + unlock (ví reset $0 mỗi hiệp)")]
-        [BillInfoBox("cost = giá mua/select. BuyOnce = mua giữ tới hết hiệp; PayPerUse = mỗi phát tốn costPerUse.")]
+        [BillInfoBox("BuyOnce = trả cost 1 lần, giữ + đạn vô hạn tới hết hiệp. PayPerUse = trả cost MỖI LẦN NẠP " +
+                     "(1 băng = magazine viên), hết đạn tự mua tiếp khi đủ tiền.")]
         [BillSlider(0, 30)] public int cost = 0;
         public AcquireMode acquireMode = AcquireMode.BuyOnce;
-        public int costPerUse = 0;
         [BillSuffix("s")] [BillInfoBox("Có sẵn từ giây thứ mấy trong hiệp (escalation). 0 = từ đầu.")]
         public float unlockTime = 0f;
         [BillSuffix("s")] public float cooldown = 0.4f;
-        [BillInfoBox("0 = đạn vô hạn (Rock). >0 = số phát trước khi hết → biến mất / báo hết đạn.")]
+        [BillInfoBox("PayPerUse: số viên mỗi băng (mỗi lần trả cost). BuyOnce/Rock: 0 = vô hạn.")]
         public int magazine = 0;
 
         [BillTitle("Đưa vào tay")]
@@ -73,6 +73,14 @@ namespace TossZone.Combat
 
         /// <summary>The prefab whose look the flying projectile copies (explicit override, else the held model).</summary>
         public GameObject ProjectileVisualPrefab => projectileVisual != null ? projectileVisual : heldPrefab;
+
+        [BillTitle("Bom Chữ X (GDD §V)")]
+        [BillInfoBox("crossFireZones = khi nổ tạo 2 vệt lửa hộp vuông góc (chữ X). Ai đi qua mất 1 mạng/lần " +
+                     "(reuse BuffZone Fire). Kích thước GDD: rộng 1.1m × dài 47% sâu sân.")]
+        public bool crossFireZones = false;
+        [BillSuffix("m")] public float crossZoneWidth = 1.1f;
+        [BillSuffix("m")] public float crossZoneLength = 5.64f;
+        [BillSuffix("s")] public float crossZoneSeconds = 3f;
 
         [BillTitle("Hành vi đặc biệt")]
         [BillInfoBox("fuseDelay > 0 = LandMine: arm + delay trước khi nổ AoE.")]

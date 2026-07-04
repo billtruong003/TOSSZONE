@@ -15,12 +15,12 @@ MonoBehaviour:
   id: bazooka
   displayName: Bazooka
   icon: {fileID: 0}
-  cost: 20
+  cost: 8
   acquireMode: 0
   costPerUse: 0
-  unlockTime: 30
-  cooldown: 1
-  magazine: 2
+  unlockTime: 10
+  cooldown: 1.2
+  magazine: 0
   handSource: 0
   heldPrefab: {fileID: 857307508753129797, guid: 4c8c9acd6d1e37548a78a462d4aaaf57, type: 3}
   holdPositionOffset: {x: 0, y: 0, z: 0}

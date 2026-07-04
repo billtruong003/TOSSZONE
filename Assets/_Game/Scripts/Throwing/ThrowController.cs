@@ -221,6 +221,12 @@ namespace TossZone.Throwing
 
         private void Fire(Vector3 origin, Vector3 swingVel)
         {
+#if PHOTON_FUSION
+            WeaponConfig ppuCfg = ResolveEquippedConfig();
+            if (ppuCfg != null && PlayerCombat.Local != null
+                && !PlayerCombat.Local.UseOrBuyAmmo(PlayerCombat.Local.EquippedIndex, ppuCfg))
+                return;
+#endif
             // Ballistic: launch with the body-relative swing velocity (no aim cone) → goes exactly where you threw.
             Vector3 dir = swingVel.sqrMagnitude > 1e-4f ? swingVel.normalized : FlatForward();
             float speed = Mathf.Clamp(swingVel.magnitude * _config.velocityScale, _config.minLaunchSpeed, _config.maxLaunchSpeed);
@@ -317,6 +323,7 @@ namespace TossZone.Throwing
                 {
                     if (cfg.damage > 0) np.SetDamage(cfg.damage);
                     if (cfg.aoeRadius > 0f) np.SetAoe(cfg.aoeRadius);
+                    if (cfg.crossFireZones) np.SetCrossZones(cfg.crossZoneWidth, cfg.crossZoneLength, cfg.crossZoneSeconds);
                 }
             }
         }

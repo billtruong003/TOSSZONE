@@ -15,7 +15,7 @@ MonoBehaviour:
   id: sword
   displayName: "Ki\u1EBFm"
   icon: {fileID: 0}
-  cost: 18
+  cost: 10
   acquireMode: 0
   costPerUse: 0
   unlockTime: 20
