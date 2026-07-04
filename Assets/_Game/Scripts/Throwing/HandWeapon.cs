@@ -81,6 +81,8 @@ namespace TossZone.Throwing
             int equipped = _combat.EquippedIndex;
             if (equipped != _lastEquippedIndex) OnEquipChanged(equipped);
 
+            UpdateLaser();
+
             // Deflect is a continuous physical sweep (no trigger press), independent of fireMode — runs
             // whenever the equipped weapon allows it (Sword: canDeflect=true, attacksPlayers=false).
             if (_activeConfig != null && _activeConfig.canDeflect && !(_combat != null && _combat.IsFrozen))
@@ -186,6 +188,43 @@ namespace TossZone.Throwing
         private void OnDestroy()
         {
             if (_heldModel != null) Destroy(_heldModel);
+            if (_laser != null) Destroy(_laser.gameObject);
+        }
+
+        private LineRenderer _laser;
+
+        private void UpdateLaser()
+        {
+            bool active = _activeConfig != null && _activeConfig.laserSight && _muzzle != null;
+            if (!active)
+            {
+                if (_laser != null) _laser.enabled = false;
+                return;
+            }
+            if (_laser == null) CreateLaser();
+            _laser.enabled = true;
+            Vector3 origin = _muzzle.position;
+            Vector3 dir = _muzzle.forward;
+            float length = Physics.Raycast(origin, dir, out RaycastHit hit, _hitscanRange, _hitscanMask,
+                QueryTriggerInteraction.Ignore) ? hit.distance : _hitscanRange;
+            _laser.SetPosition(0, origin);
+            _laser.SetPosition(1, origin + dir * length);
+        }
+
+        private void CreateLaser()
+        {
+            var go = new GameObject("LaserSight");
+            go.transform.SetParent(transform, false);
+            _laser = go.AddComponent<LineRenderer>();
+            _laser.useWorldSpace = true;
+            _laser.positionCount = 2;
+            _laser.startWidth = 0.004f;
+            _laser.endWidth = 0.004f;
+            Shader sh = Shader.Find("Universal Render Pipeline/Unlit");
+            var mat = new Material(sh != null ? sh : Shader.Find("Sprites/Default"));
+            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", new Color(1f, 0.1f, 0.1f, 0.9f));
+            else mat.color = new Color(1f, 0.1f, 0.1f, 0.9f);
+            _laser.material = mat;
         }
 
         // ── Deflect: sword sweep vs both single NetworkProjectiles (collider) and burst-rain projectiles
@@ -287,6 +326,7 @@ namespace TossZone.Throwing
             if (proj == null || !proj.TryGetComponent(out NetworkProjectile np)) return;
 
             np.Shooter = _runner.LocalPlayer;
+            np.Uncatchable = _activeConfig.isUncatchable;
             // Gun: muzzleSpeed fast + gravity 0 (straight line). Bazooka/Grenade: gravity > 0 arcs down.
             np.Launch(_muzzle.forward * _activeConfig.muzzleSpeed, _activeConfig.projectileGravity, _activeConfig.damage);
             if (_activeConfig.aoeRadius > 0f) np.SetAoe(_activeConfig.aoeRadius);

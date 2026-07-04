@@ -37,7 +37,7 @@ MonoBehaviour:
   projectileVisualScale: 1
   fuseDelay: 0
   projectileGravity: 4.9
-  laserSight: 0
+  laserSight: 1
   attacksPlayers: 1
   canDeflect: 0
   isUncatchable: 1

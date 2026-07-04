@@ -64,13 +64,11 @@ namespace TossZone.Combat
                 return;
             }
 
-            // Networked projectile (proxy)
             if (other.TryGetComponent(out NetworkProjectile netProj))
             {
-                // Uncatchable flag set on NetworkProjectile (isUncatchable weapon)
-                // We check VelocityScale as proxy for uncatchable for now; extend once field is networked.
-                bool power = netProj.Element != 0;
-                RegisterCatch(isPower: power);
+                if (netProj.Object == null || !netProj.Object.IsValid) return;
+                if (netProj.Uncatchable || netProj.Exploded) return;
+                RegisterCatch(isPower: netProj.Element != 0);
             }
         }
 

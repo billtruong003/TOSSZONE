@@ -277,8 +277,12 @@ namespace TossZone.Throwing
             ThrowProjectile proj = go.GetComponent<ThrowProjectile>();
             if (proj != null) proj.Launch(pos, velocity, power, _config);
 #if PHOTON_FUSION
-            // T20: dress the local ball as the equipped weapon's shot (null = default sphere for equip -1).
-            if (proj != null) proj.ApplyWeaponVisual(ResolveEquippedConfig());
+            WeaponConfig equippedCfg = ResolveEquippedConfig();
+            if (proj != null)
+            {
+                proj.ApplyWeaponVisual(equippedCfg);
+                if (equippedCfg != null && equippedCfg.isUncatchable) proj.SetUncatchable();
+            }
             SpawnNetworkProjectile(pos, rot, go.transform);
 #endif
         }
@@ -298,12 +302,7 @@ namespace TossZone.Throwing
             if (_netProjectilePrefab == null) return;
             TryGetRunner();
             if (_runner == null || !_runner.IsRunning) return;
-            // Clean up any stale previous projectile (shouldn't happen in normal flow).
-            if (_activeNetProj != null)
-            {
-                _runner.Despawn(_activeNetProj);
-                _activeNetProj = null;
-            }
+            DespawnNetworkProjectile();
             // T20: stamp the equipped weapon's visual id before Spawned (proxies dress it from their catalog).
             int equippedIdx = PlayerCombat.Local != null ? PlayerCombat.Local.EquippedIndex : -1;
             int visualIndex = equippedIdx >= 0 ? equippedIdx + 1 : 0;
@@ -324,6 +323,8 @@ namespace TossZone.Throwing
                     if (cfg.damage > 0) np.SetDamage(cfg.damage);
                     if (cfg.aoeRadius > 0f) np.SetAoe(cfg.aoeRadius);
                     if (cfg.crossFireZones) np.SetCrossZones(cfg.crossZoneWidth, cfg.crossZoneLength, cfg.crossZoneSeconds);
+                    if (cfg.fuseDelay > 0f) np.SetMine(cfg.fuseDelay);
+                    np.Uncatchable = cfg.isUncatchable;
                 }
             }
         }
@@ -343,9 +344,17 @@ namespace TossZone.Throwing
         private void DespawnNetworkProjectile()
         {
             if (_activeNetProj == null) return;
-            TryGetRunner();
-            if (_runner != null && _runner.IsRunning)
-                _runner.Despawn(_activeNetProj);
+            if (_activeNetProj.IsValid)
+            {
+                NetworkProjectile np = _activeNetProj.GetComponent<NetworkProjectile>();
+                if (np != null && (np.Exploded || np.PersistsAfterLanding))
+                {
+                    _activeNetProj = null;
+                    return;
+                }
+                TryGetRunner();
+                if (_runner != null && _runner.IsRunning) _runner.Despawn(_activeNetProj);
+            }
             _activeNetProj = null;
         }
 

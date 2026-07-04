@@ -35,6 +35,10 @@ namespace TossZone.Throwing
         [Tooltip("T10 — shared BuffZone prefab, spawned at the hit point when Element is Ice/Fire.")]
         [SerializeField] private NetworkObject _zonePrefab;
 
+        [SerializeField] private LayerMask _groundMask = 1;
+        [SerializeField] private float _mineTriggerRadius = 0.6f;
+        [SerializeField] private float _mineLifetime = 60f;
+
         /// <summary>Who fired this — excluded from its own hits + rewarded on a landed hit.</summary>
         [Networked] public PlayerRef Shooter { get; set; }
 
@@ -47,6 +51,8 @@ namespace TossZone.Throwing
         [Networked] public int Element { get; set; }         // 0 None · 1 Ice · 2 Fire
         [Networked] public int RingsApplied { get; set; }
         [Networked] public float EffectSeconds { get; set; }
+        [Networked] public NetworkBool Uncatchable { get; set; }
+        [Networked] public NetworkBool Exploded { get; set; }
 
         /// <summary>T20 — which weapon's shot this projectile LOOKS like: 0 = default sphere, i+1 = weapon
         /// catalog index i. Set by the shooter in onBeforeSpawned (so proxies see it in their first snapshot);
@@ -61,6 +67,13 @@ namespace TossZone.Throwing
         private float _crossWidth;
         private float _crossLength;
         private float _crossSeconds;
+        private Vector3 _prevPos;
+        private bool _fxPlayed;
+        private bool _isMine;
+        private float _mineFuse;
+        private bool _mineLanded;
+        private float _mineArmRemaining;
+        private int _despawnCountdown;
         private Rigidbody _rb;
         // T20 visual cache — survives pool lives on purpose (rebuilt only when VisualIndex changes).
         private GameObject _visualHolder;
@@ -116,6 +129,14 @@ namespace TossZone.Throwing
             _crossSeconds = seconds;
         }
 
+        public void SetMine(float fuseDelay)
+        {
+            _isMine = true;
+            _mineFuse = fuseDelay;
+        }
+
+        public bool PersistsAfterLanding => _isMine;
+
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
         public void RPC_ApplyRingBuff(float velocityScale, float areaScale, int element, float effectSeconds)
         {
@@ -159,6 +180,13 @@ namespace TossZone.Throwing
             _crossWidth = 0f;
             _crossLength = 0f;
             _crossSeconds = 0f;
+            _prevPos = transform.position;
+            _fxPlayed = false;
+            _isMine = false;
+            _mineFuse = 0f;
+            _mineLanded = false;
+            _mineArmRemaining = 0f;
+            _despawnCountdown = 0;
             _localProjectile = null;
             _localThrowProj = null;
 
@@ -193,6 +221,13 @@ namespace TossZone.Throwing
         {
             // T20: VisualIndex can land a snapshot after Spawned on late-joining proxies — keep it honest.
             ApplyVisualIfChanged();
+            if (Exploded && !_fxPlayed)
+            {
+                _fxPlayed = true;
+                ExplosionFx.Play(transform.position, _hitRadius * Mathf.Max(1f, AreaScale));
+                if (_mr != null) _mr.enabled = false;
+                if (_visualHolder != null) _visualHolder.SetActive(false);
+            }
         }
 
         /// <summary>T20 — (re)build the weapon cosmetic when the networked VisualIndex changes. The cosmetic is
@@ -230,45 +265,132 @@ namespace TossZone.Throwing
         {
             if (!HasStateAuthority) return;
 
-            // Lifetime backstop → despawn (recycled by the pool). Fixes bot/orphan projectiles leaking forever.
-            _age += Runner.DeltaTime;
-            if (_age >= _lifetime) { Runner.Despawn(Object); return; }
+            if (Exploded)
+            {
+                if (--_despawnCountdown <= 0) Runner.Despawn(Object);
+                return;
+            }
 
-            // Mirror BillTween-driven position when linked to a local ThrowProjectile (player throw path).
+            _age += Runner.DeltaTime;
+            float maxAge = _mineLanded ? _mineLifetime : _lifetime;
+            if (_age >= maxAge) { Runner.Despawn(Object); return; }
+
             if (_localProjectile != null)
             {
                 transform.SetPositionAndRotation(_localProjectile.position, _localProjectile.rotation);
             }
-            else if (_rb != null && _customGravity != 0f)
+            else if (_rb != null && !_mineLanded && _customGravity != 0f)
             {
-                // Direct-fire path (HandWeapon.Launch): manual per-tick gravity integration, not
-                // Rigidbody.useGravity — keeps the arc authority-only/deterministic (no Physics Addon).
                 _rb.linearVelocity += Vector3.down * _customGravity * Runner.DeltaTime;
             }
 
-            // Hit detection runs on the authority regardless of how the projectile moves.
             if (_hasHit) return;
-            int dmg = _damageOverride > 0 ? _damageOverride : _baseDamage;
-            int n = Physics.OverlapSphereNonAlloc(transform.position, _hitRadius * AreaScale, _overlap, _hittableMask, QueryTriggerInteraction.Collide);
-            bool hitAny = false;
+
+            if (_mineLanded)
+            {
+                TickMine();
+                _prevPos = transform.position;
+                return;
+            }
+
+            if (TryGroundContact(out Vector3 groundPoint))
+            {
+                if (_isMine) LandMine(groundPoint);
+                else Explode(groundPoint);
+            }
+            else if (!_isMine && AnyVictimInRange())
+            {
+                Explode(transform.position);
+            }
+            _prevPos = transform.position;
+        }
+
+        private bool TryGroundContact(out Vector3 point)
+        {
+            point = default;
+            Vector3 delta = transform.position - _prevPos;
+            float dist = delta.magnitude;
+            if (dist < 1e-5f) return false;
+            if (!Physics.Raycast(_prevPos, delta / dist, out RaycastHit hit, dist + 0.05f, _groundMask,
+                    QueryTriggerInteraction.Ignore)) return false;
+            point = hit.point;
+            return true;
+        }
+
+        private bool AnyVictimInRange()
+        {
+            int n = Physics.OverlapSphereNonAlloc(transform.position, _hitRadius * AreaScale, _overlap,
+                _hittableMask, QueryTriggerInteraction.Collide);
             for (int i = 0; i < n; i++)
             {
                 PlayerCombat victim = _overlap[i] != null ? _overlap[i].GetComponentInParent<PlayerCombat>() : null;
                 if (victim == null || victim.Object == null) continue;
-                // Guard: InputAuthority identifies the PLAYER who owns the avatar.
-                // Scene objects (DummyAvatar) have InputAuthority = None, so they are never excluded
-                // even when the master client is the shooter — fixing solo-test blocking.
+                if (victim.Object.InputAuthority == Shooter) continue;
+                return true;
+            }
+            return false;
+        }
+
+        private void Explode(Vector3 point)
+        {
+            _hasHit = true;
+            Exploded = true;
+            transform.position = point;
+            if (_rb != null) _rb.linearVelocity = Vector3.zero;
+            DamagePlayersAround(point);
+            if (Element == (int)RingElement.Ice || Element == (int)RingElement.Fire) SpawnElementZone();
+            if (_crossWidth > 0f) SpawnCrossZones();
+            _despawnCountdown = 5;
+        }
+
+        private void DamagePlayersAround(Vector3 point)
+        {
+            int dmg = _damageOverride > 0 ? _damageOverride : _baseDamage;
+            int n = Physics.OverlapSphereNonAlloc(point, _hitRadius * AreaScale, _overlap, _hittableMask,
+                QueryTriggerInteraction.Collide);
+            for (int i = 0; i < n; i++)
+            {
+                PlayerCombat victim = _overlap[i] != null ? _overlap[i].GetComponentInParent<PlayerCombat>() : null;
+                if (victim == null || victim.Object == null) continue;
                 if (victim.Object.InputAuthority == Shooter) continue;
                 if (Element == (int)RingElement.Ice) victim.RPC_Freeze(EffectSeconds > 0f ? EffectSeconds : 1f);
-                else victim.RPC_TakeHit(dmg, transform.position, Shooter);
-                hitAny = true;
-                if (!_isAoe) break;   // single-target weapons stop at the first victim; AoE hits everyone in range
+                else victim.RPC_TakeHit(dmg, point, Shooter);
+                if (!_isAoe) break;
             }
-            if (hitAny)
+        }
+
+        private void LandMine(Vector3 point)
+        {
+            _mineLanded = true;
+            _mineArmRemaining = _mineFuse;
+            transform.position = point + Vector3.up * 0.05f;
+            _localProjectile = null;
+            _localThrowProj = null;
+            if (_rb != null)
             {
-                _hasHit = true;
-                if (Element == (int)RingElement.Ice || Element == (int)RingElement.Fire) SpawnElementZone();
-                if (_crossWidth > 0f) SpawnCrossZones();
+                _rb.linearVelocity = Vector3.zero;
+                _rb.angularVelocity = Vector3.zero;
+                _rb.isKinematic = true;
+            }
+            RefreshVisibility();
+        }
+
+        private void TickMine()
+        {
+            if (_mineArmRemaining > 0f)
+            {
+                _mineArmRemaining -= Runner.DeltaTime;
+                return;
+            }
+            int n = Physics.OverlapSphereNonAlloc(transform.position, _mineTriggerRadius, _overlap,
+                _hittableMask, QueryTriggerInteraction.Collide);
+            for (int i = 0; i < n; i++)
+            {
+                PlayerCombat victim = _overlap[i] != null ? _overlap[i].GetComponentInParent<PlayerCombat>() : null;
+                if (victim == null || victim.Object == null || victim.Health <= 0) continue;
+                if (victim.Object.InputAuthority == Shooter) continue;
+                Explode(transform.position);
+                return;
             }
         }
 
