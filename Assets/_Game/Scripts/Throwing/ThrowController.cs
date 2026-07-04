@@ -54,23 +54,25 @@ namespace TossZone.Throwing
 #endif
 
         private PlayerRig _rig;
-        private Transform _wrist, _head, _root, _heldBall;
+        private Transform _wrist, _head, _heldBall;
         private float _heldBaseScale = 1f;
         private int _lastEquippedIndex = -999;
         private System.Action _onRefillCb;                  // cached → no per-throw delegate alloc
         private System.Action<BallLandedEvent> _onBallLandedCb;
         private Vector3 _lastWristPos;
-        private Vector3 _lastRootPos;
+        private Vector3 _lastHeadPos;
         private bool _hasLastPos;
         private float _peakFwdVel;          // peak forward swing speed since the last wind-up / fire
         private Vector3 _peakArmVel;        // smoothed hand velocity at that peak → the launch velocity
         private const int VelSamples = 4;
+        private const float MinSwingDistance = 0.25f;
         private Vector3[] _velBuf;          // moving-average ring buffer → kills 1-frame tracking jitter
         private int _velCount;
         private ThrowState _state;
         private bool _onCooldown;
         private bool _ready;
-        private bool _windBackTriggered;   // edge-detect: fire wind-up juice once per backward flick, not every frame
+        private bool _windBackTriggered;
+        private float _swingFwdDist;
 
         private void OnDisable()
         {
@@ -115,7 +117,6 @@ namespace TossZone.Throwing
 
             _wrist = _rightHand ? _rig.WristR : _rig.WristL;
             _head = _rig.Head;
-            _root = _rig.Root;
             if (_wrist == null) return;
 
             if (_projectilePrefab != null) Bill.Pool.Register(PoolKey, _projectilePrefab, 8);
@@ -155,16 +156,15 @@ namespace TossZone.Throwing
 #endif
             float dt = Time.deltaTime;
             Vector3 wp = _wrist.position;
-            Vector3 rp = _root.position;
+            Vector3 hp = _head.position;
             bool hadLast = _hasLastPos && dt > 1e-5f;
             Vector3 wvel = hadLast ? (wp - _lastWristPos) / dt : Vector3.zero;
-            Vector3 rootVel = hadLast ? (rp - _lastRootPos) / dt : Vector3.zero;
+            Vector3 headVel = hadLast ? (hp - _lastHeadPos) / dt : Vector3.zero;
             _lastWristPos = wp;
-            _lastRootPos = rp;
+            _lastHeadPos = hp;
             _hasLastPos = true;
 
-            // Body-relative (strips joystick locomotion), then a moving average to kill 1-frame tracking jitter.
-            Vector3 smoothVel = PushSmooth(wvel - rootVel);
+            Vector3 smoothVel = PushSmooth(wvel - headVel);
             float fwdVel = Vector3.Dot(smoothVel, FlatForward());
 
             if (DebugKeyPressed())
@@ -183,24 +183,24 @@ namespace TossZone.Throwing
 
                 case ThrowState.Loaded:
                     if (!grip) { Cancel(); break; }
-                    // A backward flick re-arms: reset the peak so the next forward swing is its own throw.
                     if (fwdVel < -_config.windBackSpeed)
                     {
-                        // Wind-up juice (§4.1) — once per flick, not every frame while past the threshold.
                         if (!_windBackTriggered) { Haptic(_config.hapticWind, 0.05f); PulseHeld(); _windBackTriggered = true; }
                         _peakFwdVel = 0f;
+                        _swingFwdDist = 0f;
                     }
                     else
                     {
                         _windBackTriggered = false;
                     }
-                    // Track the forward-swing peak (speed + the velocity vector captured at that instant).
+                    if (fwdVel > 0f) _swingFwdDist += fwdVel * dt;
                     if (fwdVel > _peakFwdVel) { _peakFwdVel = fwdVel; _peakArmVel = smoothVel; }
-                    // FIRE at the natural release point: once a real swing has peaked and started to slow down.
-                    if (!_onCooldown && _peakFwdVel >= _config.vMinFire && fwdVel < _peakFwdVel * _config.releaseDrop)
+                    if (!_onCooldown && _swingFwdDist >= MinSwingDistance
+                        && _peakFwdVel >= _config.vMinFire && fwdVel < _peakFwdVel * _config.releaseDrop)
                     {
                         Fire(wp, _peakArmVel);
                         _peakFwdVel = 0f;
+                        _swingFwdDist = 0f;
                     }
                     break;
             }
@@ -210,6 +210,7 @@ namespace TossZone.Throwing
         {
             _state = ThrowState.Loaded;
             _peakFwdVel = 0f;
+            _swingFwdDist = 0f;
             ShowHeld(true);
         }
 
