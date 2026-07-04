@@ -30,9 +30,8 @@ namespace TossZone.Combat
         [Tooltip("Gravity applied to the Multi-ring burst rain (arc). Higher = falls faster.")]
         [SerializeField] private float _burstGravity = 2f;
 
-        [Tooltip("Wander speed knob (T9) — higher = the ring roams its zone box faster. Only used when a " +
-                 "RingSpawner zone is resolved; otherwise falls back to the old fixed up/down drift.")]
-        [SerializeField] private float _wanderFrequency = 0.15f;
+        [Tooltip("Đường kính miệng ring của mesh prefab (m) tại localScale=1 — scale tier = đường kính GDD / số này.")]
+        [SerializeField] private float _prefabDiameter = 1.8f;
 
         private static readonly int _colorId = Shader.PropertyToID("_BaseColor");
         private MaterialPropertyBlock _block;
@@ -44,22 +43,19 @@ namespace TossZone.Combat
         /// RingSpawner flow.</summary>
         [Networked] public int Tier { get; set; }
 
-        /// <summary>This ring's configured multiplier (RC_Multi.multiplier) — used by
-        /// <see cref="ProjectileBurstSystem"/> when a data-driven rain burst stacks through this ring (T7).
-        /// Falls back to 2 if the config hasn't resolved yet (shouldn't normally happen for an active ring).</summary>
-        public int StackMultiplier => _config != null ? _config.multiplier : 2;
+        public int StackMultiplier => _config != null
+            ? Mathf.Max(2, Mathf.RoundToInt(_config.ValueForTier(Tier))) : 2;
+
+        public bool IsConsumed => _consumed;
 
         private BuffRingConfig _config;
         private Vector3 _originPos;
         private Tween _driftTween;
-
-        // T9 wander: resolved locally from RingSpawner.Instance (identical scene data on every client, no
-        // networking needed). Position is a deterministic function of Object.Id + Runner.SimulationTime — every
-        // client (authority AND proxies) computes the SAME path each frame, unlike the old per-client BillTween
-        // sin drift whose phase depended on when that client's own Spawned() happened to fire.
-        private bool _hasWanderZone;
-        private Vector3 _wanderCenter;
-        private Vector3 _wanderHalfExtents;
+        private float _tierScale = 1f;
+        private bool _hasDriftZone;
+        private Vector3 _driftCenter;
+        private Vector3 _driftHalfExtents;
+        private Vector3 _driftAnchor;
         // Set the INSTANT consumption starts (not when the 0.25s shrink tween's despawn finally completes) — the
         // ring stays alive/visible/collidable during that shrink, so without this guard it could be consumed
         // AGAIN by another ball or by a burst re-sampling it every tick (T7 hit this: without the guard a single
@@ -79,19 +75,19 @@ namespace TossZone.Combat
             if (col != null) col.isTrigger = true;
 
             _config = ResolveConfig();
+            _tierScale = BuffRingConfig.DiameterForTier(Tier) / Mathf.Max(0.01f, _prefabDiameter);
             ApplyColor();
             ApplyLabel();
 
             _originPos = transform.position;
+            _driftAnchor = transform.position;
             PlayBounceIn();
 
-            // T9: prefer wandering the shared "vùng giữa" box (every client resolves the same RingSpawner scene
-            // data); fall back to the old fixed up/down drift for a ring placed outside RingSpawner's flow.
             if (RingSpawner.Instance != null)
             {
-                _wanderCenter = RingSpawner.Instance.ZoneCenter;
-                _wanderHalfExtents = RingSpawner.Instance.ZoneHalfExtents;
-                _hasWanderZone = true;
+                _driftCenter = RingSpawner.Instance.ZoneCenter;
+                _driftHalfExtents = RingSpawner.Instance.ZoneHalfExtents;
+                _hasDriftZone = true;
             }
             else
             {
@@ -101,24 +97,18 @@ namespace TossZone.Combat
 
         private void Update()
         {
-            if (!_hasWanderZone || Runner == null) return;
-            transform.position = WanderPosition((float)Runner.SimulationTime);
+            if (!_hasDriftZone || Runner == null) return;
+            transform.position = DriftPosition((float)Runner.SimulationTime);
         }
 
-        /// <summary>Deterministic wander path inside the zone box — same seed (Object.Id) + same clock
-        /// (Runner.SimulationTime) on every client, so authority and proxies render the ring in the same place
-        /// without replicating a single extra byte.</summary>
-        private Vector3 WanderPosition(float simTime)
+        private Vector3 DriftPosition(float simTime)
         {
-            // Tier 4-5 drift noticeably faster than Tier 1-3 (design: "Tier 4-5 hiếm + trôi nhanh").
-            int tier = Mathf.Clamp(Tier, 1, 5);
-            float tierSpeedMul = 1f + (tier - 1) * 0.2f;   // Tier1=1.0x .. Tier5=1.8x
-            float seed = (Object.Id.Raw % 10000) * 0.1013f;
-            float f = simTime * _wanderFrequency * tierSpeedMul;
-            float nx = Mathf.PerlinNoise(seed, f) * 2f - 1f;
-            float ny = Mathf.PerlinNoise(f, seed) * 2f - 1f;
-            float nz = Mathf.PerlinNoise(seed + 5.5f, f + 5.5f) * 2f - 1f;
-            return _wanderCenter + new Vector3(nx * _wanderHalfExtents.x, ny * _wanderHalfExtents.y, nz * _wanderHalfExtents.z);
+            float width = _driftHalfExtents.x * 2f;
+            if (width <= 0.01f) return _driftAnchor;
+            float speed = BuffRingConfig.DriftSpeedForTier(Tier);
+            float phase = (Object.Id.Raw % 10000) * 0.1013f * width;
+            float x = Mathf.PingPong(simTime * speed + phase, width) - _driftHalfExtents.x;
+            return new Vector3(_driftCenter.x + x, _driftAnchor.y, _driftAnchor.z);
         }
 
         public override void Despawned(NetworkRunner runner, bool hasState)
@@ -134,8 +124,10 @@ namespace TossZone.Combat
 
         private BuffRingConfig ResolveConfig()
         {
-            int idx = (int)Element;
-            return (idx >= 0 && idx < _catalog.Length) ? _catalog[idx] : null;
+            if (_catalog == null) return null;
+            for (int i = 0; i < _catalog.Length; i++)
+                if (_catalog[i] != null && _catalog[i].element == Element) return _catalog[i];
+            return null;
         }
 
         private void ApplyColor()
@@ -169,19 +161,20 @@ namespace TossZone.Combat
         private void PlayBounceIn()
         {
             transform.localScale = Vector3.zero;
-            BillTween.Scale(transform, 1.0f, 0.5f)
+            BillTween.Scale(transform, _tierScale, 0.5f)
                 ?.SetEase(EaseType.OutBack)
                 .SetTarget(this);
         }
 
         private void StartDrift()
         {
-            float amp = _config != null ? _config.driftAmplitude : 0.2f;
-            float period = _config != null && _config.driftPeriod > 0f ? _config.driftPeriod : 3f;
+            const float HalfSweep = 1f;
+            float speed = BuffRingConfig.DriftSpeedForTier(Tier);
+            float period = (HalfSweep * 4f) / Mathf.Max(0.01f, speed);
             _driftTween = BillTween.Float(0f, 1f, period, t =>
             {
-                float y = Mathf.Sin(t * Mathf.PI * 2f) * amp;
-                transform.position = _originPos + Vector3.up * y;
+                float x = Mathf.PingPong(t * HalfSweep * 4f, HalfSweep * 2f) - HalfSweep;
+                transform.position = _originPos + Vector3.right * x;
             })?.SetLoops(-1, LoopType.Restart)
               .SetEase(EaseType.Linear)
               .SetTarget(this);
@@ -194,6 +187,7 @@ namespace TossZone.Combat
             if (!HasStateAuthority || _config == null || _consumed) return;
             if (!other.TryGetComponent(out NetworkProjectile proj)) return;
             if (proj.Object == null || !proj.Object.IsValid) return;
+            if (proj.RingsApplied >= NetworkProjectile.MaxRingStack) return;
 
             ApplyBuff(proj);
             PlayConsumeAnim();
@@ -207,23 +201,24 @@ namespace TossZone.Combat
         /// testing only" was masking). Route both through RPCs targeted at the projectile's authority instead.</summary>
         private void ApplyBuff(NetworkProjectile proj)
         {
-            // Multi ring → convert the single ball into a data-driven BURST (the "rain") aimed along its travel,
-            // then consume the original. The burst is DATA, not N NetworkObjects (see ProjectileBurstSystem).
-            // SpawnBurst writes to ProjectileBurstSystem, which THIS client (the ring's authority) already owns —
-            // no cross-authority issue there. Despawning the projectile itself needs the RPC (see above).
+            int tier = Mathf.Clamp(Tier, 1, 5);
+            float value = _config.ValueForTier(tier);
+
             if (_config.element == RingElement.Multi && ProjectileBurstSystem.Instance != null)
             {
-                int count = Mathf.Max(2, _config.multiplier);
+                int count = Mathf.Max(2, Mathf.RoundToInt(value));
                 ProjectileBurstSystem.Instance.SpawnBurst(
-                    proj.transform.position, proj.transform.forward, count, _burstGravity, (int)_config.element, proj.Shooter);
+                    proj.transform.position, proj.transform.forward, count, _burstGravity, (int)_config.element,
+                    proj.Shooter, proj.RingsApplied + 1);
                 proj.RPC_RequestSelfDespawn();
                 return;
             }
 
-            float velocityScale = _config.velocityScale > 1f ? _config.velocityScale : 0f;
-            float areaScale = _config.areaScale > 1f ? _config.areaScale : 0f;
+            float velocityScale = _config.element == RingElement.Speed ? value : 0f;
+            float areaScale = _config.element == RingElement.Area ? value : 0f;
+            float effectSeconds = (_config.element == RingElement.Ice || _config.element == RingElement.Fire) ? value : 0f;
             int element = _config.element != RingElement.None ? (int)_config.element : 0;
-            proj.RPC_ApplyRingBuff(velocityScale, areaScale, element);
+            proj.RPC_ApplyRingBuff(velocityScale, areaScale, element, effectSeconds);
         }
 
         /// <summary>Called by <see cref="ProjectileBurstSystem"/> (authority) when a data-driven rain burst
@@ -244,7 +239,7 @@ namespace TossZone.Combat
             // so without this it could be re-consumed again before the despawn actually removes it (see the
             // _consumed field comment).
             _consumed = true;
-            _hasWanderZone = false;   // freeze position for the shrink — don't wander away mid-despawn
+            _hasDriftZone = false;   // freeze position for the shrink — don't drift away mid-despawn
 
             // "EFFECTIVE!" flash on label then shrink ring to zero and despawn.
             if (_label != null) _label.text = "EFFECTIVE!";

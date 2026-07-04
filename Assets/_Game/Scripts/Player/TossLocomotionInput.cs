@@ -48,6 +48,11 @@ namespace TossZone.Player
         private void Update()
         {
             if (_player == null) return;
+            if (LocalPlayerFrozen())
+            {
+                _player.Move(Vector2.zero);
+                return;
+            }
 
             HandleDashInput();
             HandleJumpInput();
@@ -60,8 +65,19 @@ namespace TossZone.Player
         private void FixedUpdate()
         {
             if (_player == null) return;
-            Vector2 move = Time.time < _dashEnd ? _dashDir * _dashStrength : ReadMove();
+            Vector2 move = LocalPlayerFrozen() ? Vector2.zero
+                : Time.time < _dashEnd ? _dashDir * _dashStrength : ReadMove();
             _player.Move(move);
+        }
+
+        private static bool LocalPlayerFrozen()
+        {
+#if PHOTON_FUSION
+            var combat = TossZone.Combat.PlayerCombat.Local;
+            return combat != null && combat.IsFrozen;
+#else
+            return false;
+#endif
         }
 
         private void HandleDashInput()

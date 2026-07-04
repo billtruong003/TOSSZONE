@@ -16,6 +16,12 @@ namespace TossZone.Combat
     /// <summary>A player's health reached 0 (fired on the victim's client).</summary>
     public struct PlayerDiedEvent : IEvent { public bool IsLocal; }
 
+    public struct PlayerFrozenEvent : IEvent
+    {
+        public float Seconds;
+        public bool IsLocalVictim;
+    }
+
     /// <summary>A player respawned after the death delay (fired on the victim's client).</summary>
     public struct PlayerRespawnedEvent : IEvent { public bool IsLocal; }
 

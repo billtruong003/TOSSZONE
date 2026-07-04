@@ -146,6 +146,13 @@ namespace TossZone.Throwing
                 RefreshHeldModel();
             }
 
+#if PHOTON_FUSION
+            if (PlayerCombat.Local != null && PlayerCombat.Local.IsFrozen)
+            {
+                if (_state != ThrowState.Empty) Cancel();
+                return;
+            }
+#endif
             float dt = Time.deltaTime;
             Vector3 wp = _wrist.position;
             Vector3 rp = _root.position;

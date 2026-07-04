@@ -54,6 +54,7 @@ namespace TossZone.Combat
             public float Gravity;
             public int SpawnTick;
             public int Element;
+            public int RingsApplied;
             public PlayerRef Shooter;
             public ulong Dead0, Dead1, Dead2, Dead3;   // bit i set = projectile i resolved (hit/caught/deflected)
         }
@@ -110,7 +111,8 @@ namespace TossZone.Combat
 
         // ── Spawn (authority) ───────────────────────────────────────────────────────────
         /// <summary>Authority spawns a rain burst. Returns the slot, or -1 if full / not authority.</summary>
-        public int SpawnBurst(Vector3 origin, Vector3 dir, int count, float gravity, int element, PlayerRef shooter)
+        public int SpawnBurst(Vector3 origin, Vector3 dir, int count, float gravity, int element,
+            PlayerRef shooter, int ringsApplied = 1)
         {
             if (!HasStateAuthority) return -1;
             count = Mathf.Clamp(count, 1, MaxProjectilesPerBurst);
@@ -127,6 +129,7 @@ namespace TossZone.Combat
                     Gravity = gravity,
                     SpawnTick = Runner.Tick,
                     Element = element,
+                    RingsApplied = Mathf.Clamp(ringsApplied, 1, TossZone.Throwing.NetworkProjectile.MaxRingStack),
                     Shooter = shooter,
                 });
                 return i;
@@ -204,7 +207,7 @@ namespace TossZone.Combat
                 // Stacking (T7): a burst passing through a Multi ring multiplies Count (e.g. 12x12x12). Bursts
                 // have no collider so they can't trigger BuffRing.OnTriggerEnter normally — sample a subset of
                 // projectile positions against each live Multi ring's center instead.
-                if (b.Count < MaxProjectilesPerBurst)
+                if (b.Count < MaxProjectilesPerBurst && b.RingsApplied < TossZone.Throwing.NetworkProjectile.MaxRingStack)
                 {
                     rings ??= FindObjectsByType<BuffRing>(FindObjectsSortMode.None);
                     if (TryStackThroughRing(ref b, t, rings, out BuffRing consumedRing))
@@ -258,7 +261,8 @@ namespace TossZone.Combat
             for (int r = 0; r < rings.Length; r++)
             {
                 BuffRing ring = rings[r];
-                if (ring == null || ring.Object == null || !ring.Object.IsValid || ring.Element != RingElement.Multi) continue;
+                if (ring == null || ring.Object == null || !ring.Object.IsValid || ring.IsConsumed
+                    || ring.Element != RingElement.Multi) continue;
                 Vector3 ringPos = ring.transform.position;
 
                 for (int i = 0; i < scan; i++)
@@ -268,6 +272,7 @@ namespace TossZone.Combat
 
                     int newCount = Mathf.Min(b.Count * Mathf.Max(2, ring.StackMultiplier), MaxProjectilesPerBurst);
                     b.Count = newCount;
+                    b.RingsApplied++;
                     consumedRing = ring;
                     return true;
                 }

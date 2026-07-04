@@ -20,6 +20,7 @@ namespace TossZone.Throwing
     public class NetworkProjectile : NetworkBehaviour
     {
         private Transform _localProjectile;
+        private ThrowProjectile _localThrowProj;
         private Renderer _mr;
 
         [Header("Hit + damage")]
@@ -37,11 +38,15 @@ namespace TossZone.Throwing
         /// <summary>Who fired this — excluded from its own hits + rewarded on a landed hit.</summary>
         [Networked] public PlayerRef Shooter { get; set; }
 
+        public const int MaxRingStack = 3;
+
         // ── Buff hooks (buff-aware from the start): buff rings + catch SET these; default = no buff. ──────────
         [Networked] public int Multiplier { get; set; }      // 1 = single; >1 = "đạn mưa" (spawns via ring system later)
         [Networked] public float VelocityScale { get; set; } // 1 = base flight speed
         [Networked] public float AreaScale { get; set; }     // 1 = base hit/explosion radius
         [Networked] public int Element { get; set; }         // 0 None · 1 Ice · 2 Fire
+        [Networked] public int RingsApplied { get; set; }
+        [Networked] public float EffectSeconds { get; set; }
 
         /// <summary>T20 — which weapon's shot this projectile LOOKS like: 0 = default sphere, i+1 = weapon
         /// catalog index i. Set by the shooter in onBeforeSpawned (so proxies see it in their first snapshot);
@@ -66,6 +71,7 @@ namespace TossZone.Throwing
         public void LinkTo(Transform localProj)
         {
             _localProjectile = localProj;
+            _localThrowProj = localProj != null ? localProj.GetComponent<ThrowProjectile>() : null;
             RefreshVisibility();   // linked authority renders its LOCAL twin — hide this network copy entirely
         }
 
@@ -100,17 +106,26 @@ namespace TossZone.Throwing
             if (_hitRadius > 0.0001f) AreaScale = Mathf.Max(AreaScale, radiusMeters / _hitRadius);
         }
 
-        /// <summary>T12 — Shared Mode: only THIS projectile's own State Authority may write its [Networked]
-        /// fields (Fusion_Shared_Mode_Gotchas.md §1). A BuffRing's authority (the round's master) may differ from
-        /// the shooter who owns this projectile in multi-client, so it can't set VelocityScale/AreaScale/Element
-        /// directly — it asks via this RPC instead, which Fusion routes to whichever client actually holds
-        /// authority. 0 means "leave this field unchanged" for velocityScale/areaScale/element.</summary>
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-        public void RPC_ApplyRingBuff(float velocityScale, float areaScale, int element)
+        public void RPC_ApplyRingBuff(float velocityScale, float areaScale, int element, float effectSeconds)
         {
-            if (velocityScale > 1f) VelocityScale = Mathf.Max(VelocityScale, velocityScale);
-            if (areaScale > 1f) AreaScale = Mathf.Max(AreaScale, areaScale);
+            if (RingsApplied >= MaxRingStack) return;
+            RingsApplied++;
+            if (velocityScale > 1f)
+            {
+                VelocityScale = (VelocityScale <= 0f ? 1f : VelocityScale) * velocityScale;
+                ApplySpeedMultiplier(velocityScale);
+            }
+            if (areaScale > 1f) AreaScale = (AreaScale <= 0f ? 1f : AreaScale) * areaScale;
             if (element != 0) Element = element;
+            if (effectSeconds > 0f) EffectSeconds = Mathf.Max(EffectSeconds, effectSeconds);
+        }
+
+        private void ApplySpeedMultiplier(float mul)
+        {
+            if (mul <= 1f) return;
+            if (_localThrowProj != null) _localThrowProj.ApplySpeedMultiplier(mul);
+            else if (_rb != null && !_rb.isKinematic) _rb.linearVelocity *= mul;
         }
 
         /// <summary>T12 — same authority rule: only this projectile's own State Authority may despawn it.
@@ -132,6 +147,7 @@ namespace TossZone.Throwing
             _customGravity = 0f;
             _damageOverride = 0;
             _localProjectile = null;
+            _localThrowProj = null;
 
             _mr = null;   // re-resolve, EXCLUDING the T20 visual holder's own renderers
             foreach (Renderer r in GetComponentsInChildren<Renderer>(true))
@@ -230,7 +246,8 @@ namespace TossZone.Throwing
                 // Scene objects (DummyAvatar) have InputAuthority = None, so they are never excluded
                 // even when the master client is the shooter — fixing solo-test blocking.
                 if (victim.Object.InputAuthority == Shooter) continue;
-                victim.RPC_TakeHit(dmg, transform.position, Shooter);
+                if (Element == (int)RingElement.Ice) victim.RPC_Freeze(EffectSeconds > 0f ? EffectSeconds : 1f);
+                else victim.RPC_TakeHit(dmg, transform.position, Shooter);
                 hitAny = true;
                 if (!_isAoe) break;   // single-target weapons stop at the first victim; AoE hits everyone in range
             }
@@ -238,7 +255,7 @@ namespace TossZone.Throwing
             {
                 _hasHit = true;
                 if (Element == (int)RingElement.Ice || Element == (int)RingElement.Fire) SpawnElementZone();
-                if (PlayerCombat.Local != null) PlayerCombat.Local.RewardHit();
+                if (Element != (int)RingElement.Ice && PlayerCombat.Local != null) PlayerCombat.Local.RewardHit();
             }
         }
 
@@ -249,11 +266,12 @@ namespace TossZone.Throwing
             if (_zonePrefab == null) return;
             int element = Element;
             float radius = _hitRadius * Mathf.Max(1f, AreaScale);
+            float effectSeconds = EffectSeconds;
             NetworkId selfId = Object.Id;
             Runner.Spawn(_zonePrefab, transform.position, Quaternion.identity, PlayerRef.None,
                 (runner, o) =>
                 {
-                    if (o.TryGetComponent(out BuffZone zone)) zone.Configure(element, radius, selfId);
+                    if (o.TryGetComponent(out BuffZone zone)) zone.Configure(element, radius, selfId, effectSeconds);
                 });
         }
 

@@ -24,10 +24,9 @@ namespace TossZone.Combat
         [SerializeField] private Vector3 _zoneSize = new Vector3(8f, 1f, 4f);
         [SerializeField] private int _slotCount = 3;
 
-        [Header("T11 — Rarity theo cửa sổ thời gian của hiệp (index 0 = Tier1 .. index 4 = Tier5, trọng số tương đối)")]
-        [SerializeField] private float[] _tierWeights0to30 = { 40f, 30f, 20f, 7f, 3f };
-        [SerializeField] private float[] _tierWeights31to60 = { 25f, 30f, 25f, 12f, 8f };
-        [SerializeField] private float[] _tierWeights61to90 = { 15f, 20f, 25f, 20f, 20f };
+        private static readonly float[] TierWeights0to30 = { 65f, 25f, 8f, 2f, 0f };
+        private static readonly float[] TierWeights31to60 = { 38f, 26f, 20f, 10f, 5f };
+        private static readonly float[] TierWeights61to90 = { 20f, 25f, 25f, 20f, 10f };
 
         [Networked, Capacity(8)] private NetworkArray<NetworkId> SlotRings    => default;
         [Networked, Capacity(8)] private NetworkArray<TickTimer> RespawnTimers => default;
@@ -126,7 +125,7 @@ namespace TossZone.Combat
             int pick = Random.Range(1, System.Enum.GetValues(typeof(RingElement)).Length);
             var element = (RingElement)pick;
             int tier = RollTier();
-            if (tier >= 4 && HasActiveHighTier(element)) tier = Random.Range(1, 4);   // "không cho 2 ring cùng tên+Tier 4-5 đồng thời"
+            if (tier >= 4 && HasActiveTier(tier)) tier = Random.Range(1, 4);
 
             NetworkObject obj = Runner.Spawn(_ringPrefab,
                 pos, Quaternion.identity, PlayerRef.None,
@@ -139,13 +138,10 @@ namespace TossZone.Combat
             RespawnTimers.Set(i, default);
         }
 
-        /// <summary>T11 — rarity-weighted tier roll for the round's current time window (0-30s / 31-60s / 61-90s+).
-        /// Tier 4-5 have lower weight in every window, but become relatively less rare later (escalation, matches
-        /// how weapon unlockTime already escalates over a round).</summary>
         private int RollTier()
         {
             float elapsed = CombatSession.Instance != null ? CombatSession.Instance.RoundElapsed : 0f;
-            float[] weights = elapsed < 30f ? _tierWeights0to30 : elapsed < 60f ? _tierWeights31to60 : _tierWeights61to90;
+            float[] weights = elapsed < 30f ? TierWeights0to30 : elapsed < 60f ? TierWeights31to60 : TierWeights61to90;
             if (weights == null || weights.Length == 0) return 1;
 
             float total = 0f;
@@ -162,8 +158,7 @@ namespace TossZone.Combat
             return weights.Length;
         }
 
-        /// <summary>T11 anti-duplicate: is a Tier 4-5 ring of this same element already active in another slot?</summary>
-        private bool HasActiveHighTier(RingElement element)
+        private bool HasActiveTier(int tier)
         {
             int slots = SlotCount;
             for (int i = 0; i < slots; i++)
@@ -172,7 +167,7 @@ namespace TossZone.Combat
                 if (id == default(NetworkId)) continue;
                 NetworkObject obj = Runner.FindObject(id);
                 if (obj == null || !obj.TryGetComponent(out BuffRing ring)) continue;
-                if (ring.Element == element && ring.Tier >= 4) return true;
+                if (ring.Tier == tier) return true;
             }
             return false;
         }

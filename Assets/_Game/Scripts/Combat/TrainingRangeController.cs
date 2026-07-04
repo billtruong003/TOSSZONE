@@ -28,7 +28,7 @@ namespace TossZone.Combat
         [Header("Weapon buttons (index = catalog index)")]
         [SerializeField] private PokeButton3D[] _weaponButtons;
 
-        [Header("Ring buttons (order = RingElement 1..5: Ice, Fire, Multi, Speed, Shield)")]
+        [Header("Ring buttons (order = RingElement 1..5: Ice, Fire, Multi, Speed, Area)")]
         [SerializeField] private PokeButton3D[] _ringButtons;
         [Tooltip("Stress button: spawns _burstCount random rings at once (capacity test).")]
         [SerializeField] private PokeButton3D _ringBurstButton;

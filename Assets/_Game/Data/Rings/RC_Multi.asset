@@ -17,10 +17,10 @@ MonoBehaviour:
   element: 3
   ringColor: {r: 1, g: 0.9, b: 0.1, a: 1}
   icon: {fileID: 0}
-  multiplier: 40
-  velocityScale: 1
-  areaScale: 1
-  shieldSelf: 0
+  valuePerTier:
+  - 2
+  - 4
+  - 8
+  - 12
+  - 15
   respawnDelay: 15
-  driftAmplitude: 0.18
-  driftPeriod: 3

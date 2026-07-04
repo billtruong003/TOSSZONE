@@ -83,7 +83,8 @@ namespace TossZone.Throwing
 
             // Deflect is a continuous physical sweep (no trigger press), independent of fireMode — runs
             // whenever the equipped weapon allows it (Sword: canDeflect=true, attacksPlayers=false).
-            if (_activeConfig != null && _activeConfig.canDeflect) HandleDeflectSweep();
+            if (_activeConfig != null && _activeConfig.canDeflect && !(_combat != null && _combat.IsFrozen))
+                HandleDeflectSweep();
 
             // Ballistic weapons are handled entirely by ThrowController.
             if (_activeConfig == null || _activeConfig.fireMode == FireMode.ThrowBallistic) return;
@@ -252,6 +253,7 @@ namespace TossZone.Throwing
         private void OnTriggerPressed()
         {
             if (_activeConfig == null || Time.time < _cooldownEnd) return;
+            if (_combat != null && _combat.IsFrozen) return;
 
             float elapsed = CombatSession.Instance != null ? CombatSession.Instance.RoundElapsed : 0f;
             if (!CombatSession.TrainingModeActive && elapsed < _activeConfig.unlockTime) return;

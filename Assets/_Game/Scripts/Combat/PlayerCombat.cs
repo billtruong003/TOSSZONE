@@ -27,6 +27,10 @@ namespace TossZone.Combat
         [Networked] public int EquippedIndex { get; set; }
         /// <summary>Ammo remaining for PayPerUse weapons.</summary>
         [Networked] public int Ammo { get; set; }
+        [Networked] private TickTimer FrozenTimer { get; set; }
+
+        public bool IsFrozen => Object != null && Object.IsValid && Runner != null
+            && !FrozenTimer.ExpiredOrNotRunning(Runner);
 
         /// <summary>All live PlayerCombat instances on this client — polled by ArenaManager to check alive count.</summary>
         public static readonly System.Collections.Generic.List<PlayerCombat> AllInstances
@@ -96,6 +100,7 @@ namespace TossZone.Combat
             {
                 remaining = Mathf.Max(0, Health - damage);
                 Health = remaining;
+                if (damage > 0) FrozenTimer = default;
             }
             if (!Bill.IsReady) return;
             Bill.Events.Fire(new PlayerHitEvent
@@ -107,6 +112,15 @@ namespace TossZone.Combat
             });
             if (HasStateAuthority && remaining <= 0)
                 Bill.Events.Fire(new PlayerDiedEvent { IsLocal = true });
+        }
+
+        [Rpc(RpcSources.All, RpcTargets.All)]
+        public void RPC_Freeze(float seconds)
+        {
+            if (HasStateAuthority && Health > 0)
+                FrozenTimer = TickTimer.CreateFromSeconds(Runner, Mathf.Clamp(seconds, 0.1f, 10f));
+            if (Bill.IsReady)
+                Bill.Events.Fire(new PlayerFrozenEvent { Seconds = seconds, IsLocalVictim = HasStateAuthority });
         }
 
         /// <summary>Authority (the shooter): reward this player for a landed hit.</summary>
@@ -124,6 +138,7 @@ namespace TossZone.Combat
             OwnedMask = 0;
             EquippedIndex = -1;
             Ammo = 0;
+            FrozenTimer = default;
             _incomeAccum = 0f;
             if (!Bill.IsReady) return;
             Bill.Events.Fire(new MoneyChangedEvent { Money = 0 });

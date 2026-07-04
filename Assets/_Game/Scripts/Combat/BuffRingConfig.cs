@@ -3,18 +3,14 @@ using UnityEngine;
 
 namespace TossZone.Combat
 {
-    /// <summary>Ring element / type (matches design §16).</summary>
-    public enum RingElement { None = 0, Ice = 1, Fire = 2, Multi = 3, Speed = 4, Shield = 5 }
+    public enum RingElement { None = 0, Ice = 1, Fire = 2, Multi = 3, Speed = 4, Area = 5 }
 
-    /// <summary>
-    /// Designer data for ONE buff-ring type. Five types from design §16:
-    /// Băng (Ice), Lửa (Fire), Đạn Mưa (Multi), Tốc Độ (Speed), Chắn Đạn (Shield).
-    /// The ring grants its buff to the first player whose projectile passes through it.
-    /// Stack limit = 3 per element.
-    /// </summary>
     [CreateAssetMenu(menuName = "TOSSZONE/Buff Ring Config", fileName = "BuffRingConfig")]
     public class BuffRingConfig : ScriptableObject
     {
+        public static readonly float[] DiameterPerTier = { 1.8f, 1.5f, 1.2f, 0.9f, 0.6f };
+        public static readonly float[] DriftSpeedPerTier = { 1f, 1.5f, 2f, 2.5f, 3.5f };
+
         [BillTitle("Identity")]
         [BillRequired] public string id = "ring_ice";
         public string displayName = "Băng";
@@ -22,16 +18,22 @@ namespace TossZone.Combat
         public Color ringColor = Color.cyan;
         public Sprite icon;
 
-        [BillTitle("Buff values")]
-        [BillInfoBox("Giá trị áp lên NetworkProjectile khi đi xuyên qua. Stacks lên tối đa 3.")]
-        [BillSlider(1, 3)] public int multiplier = 1;          // Đạn Mưa: số đạn spawn thêm
-        [BillSlider(0.5f, 3f)] public float velocityScale = 1f; // Tốc Độ
-        [BillSlider(0.5f, 3f)] public float areaScale = 1f;     // mở rộng hitRadius
-        public bool shieldSelf = false;                          // Chắn Đạn: chủ nhân được shield
+        [BillTitle("Buff value THEO TIER (GDD §VI — index 0 = Tier 1 … index 4 = Tier 5)")]
+        [BillInfoBox("Ý nghĩa theo element: Multi = số đạn (2/4/8/12/15) · Speed = hệ số vận tốc bay " +
+                     "(1.2/1.4/1.6/1.8/2.0) · Area = hệ số bán kính nổ (1.25/1.5/1.75/2/2.25) · " +
+                     "Ice = giây đóng băng + đời tường băng (1/1.5/2/2.5/3) · Fire = đời vùng lửa giây (1/1.5/2/2.5/3).")]
+        public float[] valuePerTier = new float[5] { 1f, 1f, 1f, 1f, 1f };
 
         [BillTitle("Vòng đời")]
         [BillSuffix("s")] public float respawnDelay = 10f;
-        [BillSuffix("s")] public float driftAmplitude = 0.2f;
-        [BillSuffix("s")] public float driftPeriod = 3f;
+
+        public float ValueForTier(int tier)
+        {
+            if (valuePerTier == null || valuePerTier.Length == 0) return 1f;
+            return valuePerTier[Mathf.Clamp(tier, 1, valuePerTier.Length) - 1];
+        }
+
+        public static float DiameterForTier(int tier) => DiameterPerTier[Mathf.Clamp(tier, 1, 5) - 1];
+        public static float DriftSpeedForTier(int tier) => DriftSpeedPerTier[Mathf.Clamp(tier, 1, 5) - 1];
     }
 }

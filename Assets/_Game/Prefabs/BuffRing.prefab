@@ -99,7 +99,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 79ea68b5d5e2e7140a208d67f7a6fc55, type: 2}
   - {fileID: 11400000, guid: a120d85ff934782459c918a2b4c0e68e, type: 2}
   _burstGravity: 2
-  _wanderFrequency: 0.15
+  _prefabDiameter: 2.1
   _Element: 0
   _Tier: 0
 --- !u!1 &4308871812770537861

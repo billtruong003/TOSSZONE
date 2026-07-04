@@ -27,6 +27,7 @@ namespace TossZone.Throwing
         private Vector3 _gravity;     // world gravity vector (down * g)
         private float _power;
         private Vector3 _baseScale = Vector3.one;
+        private float _elapsed;
         private bool _live;
         private bool _matSet;
         private MeshRenderer _mr;
@@ -98,6 +99,7 @@ namespace TossZone.Throwing
 
             EnsureMaterial(config.ballColor);
             transform.position = origin;
+            _elapsed = 0f;
             _live = true;
 
             _onFlightCb ??= OnFlight;
@@ -125,8 +127,18 @@ namespace TossZone.Throwing
             if (_trail != null) _trail.Clear();
         }
 
+        public void ApplySpeedMultiplier(float mul)
+        {
+            if (!_live || mul <= 1f) return;
+            Vector3 vel = (_v0 + _gravity * _elapsed) * mul;
+            _flight?.Kill();
+            _flight = null;
+            Launch(transform.position, vel, _power, _config);
+        }
+
         private void OnFlight(float t)
         {
+            _elapsed = t;
             transform.position = _origin + _v0 * t + 0.5f * _gravity * (t * t);
 
             Vector3 vel = _v0 + _gravity * t;   // instantaneous velocity → facing + stretch
