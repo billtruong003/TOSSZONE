@@ -3,14 +3,15 @@
 > Chốt từ feedback owner 2026-07-02 cuối Session 11. Đọc kèm `deprecated/TASKS_DETAIL.md` (T1-T17 đã xong) và
 > `T17_Test_Report.html` (checklist test 2 người).
 >
-> **TRẠNG THÁI (cập nhật cuối Session 13 — 2026-07-04):**
+> **TRẠNG THÁI (cập nhật cuối Session 13 — 2026-07-04): KẾ HOẠCH CHÍNH ✅ XONG HẾT.**
 > ✅ XONG S12: **T19** (`47718e8`) · **T18** (`c0d278a`) · **T25** (`91dfa21`) · **T20** (`7dabfe8`).
-> ✅ XONG S13: **T27** (`3c5ceac`) · **T30** (`4629bcc`) · **T31** (`67915b7`) — chi tiết triển khai +
-> verify trong HANDOFF.md mục Session 13 và commit message từng task.
-> ⏭ TIẾP: **T26 → T28**. Backlog: T21/T22/T29/T23/T24/T32 + scale sân theo mode + art Bom X.
-> 🔒 ĐÃ CHỐT với owner: T27 ⑧ ring TRÔI NGANG ✅ đã build · Sword+LandMine GIỮ extension ✅ ·
-> T31 mix per-weapon: owner DUYỆT 2026-07-04 phương án **"Mix cân bằng"** (bảng trong mục T31 dưới) ✅ đã build.
-> ⚠️ QUY TẮC MỚI owner 2026-07-04: code CLEAN, KHÔNG viết comment (gotchas ghi Docs/commit message).
+> ✅ XONG S13: **T27** (`3c5ceac`) · **T30** (`4629bcc`) · **T31** (`67915b7`) · **T26** (`83fac0c`) ·
+> **T28** (`674e021`) — chi tiết triển khai + verify trong HANDOFF.md mục Session 13 và commit message.
+> ⏭ CÒN backlog: T21 equip feedback → T29 kiếm sau lưng → scale sân theo mode → heckle/T23/T24/T32.
+> Việc ART owner: T22 icons · model Bom X · shader hologram · tune vị trí UI trong headset.
+> 🔒 ĐÃ CHỐT với owner: T27 ⑧ ring TRÔI NGANG ✅ · Sword+LandMine GIỮ extension ✅ ·
+> T31 mix per-weapon "Mix cân bằng" (owner duyệt 2026-07-04, bảng trong mục T31) ✅ — tất cả đã build.
+> ⚠️ QUY TẮC owner 2026-07-04: code CLEAN, KHÔNG viết comment (gotchas ghi Docs/commit message).
 
 ---
 
@@ -81,9 +82,10 @@ Master thoát → trận hiện tại chết. `FusionNet` đã expose `HostMigra
 
 ## 3. AUDIT design-vs-code — các điểm SAI/CHƯA LÀM (quét 2026-07-02)
 
-> ⚠️ **CẬP NHẬT S13 (2026-07-04):** mọi dòng gắn T27/T30/T31 trong bảng dưới ĐÃ FIX (commit `3c5ceac`/
-> `4629bcc`/`67915b7`) — kể cả costPerUse/magazine (làm ở T31 thay vì T26). Chỉ các dòng T26 (nổ chạm đất,
-> effect nổ, laserSight, isUncatchable, fuseDelay/mìn) và T29/backlog còn mở.
+> ⚠️ **CẬP NHẬT S13 (2026-07-04):** TOÀN BỘ dòng gắn T26/T27/T30/T31 trong bảng dưới ĐÃ FIX
+> (commit `3c5ceac`/`4629bcc`/`67915b7`/`83fac0c`) — costPerUse/magazine làm ở T31, phần còn lại của
+> T26 (nổ chạm đất, effect nổ, laserSight, isUncatchable, fuseDelay/mìn) ở `83fac0c`. Chỉ còn mở:
+> dòng T29 (kiếm sau lưng) + heckle khán đài (backlog).
 
 > ⚠️ **ĐÍNH CHÍNH sau khi owner đưa GDD PDF chính chủ** (đã chép thành `GDD_Core_Reference.md` — NGUỒN
 > CHÂN LÝ mới): bản audit đầu tiên của phần này dựa trên code + Combat_Minigame_Design cũ nên có dòng SAI —
@@ -177,14 +179,14 @@ Format mỗi phase: ✅ có · 🟡 tạm/thiếu 1 phần · ❌ chưa có.
 
 ## 7. Task list cập nhật (thứ tự đề xuất Session 12+)
 
-✅ xong: T19 → T18 → T25 → T20 (S12) → T27 → T30 → T31 (S13).
-⏭ còn lại: **T26 weapon phases** (nổ chạm đất + effect AoE theo aoeRadius + laserSight + isUncatchable
-enforce + fix InvalidOperationException đọc Element trước Spawned + chuỗi mìn ARM→đạp→nổ — **costPerUse/
-magazine ĐÃ XONG ở T31**, đừng làm lại) → **T28 HUD/feedback** (mục 5; ammo đọc `PlayerCombat.AmmoFor(slot)`,
-scoreboard dùng `RoundEndEvent.WinnerTeam/ScoreA/ScoreB`, freeze feedback nghe `PlayerFrozenEvent`)
-→ T21 equip feedback → T22 icons → backlog: T29 kiếm rút sau lưng (❓ngoài GDD), heckle khán đài,
-T23 matchmaking (nâng cấp thành GDD lobby flow), T24 host-migration, T32 lobby epic, scale sân theo mode
-(GDD §III), art model Bom Chữ X (đang mượn grenade ×1.3).
+✅ XONG HẾT kế hoạch chính: T19 → T18 → T25 → T20 (S12) → T27 → T30 → T31 → **T26** (`83fac0c`:
+nổ chạm đất + Explode hợp nhất + ExplosionFx cầu lửa/haptic/flash + laser Gun&Bazooka + isUncatchable
+networked + fix Element-trước-Spawned + chuỗi mìn nằm→ARM→đạp→nổ) → **T28** (`674e021`: ScoreboardUI +
+WristStatusHud + AnnouncerUI + DeflectEvent + countdown unlock + xN đạn PPU + KHÔNG ĐỦ $ + đạn nhuộm màu
+element + ClearLeftoverHazards đầu hiệp).
+⏭ backlog: T21 equip feedback → T29 kiếm rút sau lưng (❓ngoài GDD) → scale sân theo mode (GDD §III) →
+heckle khán đài → T23 matchmaking (nâng cấp thành GDD lobby flow) → T24 host-migration → T32 lobby epic.
+ART owner: T22 icons, model Bom Chữ X (đang mượn grenade ×1.3), shader hologram, tune UI headset.
 
 ### ✅ T27 (XONG `3c5ceac`) — RING OVERHAUL theo GDD (thay spec cũ)
 Nguồn: `GDD_Core_Reference.md` mục VI. Gồm: ① đổi element 5 `Shield` → **`Area`** (enum + asset `RC_Shield`
