@@ -93,9 +93,19 @@ namespace TossZone.Combat
             PlayerCombat.MaxLives = PlayerCombat.LivesForPlayerCount(CountRealPlayers());
             ResetAllCombat();
             _ringSpawner?.ResetRings();
+            ClearLeftoverHazards();
 
             if (CombatSession.Instance != null) CombatSession.Instance.NotifyRoundStart();
-            if (Bill.IsReady) Bill.Events.Fire(new RoundEndEvent { Round = Round - 1 });
+        }
+
+        private void ClearLeftoverHazards()
+        {
+            foreach (var zone in FindObjectsByType<BuffZone>(FindObjectsSortMode.None))
+                if (zone.Object != null && zone.Object.IsValid && zone.Object.HasStateAuthority)
+                    Runner.Despawn(zone.Object);
+            foreach (var proj in FindObjectsByType<TossZone.Throwing.NetworkProjectile>(FindObjectsSortMode.None))
+                if (proj.Object != null && proj.Object.IsValid && proj.Object.HasStateAuthority)
+                    Runner.Despawn(proj.Object);
         }
 
         private int CountRealPlayers()

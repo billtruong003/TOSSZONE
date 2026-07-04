@@ -243,6 +243,9 @@ namespace TossZone.Throwing
 
             int deflectedSingle = DeflectSingleProjectiles(_prevBladePos, cur, bounceVel);
             int deflectedBurst = DeflectBurstProjectiles(_prevBladePos, cur, bounceVel);
+            int deflected = deflectedSingle + deflectedBurst;
+            if (deflected > 0 && BillGameCore.Bill.IsReady)
+                BillGameCore.Bill.Events.Fire(new DeflectEvent { Count = deflected, Point = (_prevBladePos + cur) * 0.5f });
 
 #if UNITY_EDITOR
             // Debug visual: the actual swept segment each frame, cyan normally / yellow the instant it deflects

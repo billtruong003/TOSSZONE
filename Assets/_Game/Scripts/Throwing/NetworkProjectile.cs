@@ -69,6 +69,8 @@ namespace TossZone.Throwing
         private float _crossSeconds;
         private Vector3 _prevPos;
         private bool _fxPlayed;
+        private int _appliedElementTint;
+        private MaterialPropertyBlock _tintBlock;
         private bool _isMine;
         private float _mineFuse;
         private bool _mineLanded;
@@ -148,7 +150,12 @@ namespace TossZone.Throwing
                 ApplySpeedMultiplier(velocityScale);
             }
             if (areaScale > 1f) AreaScale = (AreaScale <= 0f ? 1f : AreaScale) * areaScale;
-            if (element != 0) Element = element;
+            if (element != 0)
+            {
+                Element = element;
+                if (_localThrowProj != null)
+                    _localThrowProj.SetTrailTint(TossZone.Combat.BuffRingConfig.ElementColor((TossZone.Combat.RingElement)element));
+            }
             if (effectSeconds > 0f) EffectSeconds = Mathf.Max(EffectSeconds, effectSeconds);
         }
 
@@ -182,6 +189,7 @@ namespace TossZone.Throwing
             _crossSeconds = 0f;
             _prevPos = transform.position;
             _fxPlayed = false;
+            _appliedElementTint = 0;
             _isMine = false;
             _mineFuse = 0f;
             _mineLanded = false;
@@ -221,6 +229,16 @@ namespace TossZone.Throwing
         {
             // T20: VisualIndex can land a snapshot after Spawned on late-joining proxies — keep it honest.
             ApplyVisualIfChanged();
+            if (_appliedElementTint != Element)
+            {
+                _appliedElementTint = Element;
+                if (_mr != null && Element != 0)
+                {
+                    _tintBlock ??= new MaterialPropertyBlock();
+                    _tintBlock.SetColor("_BaseColor", BuffRingConfig.ElementColor((RingElement)Element));
+                    _mr.SetPropertyBlock(_tintBlock);
+                }
+            }
             if (Exploded && !_fxPlayed)
             {
                 _fxPlayed = true;

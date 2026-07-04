@@ -35,5 +35,18 @@ namespace TossZone.Combat
 
         public static float DiameterForTier(int tier) => DiameterPerTier[Mathf.Clamp(tier, 1, 5) - 1];
         public static float DriftSpeedForTier(int tier) => DriftSpeedPerTier[Mathf.Clamp(tier, 1, 5) - 1];
+
+        public static Color ElementColor(RingElement element)
+        {
+            switch (element)
+            {
+                case RingElement.Ice: return new Color(0.35f, 0.9f, 1f);
+                case RingElement.Fire: return new Color(1f, 0.4f, 0.1f);
+                case RingElement.Multi: return new Color(1f, 0.9f, 0.2f);
+                case RingElement.Speed: return new Color(0.45f, 0.75f, 1f);
+                case RingElement.Area: return new Color(0.7f, 0.4f, 1f);
+                default: return Color.white;
+            }
+        }
     }
 }

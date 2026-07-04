@@ -35,6 +35,9 @@ namespace TossZone.Throwing
         private System.Action<float> _onFlightCb;   // cached → no per-throw delegate alloc
         private System.Action _onLandedCb;
         private System.Action _returnCb;
+        private bool _trailBaseSaved;
+        private Color _trailBaseStart;
+        private Color _trailBaseEnd;
         private static Material _ballMat;
 
         /// <summary>True while the ball is in flight and catchable (false for uncatchable weapons).</summary>
@@ -124,7 +127,15 @@ namespace TossZone.Throwing
             _flight = null;
             _live = false;
             transform.localScale = _baseScale;
-            if (_trail != null) _trail.Clear();
+            if (_trail != null)
+            {
+                _trail.Clear();
+                if (_trailBaseSaved)
+                {
+                    _trail.startColor = _trailBaseStart;
+                    _trail.endColor = _trailBaseEnd;
+                }
+            }
         }
 
         public void ApplySpeedMultiplier(float mul)
@@ -134,6 +145,19 @@ namespace TossZone.Throwing
             _flight?.Kill();
             _flight = null;
             Launch(transform.position, vel, _power, _config);
+        }
+
+        public void SetTrailTint(Color color)
+        {
+            if (_trail == null) return;
+            if (!_trailBaseSaved)
+            {
+                _trailBaseSaved = true;
+                _trailBaseStart = _trail.startColor;
+                _trailBaseEnd = _trail.endColor;
+            }
+            _trail.startColor = color;
+            _trail.endColor = new Color(color.r, color.g, color.b, 0f);
         }
 
         private void OnFlight(float t)

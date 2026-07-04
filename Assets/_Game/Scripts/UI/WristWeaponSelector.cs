@@ -164,16 +164,27 @@ namespace TossZone.UI
                 if (cfg.IsPayPerUse)
                 {
                     if (_combat.AmmoFor(_viewIndex) <= 0
-                        && !_combat.TryBuyAmmo(_viewIndex, cfg.cost, cfg.magazine)) return;
+                        && !_combat.TryBuyAmmo(_viewIndex, cfg.cost, cfg.magazine)) { DenyFeedback(hand); return; }
                 }
                 else if (!_combat.OwnsWeapon(_viewIndex))
                 {
-                    if (!_combat.TryBuyWeapon(_viewIndex, cfg.cost)) return;
+                    if (!_combat.TryBuyWeapon(_viewIndex, cfg.cost)) { DenyFeedback(hand); return; }
                 }
             }
             _combat.EquipWeapon(_viewIndex);   // T19 WeaponHolder grabs the real weapon into the squeezing hand
             RefreshSlots();
             ApplyHologramState();
+        }
+
+        private void DenyFeedback(Hand hand)
+        {
+            Vector3 pos = _hologramAnchor != null ? _hologramAnchor.position : transform.position;
+            RewardText.Show("KHÔNG ĐỦ $", pos, new Color(1f, 0.3f, 0.25f));
+            if (hand == null) return;
+            var dev = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(
+                hand.left ? UnityEngine.XR.XRNode.LeftHand : UnityEngine.XR.XRNode.RightHand);
+            if (dev.isValid && dev.TryGetHapticCapabilities(out UnityEngine.XR.HapticCapabilities caps) && caps.supportsImpulse)
+                dev.SendHapticImpulse(0, 0.7f, 0.15f);
         }
 
         // ── hologram ─────────────────────────────────────────────────────────────
@@ -252,10 +263,13 @@ namespace TossZone.UI
             {
                 if (_slots[i] == null) continue;
                 WeaponConfig cfg = _catalog[indices[i]];
+                bool isPpu = cfg != null && cfg.IsPayPerUse;
+                int ammo = _combat != null && isPpu ? _combat.AmmoFor(indices[i]) : -1;
                 bool equipped = _combat != null && _combat.EquippedIndex == indices[i];
-                bool owned    = _combat != null && _combat.OwnsWeapon(indices[i]);
+                bool owned = _combat != null && (isPpu ? ammo > 0 : _combat.OwnsWeapon(indices[i]));
                 bool unlocked = cfg == null || elapsed >= cfg.unlockTime;
-                _slots[i].Bind(cfg, owned, equipped, unlocked);
+                float lockRemaining = cfg != null && !unlocked ? cfg.unlockTime - elapsed : 0f;
+                _slots[i].Bind(cfg, owned, equipped, unlocked, lockRemaining, ammo);
             }
         }
 
@@ -273,12 +287,16 @@ namespace TossZone.UI
         public UnityEngine.UI.Image equippedIndicator;
         public CanvasGroup lockedOverlay;
 
-        public void Bind(WeaponConfig cfg, bool owned, bool equipped, bool unlocked)
+        public void Bind(WeaponConfig cfg, bool owned, bool equipped, bool unlocked, float lockRemaining, int ammo)
         {
             if (cfg == null) { if (gameObject) gameObject.SetActive(false); return; }
             if (icon != null) icon.sprite = cfg.icon;
             if (nameLabel  != null) nameLabel.text  = cfg.displayName;
-            if (priceLabel != null) priceLabel.text = owned ? "✓" : $"${cfg.cost}";
+            if (priceLabel != null)
+                priceLabel.text = !unlocked ? "🔒" + Mathf.CeilToInt(lockRemaining) + "s"
+                    : ammo > 0 ? "x" + ammo
+                    : owned ? "✓"
+                    : $"${cfg.cost}";
             if (equippedIndicator != null) equippedIndicator.enabled = equipped;
             if (lockedOverlay != null) lockedOverlay.alpha = unlocked ? 0f : 0.6f;
         }
