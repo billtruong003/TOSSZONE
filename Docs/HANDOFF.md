@@ -22,7 +22,42 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 
 ---
 
-## Session 12 — 2026-07-03 (session vừa xong) — T19 → T18 → T25 → T20 XONG, verify từng task qua MCP
+## Session 13 — 2026-07-04 (session vừa xong) — T27 → T30 → T31 XONG, verify từng task qua MCP
+
+> **PROMPT CHẠY TIẾP (paste nguyên văn vào session mới):**
+> ```
+> Đọc Docs/HANDOFF.md rồi Docs/GDD_Core_Reference.md rồi Docs/TASKS_WEAPON_UX.md.
+> Session 13 đã xong T27 → T30 → T31 (đến commit 67915b7). Chạy tiếp tuần tự: T26 → T28.
+> Mỗi task: build code thật, verify qua Unity MCP (set_active_instance TOSSZONE, guard WRONG PROJECT,
+> đọc console qua LogEntries), commit riêng từng task.
+> QUY TẮC MỚI từ owner: code phải CLEAN, KHÔNG viết comment — gotchas ghi vào Docs/commit message.
+> Lưu ý T26: costPerUse + magazine ĐÃ XONG trong T31 (UseOrBuyAmmo per-băng) — T26 còn: nổ chạm đất,
+> effect nổ theo aoeRadius, laserSight, isUncatchable + fix Element-trước-Spawned, chuỗi mìn.
+> Networking đọc Fusion_Shared_Mode_Gotchas.md trước. Framework đọc BillGameCore_Usage.md.
+> Đọc mục "Session 13" trong HANDOFF.md để biết gotchas mới (sim catch-up, ring nuốt đạn test).
+> ```
+
+**3 commit (mỗi task 1 commit, chi tiết đầy đủ trong message):**
+| Commit | Task | Nội dung |
+|---|---|---|
+| `3c5ceac` | **T27** | Ring overhaul đủ 10 điểm GDD §VI: ① Shield→**Area** (rename enum + `RC_Shield`→`RC_Area` giữ GUID) · ② **giá trị theo TIER** (`valuePerTier[5]` per element + hằng `DiameterPerTier`/`DriftSpeedPerTier`) · ③ **VelocityScale áp vận tốc THẬT** (RB nhân thẳng; throw path twin re-launch — verify 6→14.4 m/s khớp scale) · ④ **stack cộng dồn ≤3 vòng/viên** (`RingsApplied` networked, cả Burst struct) · ⑤ **Băng=FREEZE** (`RPC_Freeze`+`FrozenTimer`, khóa move/ném/bắn/deflect, damage giải băng, KHÔNG damage) · ⑥ **Lửa=1 mạng/lần đi qua**, zone sống theo giây tier · ⑦ anti-dup 1×T4+1×T5 bất kể element · ⑧ **TRÔI NGANG** PingPong X theo tốc tier, deterministic · ⑨ đường kính scale theo tier (mesh 2.1m, `_prefabDiameter`) · ⑩ weight GDD 3 cửa sổ (verify 5000 roll). **+2 bug sẵn có**: ResolveConfig index OOB element 5; burst nhân đôi qua chính ring đang shrink (T7 — thêm `IsConsumed` guard). |
+| `4629bcc` | **T30** | Match: 90s hiệp · nghỉ 5s · Bo3 (code+asset+scene) · **đổi bên theo parity Round** (verify z +9→-9) · mạng theo mode 7/5/4 (`MaxLives`+`LivesForPlayerCount`, bỏ const 5) · timeout so **TỔNG MẠNG ĐỘI** · round hòa không điểm · match end khi đủ wins HOẶC hết bestOf, bằng điểm = **Hòa Chung Cuộc** (-1) · `RoundEndEvent` mang WinnerTeam/ScoreA/ScoreB (sẵn cho scoreboard T28). Economy per-mạng: **+$2/s** (đo 1.97) · **+$5/mạng lấy được + bounty nạn nhân** (bỏ RewardHit $10/hit) · **shutdown bounty** +$2/mạng vào giá trị mạng mình, reset khi mất mạng · **đền bù +$10/mạng + 3s BẤT TỬ** (chặn damage hoàn toàn; dummy miễn bất tử cho training) · respawn giữa hiệp `RestoreLives()` giữ ví+vũ khí (trước reset sạch — sai GDD). |
+| `67915b7` | **T31** | Roster GDD §V vào 8 asset: Đá $0/0.8m · Súng $2/0.1s/0.35m@1s · Bom Nhỏ $5@5s · Bazooka $8@10s · **Bom Chữ X $13@20s (MỚI — `WC_CrossBomb`)** · Nuke $20/3s/4.5m@45s · Kiếm $10@20s · Mìn $8@45s. **Mix per-weapon owner DUYỆT (2026-07-04, "Mix cân bằng")**: PPU = trả cost MỖI LẦN NẠP (Súng băng 10, Bom Nhỏ/Mìn băng 3, Bom X/Nuke từng quả); Bazooka/Kiếm BuyOnce; Đá free. Cơ chế PPU thật: `AmmoSlots` NetworkArray per-slot + `TryBuyAmmo`/`UseOrBuyAmmo` (tự nạp khi hết+đủ tiền), gate cả 2 đường bắn (trigger + NÉM — đường ném trước không có gate); selector mua băng khi grab hologram; catch thưởng đạn đúng slot; bỏ `costPerUse` chết. Bom X: nổ → 2 BuffZone **HỘP** xoay 45°/135° (1.1m × 5.64m = 47% sâu sân 12m, sống 3s, mất 1 mạng/lần) — BuffZone thêm box mode OBB. Model X tạm mượn grenade ×1.3 chờ art owner. |
+
+**⚠️ QUY TẮC MỚI TỪ OWNER (2026-07-04, đã lưu memory):** code phải CLEAN, **KHÔNG viết comment** trong code — gotchas/lý do thiết kế ghi vào Docs + commit message thay vì inline. (Comment cũ ở vùng code không đụng tới thì để nguyên, đừng churn diff.)
+
+**Gotchas MỚI học được session này (đọc trước khi verify MCP):**
+1. **Editor không focus + MCP: sim catch-up theo BURST giữa các call** — giữa 2 execute_code roundtrip, Fusion tua nhiều giây sim trong 1-2 frame. State sống ngắn (zone 3s, freeze 2s, đạn bay 0.3s) HẾT ĐỜI trước khi poll bằng call tiếp theo → verify bằng **recorder gắn `EditorApplication.update`** ghi vào `EditorPrefs` trong 1 call, đọc kết quả ở call sau. Đừng tin poll 2-call cho anything <5s.
+2. **Đạn test bay qua vùng giữa bị slot ring NUỐT** (OnTriggerEnter consume + Multi ring RPC despawn đạn) → trước khi test đường đạn: tắt `DummyBotDriver`, set `_slotCount=0` (reflection) + despawn hết ring. **Play session mới reset các hack runtime này — phải set lại.**
+3. **RPC Fusion chạy INLINE trên client gọi** (cùng call thấy kết quả ngay) — nhưng timer TickTimer đọc chậm 1 tick.
+4. Burst từng nhân qua CHÍNH ring nó vừa consume (ring sống thêm 0.25s shrink, `TryStackThroughRing` không check consumed) — đã fix T27, nhớ pattern này khi thêm consumer mới cho ring.
+5. Sửa nhiều [Networked] cùng lúc (PlayerCombat/BuffZone/NetworkProjectile/Burst struct) → force-reimport đủ BỘ prefab liên quan (NetworkAvatar, DummyAvatar, BuffZone, NetworkProjectile, BuffRing, RingSpawnerHub) rồi mới Play.
+
+**Còn nợ verify (cần 2 client / headset thật — làm cùng đợt test build):** freeze gate trong headset (input headless không test được locomotion thật) · Speed buff trên đường ném local tween (cần swing thật — code path giống RB đã test) · đổi bên nhìn từ 2 máy · Hòa Chung Cuộc 1-1-1 thật · PPU cross-client.
+
+---
+
+## Session 12 — 2026-07-03 — T19 → T18 → T25 → T20 XONG, verify từng task qua MCP
 
 > **PROMPT CHẠY TIẾP (paste nguyên văn vào session mới):**
 > ```
@@ -135,8 +170,11 @@ Verify toàn bộ minigame (session 9-9c), fix bug, rồi build 4 task + chốt 
 | 2-player thật (ParrelSync) | ✅ core verify (T17) — checklist còn lại trong T17_Test_Report.html |
 | Per-weapon projectile visuals | ✅ (T20) — VisualIndex networked, đạn đúng model mọi client (T20 chưa test 2 máy thật — làm cùng đợt test build) |
 | Training range hub (warm-up) | ✅ (T25) — equip free + ring theo yêu cầu + x8 + 3 dummy passive |
+| Ring system theo GDD (tier matrix, trôi ngang, freeze, stack ≤3) | ✅ (T27) — đủ 10 điểm §VI, verify từng cơ chế |
+| Match & economy theo GDD (90s/Bo3/đổi bên, mạng 7/5/4, $/mạng, bất tử) | ✅ (T30) — 2-client verify còn nợ (đổi bên 2 phía, hòa 1-1-1) |
+| Weapon roster GDD + Bom Chữ X + mix PPU/BuyOnce | ✅ (T31) — mix owner duyệt; model Bom X chờ art owner |
 
-Việc tiếp theo → **`TASKS_WEAPON_UX.md`**: **T27 → T30 → T31 → T26 → T28** (T19/T18/T25/T20 ✅ xong Session 12). Prompt chạy tiếp ở đầu mục Session 12 phía trên.
+Việc tiếp theo → **`TASKS_WEAPON_UX.md`**: **T26 → T28** (T27/T30/T31 ✅ xong Session 13). Prompt chạy tiếp ở đầu mục Session 13 phía trên.
 
 ---
 
@@ -183,31 +221,25 @@ Nếu scene objects dormant khi play thẳng (gate chưa fire): gọi tay `BillG
 
 ---
 
-## Việc tiếp theo (→ TASKS_WEAPON_UX.md) — cập nhật cuối Session 12
+## Việc tiếp theo (→ TASKS_WEAPON_UX.md) — cập nhật cuối Session 13
 
-**Xong:** T19 ✅ T18 ✅ T25 ✅ T20 ✅ (commit `47718e8` → `7dabfe8`, mỗi task 1 commit + verify MCP).
-**Đọc `GDD_Core_Reference.md` TRƯỚC** (nguồn chân lý — nhiều thứ code vẫn lệch GDD).
+**Xong:** T19 ✅ T18 ✅ T25 ✅ T20 ✅ (S12) · **T27 ✅ T30 ✅ T31 ✅** (S13, commit `3c5ceac` → `67915b7`,
+mỗi task 1 commit + verify MCP). **Đọc `GDD_Core_Reference.md` TRƯỚC** (nguồn chân lý).
 
 Chạy tiếp theo thứ tự — chi tiết từng việc trong `TASKS_WEAPON_UX.md` mục 7:
-1. **T27 — RING OVERHAUL theo GDD** (10 điểm ①-⑩ trong spec; ⑧ ĐÃ CHỐT: trôi ngang trái↔phải theo tốc độ
-   tier, bỏ wander Perlin; nhớ đổi enum `Shield`→`Area` + asset `RC_Shield`→`RC_Area`; Băng=FREEZE không
-   damage; Lửa=mất 1 mạng/lần + sống 1-3s; stack cộng dồn ≤3; ma trận tier; anti-dup 1×T4+1×T5; weight GDD).
-   Đụng nhiều [Networked] → đọc lại Fusion_Shared_Mode_Gotchas.md + refresh scope=all + reimport prefab.
-2. **T30 — Match & economy theo GDD** (90s hiệp; nghỉ 5s + đổi bên + bảng điểm; mạng 7/5/4 theo chế độ;
-   timeout so TỔNG MẠNG ĐỘI; hòa 1-1-1; +$2/s; +$5/KILL; chết +$10 + 3s bất tử; shutdown bounty +$2).
-3. **T31 — Weapon roster theo GDD** (giá/cooldown/AoE/unlock 6 món GDD; BUILD Bom Chữ X — vệt lửa chữ thập
-   = 2 BuffZone hộp xoay 90°, rộng 1.1m × dài 47% sâu sân; Đá/Súng thêm AoE nhỏ 0.8/0.35m). ĐÃ CHỐT:
-   Sword+LandMine GIỮ làm extension (8 món tổng). **MIX per-weapon: phải đề xuất bảng BuyOnce/PayPerUse
-   từng món cho owner DUYỆT trước khi code.**
-4. **T26 — Weapon phases** (nổ khi chạm ĐẤT cho grenade/bazooka/nuke; effect nổ theo aoeRadius: cầu lửa +
-   shockwave + haptic, Nuke rung mạnh 2 tay + flash; laserSight Gun/Bazooka; magazine; isUncatchable enforce
-   trong CatchController — **tiện tay fix luôn InvalidOperationException đọc Element trước Spawned, thấy
-   trong log Session 12**; chuỗi mìn ném/đặt→ARM fuseDelay→đạp→nổ; costPerUse theo bảng mix T31).
-5. **T28 — HUD/feedback inventory** (bảng đầy đủ ở TASKS_WEAPON_UX.md mục 5: ví tổng, ammo, scoreboard
-   MS_ScoreBoard, countdown unlock, catch/deflect feedback, kill/win-lose...).
+1. **T26 — Weapon phases** (nổ khi chạm ĐẤT cho grenade/bazooka/nuke/Bom X; effect nổ theo aoeRadius: cầu
+   lửa + shockwave + haptic, Nuke rung mạnh 2 tay + flash; laserSight Gun/Bazooka; isUncatchable enforce
+   trong CatchController — **tiện tay fix luôn InvalidOperationException đọc Element trước Spawned (guard
+   Object.IsValid), thấy trong log Session 12**; chuỗi mìn ném/đặt→ARM fuseDelay→đạp→nổ).
+   **LƯU Ý: costPerUse + magazine ĐÃ XONG ở T31** (`UseOrBuyAmmo` per-băng) — đừng làm lại.
+2. **T28 — HUD/feedback inventory** (bảng đầy đủ ở TASKS_WEAPON_UX.md mục 5: ví tổng, ammo per-slot
+   (`PlayerCombat.AmmoFor`), scoreboard MS_ScoreBoard — `RoundEndEvent` đã mang WinnerTeam/ScoreA/ScoreB,
+   countdown unlock, catch/deflect feedback, kill/win-lose, freeze feedback (`PlayerFrozenEvent` đã fire
+   sẵn từ T27, chưa ai nghe)...).
 
-Backlog sau đó: T21 equip feedback (~30') · T22 icons (owner tự làm được) · T29 kiếm rút sau lưng (ngoài
-GDD) · heckle khán đài · T23 matchmaking API · T24 host-migration · T32 lobby epic.
+Backlog sau đó: T21 equip feedback (~30') · T22 icons (owner tự làm được — thêm icon Bom Chữ X) · T29 kiếm
+rút sau lưng (ngoài GDD) · heckle khán đài · T23 matchmaking API · T24 host-migration · T32 lobby epic ·
+scale sân theo mode (GDD §III — blockout 14×12 vẫn to hơn chuẩn) · art model Bom Chữ X (đang mượn grenade).
 Song song: owner build APK test theo `T17_Test_Report.html` + tune vị trí nút selector/hologram trong headset
 + làm shader hologram (gán vào field `_hologramMat` trên WristSelector).
 

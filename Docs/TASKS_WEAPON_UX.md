@@ -3,12 +3,14 @@
 > Chốt từ feedback owner 2026-07-02 cuối Session 11. Đọc kèm `deprecated/TASKS_DETAIL.md` (T1-T17 đã xong) và
 > `T17_Test_Report.html` (checklist test 2 người).
 >
-> **TRẠNG THÁI (cập nhật cuối Session 12 — 2026-07-03):**
-> ✅ XONG: **T19** (`47718e8`) · **T18** (`c0d278a`) · **T25** (`91dfa21`) · **T20** (`7dabfe8`) — chi tiết
-> triển khai + verify trong HANDOFF.md mục Session 12 và commit message từng task.
-> ⏭ TIẾP: **T27 → T30 → T31 → T26 → T28** (thứ tự đã chốt với owner). Backlog: T21/T22/T29/T23/T24/T32.
-> 🔒 ĐÃ CHỐT với owner: T27 ⑧ ring TRÔI NGANG theo GDD · T31(a) Sword+LandMine GIỮ extension ·
-> T31(b) mua kiểu MIX per-weapon (bảng chi tiết PHẢI trình owner duyệt trước khi code).
+> **TRẠNG THÁI (cập nhật cuối Session 13 — 2026-07-04):**
+> ✅ XONG S12: **T19** (`47718e8`) · **T18** (`c0d278a`) · **T25** (`91dfa21`) · **T20** (`7dabfe8`).
+> ✅ XONG S13: **T27** (`3c5ceac`) · **T30** (`4629bcc`) · **T31** (`67915b7`) — chi tiết triển khai +
+> verify trong HANDOFF.md mục Session 13 và commit message từng task.
+> ⏭ TIẾP: **T26 → T28**. Backlog: T21/T22/T29/T23/T24/T32 + scale sân theo mode + art Bom X.
+> 🔒 ĐÃ CHỐT với owner: T27 ⑧ ring TRÔI NGANG ✅ đã build · Sword+LandMine GIỮ extension ✅ ·
+> T31 mix per-weapon: owner DUYỆT 2026-07-04 phương án **"Mix cân bằng"** (bảng trong mục T31 dưới) ✅ đã build.
+> ⚠️ QUY TẮC MỚI owner 2026-07-04: code CLEAN, KHÔNG viết comment (gotchas ghi Docs/commit message).
 
 ---
 
@@ -78,6 +80,10 @@ Master thoát → trận hiện tại chết. `FusionNet` đã expose `HostMigra
 ---
 
 ## 3. AUDIT design-vs-code — các điểm SAI/CHƯA LÀM (quét 2026-07-02)
+
+> ⚠️ **CẬP NHẬT S13 (2026-07-04):** mọi dòng gắn T27/T30/T31 trong bảng dưới ĐÃ FIX (commit `3c5ceac`/
+> `4629bcc`/`67915b7`) — kể cả costPerUse/magazine (làm ở T31 thay vì T26). Chỉ các dòng T26 (nổ chạm đất,
+> effect nổ, laserSight, isUncatchable, fuseDelay/mìn) và T29/backlog còn mở.
 
 > ⚠️ **ĐÍNH CHÍNH sau khi owner đưa GDD PDF chính chủ** (đã chép thành `GDD_Core_Reference.md` — NGUỒN
 > CHÂN LÝ mới): bản audit đầu tiên của phần này dựa trên code + Combat_Minigame_Design cũ nên có dòng SAI —
@@ -171,13 +177,16 @@ Format mỗi phase: ✅ có · 🟡 tạm/thiếu 1 phần · ❌ chưa có.
 
 ## 7. Task list cập nhật (thứ tự đề xuất Session 12+)
 
-T19 held-grabbable → T18 selector poke/cone/hologram → **T25 training range** → T20 projectile visuals →
-T26 weapon phases (nổ chạm đất + effect AoE + laser + magazine + isUncatchable — landmine/costPerUse chờ chốt T31)
-→ **T27 RING OVERHAUL THEO GDD** (xem chi tiết dưới) → T30 match/economy theo GDD → T31 weapon roster theo GDD
-→ T28 HUD/feedback → T21 equip feedback → T22 icons → backlog: T29 kiếm rút sau lưng (❓ngoài GDD), heckle
-khán đài, T23 matchmaking (nâng cấp thành GDD lobby flow), T24 host-migration, T32 lobby epic.
+✅ xong: T19 → T18 → T25 → T20 (S12) → T27 → T30 → T31 (S13).
+⏭ còn lại: **T26 weapon phases** (nổ chạm đất + effect AoE theo aoeRadius + laserSight + isUncatchable
+enforce + fix InvalidOperationException đọc Element trước Spawned + chuỗi mìn ARM→đạp→nổ — **costPerUse/
+magazine ĐÃ XONG ở T31**, đừng làm lại) → **T28 HUD/feedback** (mục 5; ammo đọc `PlayerCombat.AmmoFor(slot)`,
+scoreboard dùng `RoundEndEvent.WinnerTeam/ScoreA/ScoreB`, freeze feedback nghe `PlayerFrozenEvent`)
+→ T21 equip feedback → T22 icons → backlog: T29 kiếm rút sau lưng (❓ngoài GDD), heckle khán đài,
+T23 matchmaking (nâng cấp thành GDD lobby flow), T24 host-migration, T32 lobby epic, scale sân theo mode
+(GDD §III), art model Bom Chữ X (đang mượn grenade ×1.3).
 
-### T27 — RING OVERHAUL theo GDD (thay spec cũ)
+### ✅ T27 (XONG `3c5ceac`) — RING OVERHAUL theo GDD (thay spec cũ)
 Nguồn: `GDD_Core_Reference.md` mục VI. Gồm: ① đổi element 5 `Shield` → **`Area`** (enum + asset `RC_Shield`
 → `RC_Area`, xóa `shieldSelf`; Area = nhân `AreaScale` — pipeline AreaScale→hit radius ĐÃ chạy sẵn, chỉ thiếu
 ring cấp nó); ② **BuffRingConfig chuyển sang giá trị THEO TIER** (bảng ma trận: Multi x2/4/8/12/15, Area
@@ -192,21 +201,22 @@ freeze-on-touch, sống theo tier; ⑥ **Lửa** = mất 1 mạng/lần đi qua,
 tính X theo tốc độ tier, chạm mép quay đầu; ⑨ scale đường kính ring theo tier; ⑩ weight spawn dùng ĐÚNG số GDD:
 T1-T5 = (65,25,8,2,0) / (38,26,20,10,5) / (20,25,25,20,10) theo 3 cửa sổ.
 
-### T30 — Match & Economy theo GDD (mới)
-90s/hiệp (code 120) · nghỉ 5s + ĐỔI BÊN + bảng điểm · mạng theo chế độ 7/5/4 (bỏ MaxHealth=5 cứng) ·
-timeout so **tổng mạng ĐỘI** (code đang so máu cá nhân) · hòa hiệp + **Hòa Chung Cuộc** (1-1-1) · thu nhập
-+$2/s (code +1) · **+$5/KILL** (code +$10/HIT — sai cả giá trị lẫn điều kiện) · chết +$10 & **3s bất tử** ·
-shutdown bounty +$2/kill.
+### ✅ T30 (XONG `4629bcc`) — Match & Economy theo GDD
+90s/hiệp ✅ · nghỉ 5s + ĐỔI BÊN ✅ (bảng điểm UI → T28, data đã có trong RoundEndEvent) · mạng theo chế độ
+7/5/4 ✅ (`PlayerCombat.MaxLives`) · timeout so **tổng mạng ĐỘI** ✅ · hòa hiệp + **Hòa Chung Cuộc** ✅ ·
++$2/s ✅ · **+$5/mạng lấy được** ✅ · mất mạng +$10 & **3s bất tử** ✅ (dummy miễn bất tử) · shutdown bounty
++$2 ✅ · respawn giữ ví+vũ khí (`RestoreLives`) ✅. Còn nợ 2-client: đổi bên nhìn 2 phía, hòa 1-1-1 thật.
 
-### T31 — Weapon roster & bảng số theo GDD (mới — cần owner chốt 2 điểm)
-GDD = 6 vũ khí: Đá $0/0.4s/AoE 0.8m · Súng $2/0.1s/0.35m/mở 1s · Bom Nhỏ $5/1s/1.5m/5s · Bazooka
-$8/1.2s/2.5m/10s · **Bom Chữ X $13/2.3s (vệt lửa chữ X 1.1m × 47% sâu sân)/20s — CHƯA CÓ TRONG CODE** ·
-Nuke $20/3s/4.5m/45s. Việc: sửa giá/cooldown/AoE/unlock 7 asset WC_* theo bảng; build Bom X (vệt lửa chữ
-thập = 2 BuffZone dạng hộp xoay 90°); Đá/Súng cũng có AoE nhỏ. **🔒 ĐÃ CHỐT (owner, 2026-07-03):**
-(a) Sword + LandMine **GIỮ làm extension** (roster 8 món khi thêm Bom X — T26 build đủ chuỗi mìn).
-(b) Mua kiểu **MIX per-weapon** — owner CHƯA cho bảng chi tiết: khi làm T31 phải ĐỀ XUẤT bảng
-BuyOnce/PayPerUse từng món (gợi ý khởi điểm: đồ rẻ spam PayPerUse — Súng/Bom Nhỏ; đồ đắt finale
-BuyOnce — Bazooka/Bom X/Nuke/Sword; Đá free) và hỏi owner duyệt TRƯỚC khi code.
+### ✅ T31 (XONG `67915b7`) — Weapon roster & bảng số theo GDD + mix per-weapon
+Stats GDD vào 8 asset ✅ (bảng trong commit message) · **Bom Chữ X built** ✅ (`WC_CrossBomb`, catalog index 7:
+nổ → 2 BuffZone HỘP xoay 45°/135°, 1.1m × 5.64m, sống 3s, mất 1 mạng/lần — BuffZone thêm box-mode OBB;
+model tạm mượn grenade ×1.3 chờ art) · Đá/Súng AoE nhỏ 0.8/0.35m ✅.
+**🔒 MIX per-weapon — owner DUYỆT 2026-07-04 ("Mix cân bằng"):** PayPerUse = trả `cost` MỖI LẦN NẠP
+(1 băng = `magazine` viên): Súng $2/băng 10 · Bom Nhỏ $5/băng 3 · Bom X $13/quả · Nuke $20/quả ·
+Mìn $8/băng 3. BuyOnce giữ cả hiệp: Bazooka $8 · Kiếm $10. Đá free vô hạn.
+Cơ chế: `PlayerCombat.AmmoSlots` (NetworkArray per-slot) + `TryBuyAmmo`/`UseOrBuyAmmo` (hết đạn tự mua nếu
+đủ tiền, hết tiền = tịt) — gate cả HandWeapon (trigger) lẫn ThrowController (ném); selector grab hologram
+= mua băng đầu; catch thưởng đạn vào slot đang cầm; field `costPerUse` đã xóa.
 
 ### T32 — Lobby/Out-game epic theo GDD (backlog lớn)
 Hub 3D tương tác: HOST đấm nút → room code 5 chữ · join = ném khối chữ/bàn phím hologram · Quick Play
