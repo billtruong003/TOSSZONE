@@ -75,7 +75,6 @@ namespace TossZone.Combat
             {
                 Local = this;
                 if (Health <= 0) Health = MaxLives;
-                if (EquippedIndex == 0) EquippedIndex = -1;   // 0 = default int, use -1 for "no override"
             }
         }
 
@@ -160,7 +159,7 @@ namespace TossZone.Combat
             Health = MaxLives;
             Money = 0;
             OwnedMask = 0;
-            EquippedIndex = -1;
+            EquippedIndex = 0;
             for (int i = 0; i < AmmoSlots.Length; i++) AmmoSlots.Set(i, 0);
             Bounty = 0;
             FrozenTimer = default;

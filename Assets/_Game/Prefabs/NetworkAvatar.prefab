@@ -2678,9 +2678,7 @@ MonoBehaviour:
   _Money: 0
   _OwnedMask: 0
   _EquippedIndex: 0
-  _Ammo: 0
-  _incomePerSecond: 1
-  _hitReward: 10
+  _Bounty: 0
 --- !u!114 &8176461611797126089
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2696,7 +2694,7 @@ MonoBehaviour:
   _config: {fileID: 11400000, guid: 1ac66ba853451a84d9442db1a5ee61fd, type: 2}
   _projectilePrefab: {fileID: 2983061311041850839, guid: 30a25f488bb6abc428d810951d30cdb8, type: 3}
   _heldBallPrefab: {fileID: 7984634097529775090, guid: cadd7f6dea8e568489d55ec2e8dbb7fa, type: 3}
-  _showVisualHeldBall: 1
+  _showVisualHeldBall: 0
   _rightHand: 1
   _debugThrowKey: 34
   _editorGripKey: 21
