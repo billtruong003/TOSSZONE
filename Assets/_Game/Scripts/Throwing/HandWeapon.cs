@@ -320,17 +320,14 @@ namespace TossZone.Throwing
                 : _defaultNetProjPrefab;
             if (prefab == null) return;
 
-            // T20: stamp which weapon's shot this is BEFORE Spawned so proxies dress it from their catalog
-            // in their first snapshot (0 = default sphere, i+1 = catalog index i).
             int visualIndex = _lastEquippedIndex >= 0 ? _lastEquippedIndex + 1 : 0;
+            Fusion.PlayerRef shooter = _runner.LocalPlayer;
             NetworkObject proj = _runner.Spawn(prefab, _muzzle.position,
                 Quaternion.LookRotation(_muzzle.forward), _runner.LocalPlayer,
-                (runner, o) => { if (o.TryGetComponent(out NetworkProjectile p)) p.VisualIndex = visualIndex; });
+                (runner, o) => { if (o.TryGetComponent(out NetworkProjectile p)) { p.VisualIndex = visualIndex; p.Shooter = shooter; } });
             if (proj == null || !proj.TryGetComponent(out NetworkProjectile np)) return;
 
-            np.Shooter = _runner.LocalPlayer;
             np.Uncatchable = _activeConfig.isUncatchable;
-            // Gun: muzzleSpeed fast + gravity 0 (straight line). Bazooka/Grenade: gravity > 0 arcs down.
             np.Launch(_muzzle.forward * _activeConfig.muzzleSpeed, _activeConfig.projectileGravity, _activeConfig.damage);
             if (_activeConfig.aoeRadius > 0f) np.SetAoe(_activeConfig.aoeRadius);
         }

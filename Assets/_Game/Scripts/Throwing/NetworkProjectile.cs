@@ -68,9 +68,14 @@ namespace TossZone.Throwing
         private float _crossLength;
         private float _crossSeconds;
         private Vector3 _prevPos;
+        private Vector3 _origin;
+        private bool _explosive;
         private bool _fxPlayed;
         private int _appliedElementTint;
         private MaterialPropertyBlock _tintBlock;
+
+        private const float ExplosiveAoeThreshold = 1.0f;
+        private const float MinArmDistance = 0.7f;
         private bool _isMine;
         private float _mineFuse;
         private bool _mineLanded;
@@ -116,16 +121,18 @@ namespace TossZone.Throwing
         /// default for Rock / anything that doesn't call this).</summary>
         public void SetDamage(int damage) => _damageOverride = damage;
 
-        /// <summary>Explosive weapons (BigBoom/Grenade): damage EVERY player in <paramref name="radiusMeters"/>,
-        /// not just the first found. Expressed via the existing AreaScale hook (also used by buff rings).</summary>
+        /// <summary>Splash radius. radiusMeters ≥ ExplosiveAoeThreshold (grenade/bazooka/nuke/cross) → this shot
+        /// detonates with a fireball on ground/proximity. Below it (rock/gun) → plain direct hit, no fireball.</summary>
         public void SetAoe(float radiusMeters)
         {
             _isAoe = true;
+            if (radiusMeters >= ExplosiveAoeThreshold) _explosive = true;
             if (_hitRadius > 0.0001f) AreaScale = Mathf.Max(AreaScale, radiusMeters / _hitRadius);
         }
 
         public void SetCrossZones(float width, float length, float seconds)
         {
+            _explosive = true;
             _crossWidth = width;
             _crossLength = length;
             _crossSeconds = seconds;
@@ -187,7 +194,9 @@ namespace TossZone.Throwing
             _crossWidth = 0f;
             _crossLength = 0f;
             _crossSeconds = 0f;
+            _explosive = false;
             _prevPos = transform.position;
+            _origin = transform.position;
             _fxPlayed = false;
             _appliedElementTint = 0;
             _isMine = false;
@@ -311,16 +320,52 @@ namespace TossZone.Throwing
                 return;
             }
 
-            if (TryGroundContact(out Vector3 groundPoint))
+            bool onGround = TryGroundContact(out Vector3 groundPoint);
+
+            if (_isMine)
             {
-                if (_isMine) LandMine(groundPoint);
-                else Explode(groundPoint);
+                if (onGround) LandMine(groundPoint);
+                _prevPos = transform.position;
+                return;
             }
-            else if (!_isMine && AnyVictimInRange())
+
+            if (_explosive)
             {
-                Explode(transform.position);
+                if (onGround) Explode(groundPoint);
+                else if (IsArmed() && AnyVictimInRange()) Explode(transform.position);
+            }
+            else
+            {
+                if (!HitFirstVictim() && onGround) { _hasHit = true; Runner.Despawn(Object); }
             }
             _prevPos = transform.position;
+        }
+
+        private bool IsArmed() => (transform.position - _origin).sqrMagnitude >= MinArmDistance * MinArmDistance;
+
+        private bool HitFirstVictim()
+        {
+            int dmg = _damageOverride > 0 ? _damageOverride : _baseDamage;
+            int n = Physics.OverlapSphereNonAlloc(transform.position, _hitRadius * AreaScale, _overlap,
+                _hittableMask, QueryTriggerInteraction.Collide);
+            bool hit = false;
+            for (int i = 0; i < n; i++)
+            {
+                PlayerCombat victim = _overlap[i] != null ? _overlap[i].GetComponentInParent<PlayerCombat>() : null;
+                if (victim == null || victim.Object == null) continue;
+                if (victim.Object.InputAuthority == Shooter) continue;
+                if (Element == (int)RingElement.Ice) victim.RPC_Freeze(EffectSeconds > 0f ? EffectSeconds : 1f);
+                else victim.RPC_TakeHit(dmg, transform.position, Shooter);
+                hit = true;
+                if (!_isAoe) break;
+            }
+            if (hit)
+            {
+                _hasHit = true;
+                if (Element == (int)RingElement.Ice || Element == (int)RingElement.Fire) SpawnElementZone();
+                Runner.Despawn(Object);
+            }
+            return hit;
         }
 
         private bool TryGroundContact(out Vector3 point)
