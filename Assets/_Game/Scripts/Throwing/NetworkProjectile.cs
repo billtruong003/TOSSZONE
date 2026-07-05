@@ -68,6 +68,7 @@ namespace TossZone.Throwing
         private float _crossLength;
         private float _crossSeconds;
         private Vector3 _prevPos;
+        private bool _prevPosValid;
         private Vector3 _origin;
         private bool _explosive;
         private bool _fxPlayed;
@@ -196,6 +197,7 @@ namespace TossZone.Throwing
             _crossSeconds = 0f;
             _explosive = false;
             _prevPos = transform.position;
+            _prevPosValid = false;
             _origin = transform.position;
             _fxPlayed = false;
             _appliedElementTint = 0;
@@ -312,6 +314,13 @@ namespace TossZone.Throwing
             }
 
             if (_hasHit) return;
+
+            if (!_prevPosValid)
+            {
+                _prevPos = transform.position;
+                _prevPosValid = true;
+                return;
+            }
 
             if (_mineLanded)
             {
