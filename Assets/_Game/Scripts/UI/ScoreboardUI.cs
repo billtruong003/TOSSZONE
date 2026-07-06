@@ -25,6 +25,7 @@ namespace TossZone.UI
             var go = new GameObject("Scoreboard" + faceName);
             go.transform.SetParent(transform, false);
             go.transform.localRotation = localRot;
+            go.transform.localPosition = localRot * new Vector3(0f, 0f, -0.01f);
             var tmp = go.AddComponent<TextMeshPro>();
             tmp.fontSize = _fontSize;
             tmp.color = _color;
