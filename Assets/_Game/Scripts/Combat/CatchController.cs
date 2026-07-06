@@ -69,6 +69,7 @@ namespace TossZone.Combat
                 if (netProj.Object == null || !netProj.Object.IsValid) return;
                 if (netProj.Uncatchable || netProj.Exploded) return;
                 RegisterCatch(isPower: netProj.Element != 0);
+                netProj.RPC_RequestSelfDespawn();
             }
         }
 
