@@ -118,29 +118,32 @@ namespace TossZone.Combat
 
         private void CheckWinCondition()
         {
-            int aliveCount = 0;
             int realPlayerCount = 0;
-            PlayerCombat lastAlive = null;
+            int playersA = 0, playersB = 0, aliveA = 0, aliveB = 0;
 
             foreach (PlayerCombat pc in PlayerCombat.AllInstances)
             {
-                if (!pc.IsPlayer) continue;   // bots (DummyAvatar) never count
+                if (!pc.IsPlayer || pc.Object == null) continue;   // bots (DummyAvatar) never count
                 realPlayerCount++;
-                if (pc.Health > 0)
+                if (GetTeam(pc.Object.InputAuthority) == 0)
                 {
-                    aliveCount++;
-                    lastAlive = pc;
+                    playersA++;
+                    if (pc.Health > 0) aliveA++;
+                }
+                else
+                {
+                    playersB++;
+                    if (pc.Health > 0) aliveB++;
                 }
             }
 
             // Decide a round by elimination only once at least 2 real players are in the match. Gating on the
             // bot-inclusive AllInstances.Count let a solo player (or a bot-only arena) end the round every tick,
             // spinning Warmup→Playing→RoundEnd forever and constantly resetting combat health.
-            if (realPlayerCount < 2 || aliveCount > 1) return;
+            if (realPlayerCount < 2 || playersA == 0 || playersB == 0) return;
+            if (aliveA > 0 && aliveB > 0) return;
 
-            int winnerTeam = lastAlive != null && lastAlive.Object != null
-                ? GetTeam(lastAlive.Object.InputAuthority) : -1;
-            EndRound(winnerTeam);
+            EndRound(aliveA > 0 ? 0 : aliveB > 0 ? 1 : -1);
         }
 
         private void OnTimeout()
