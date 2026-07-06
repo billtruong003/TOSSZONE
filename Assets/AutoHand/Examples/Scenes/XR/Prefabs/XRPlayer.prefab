@@ -10131,12 +10131,24 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 7942002211881670212}
     - target: {fileID: 8834320319295017360, guid: fdc3ba53f4e81a040b0471bbbafbb10a, type: 3}
+      propertyPath: minMaxHeight.y
+      value: 1.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 8834320319295017360, guid: fdc3ba53f4e81a040b0471bbbafbb10a, type: 3}
       propertyPath: trackingContainer
       value: 
       objectReference: {fileID: 7942002212320107156}
+    - target: {fileID: 8834320319295017360, guid: fdc3ba53f4e81a040b0471bbbafbb10a, type: 3}
+      propertyPath: autoAdjustColliderHeight
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8834320319295017362, guid: fdc3ba53f4e81a040b0471bbbafbb10a, type: 3}
       propertyPath: m_Name
       value: AutoHandPlayer
+      objectReference: {fileID: 0}
+    - target: {fileID: 8834320319295017374, guid: fdc3ba53f4e81a040b0471bbbafbb10a, type: 3}
+      propertyPath: m_Height
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 8834320319295017374, guid: fdc3ba53f4e81a040b0471bbbafbb10a, type: 3}
       propertyPath: m_Material
@@ -10243,8 +10255,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TossZone.Player.TossLocomotionInput
   _player: {fileID: 6707951067419483808}
-  _showDebug: 1
-  _hudRef: {fileID: 1707206589229051498, guid: c2d567a36f689d9479f474143c38595d, type: 3}
+  _dashStrength: 3.5
+  _dashDuration: 0.18
+  _dashCooldown: 0.8
 --- !u!4 &6707951067419483823 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8834320319295017375, guid: fdc3ba53f4e81a040b0471bbbafbb10a, type: 3}

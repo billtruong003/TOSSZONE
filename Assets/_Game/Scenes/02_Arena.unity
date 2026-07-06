@@ -1491,6 +1491,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: DummyAvatar
       objectReference: {fileID: 0}
+    - target: {fileID: 8016643276908417007, guid: 9090876a05f2bda469b62ef46b902207, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

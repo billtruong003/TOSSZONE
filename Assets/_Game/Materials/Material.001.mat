@@ -122,8 +122,8 @@ Material:
     - _RimToggle: 0
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
-    - _SpecSize: 0
-    - _SpecStrength: 0.5
+    - _SpecSize: 0.537
+    - _SpecStrength: 0.148
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
