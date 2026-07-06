@@ -2,6 +2,7 @@
 using Autohand;
 using BillGameCore;
 using TossZone.Combat;
+using TossZone.Player;
 using UnityEngine;
 
 namespace TossZone.UI
@@ -34,6 +35,17 @@ namespace TossZone.UI
         [SerializeField] private float _viewHalfAngle = 22f;
         [Tooltip("Max head→wrist distance for the panel to show.")]
         [SerializeField] private float _viewMaxDistance = 1f;
+        [Tooltip("Hysteresis: panel đang mở chỉ đóng khi lệch quá góc này (rộng hơn góc mở).")]
+        [SerializeField] private float _viewExitHalfAngle = 38f;
+        [Tooltip("Panel đang mở nán lại thêm chừng này giây sau khi rời cone rồi mới đóng.")]
+        [SerializeField] private float _hideDelay = 0.8f;
+        [Tooltip("Tay phải trong bán kính này quanh panel = giữ panel mở (đang với vào bấm).")]
+        [SerializeField] private float _interactHoldRadius = 0.35f;
+
+        [Header("Panel vật lý (prefab WristSelectorPanel)")]
+        [SerializeField] private Transform _panelRoot;
+        [SerializeField] private GameObject _backPlate;
+        [SerializeField] private TMPro.TextMeshPro _statusLabel;
 
         [Header("Poke buttons (prev / next)")]
         [SerializeField] private PokeButton3D _btnPrev;
@@ -57,6 +69,8 @@ namespace TossZone.UI
         private int _viewIndex;          // catalog index currently in the center slot / hologram
         private float _nextPeriodicRefresh;
         private bool _visible;
+        private float _lastInViewTime;
+        private bool _reparented;
 
         public void Initialize(PlayerCombat combat)
         {
@@ -65,8 +79,17 @@ namespace TossZone.UI
             if (_btnPrev != null) _btnPrev.Poked += OnPrevPoked;
             if (_btnNext != null) _btnNext.Poked += OnNextPoked;
             if (_hologramZone != null) _hologramZone.Poked += OnHologramGrabbed;
+            AttachPanelToRig();
             TryResolveCatalog();
             SetVisible(false);
+        }
+
+        private void AttachPanelToRig()
+        {
+            Transform wrist = PlayerRig.Local != null ? PlayerRig.Local.WristL : null;
+            if (wrist == null || _panelRoot == null) return;
+            _panelRoot.SetParent(wrist, false);
+            _reparented = true;
         }
 
         private void Awake() => SetVisible(false);   // proxies never Initialize — keep the panel off for them
@@ -81,13 +104,17 @@ namespace TossZone.UI
 
         private void Update()
         {
-            if (_combat == null) return;
+            if (_combat == null)
+            {
+                if (_reparented && _panelRoot != null) { Destroy(_panelRoot.gameObject); _reparented = false; }
+                return;
+            }
 
             // Initialize() can run before ArenaManager fires MinigameEnteredEvent (avatar spawns before the
             // scene's combat authority attaches) — keep resolving until the catalog appears.
             if (_catalog == null && !TryResolveCatalog()) return;
 
-            bool show = InViewCone();
+            bool show = ResolveVisible();
             if (show != _visible) SetVisible(show);
             if (!_visible) return;
 
@@ -98,20 +125,30 @@ namespace TossZone.UI
                 _nextPeriodicRefresh = Time.time + PeriodicRefreshInterval;
                 RefreshSlots();
                 ApplyHologramState();
+                RefreshStatusLabel();
             }
         }
 
         // ── visibility ───────────────────────────────────────────────────────────
 
-        private bool InViewCone()
+        private bool ResolveVisible()
         {
             Camera cam = Camera.main;
-            if (cam == null) return false;
-            Transform ct = cam.transform;
-            Vector3 to = transform.position - ct.position;
-            float dist = to.magnitude;
-            if (dist > _viewMaxDistance || dist < 1e-4f) return false;
-            return Vector3.Dot(ct.forward, to / dist) > Mathf.Cos(_viewHalfAngle * Mathf.Deg2Rad);
+            Vector3 anchor = _panelRoot != null ? _panelRoot.position : transform.position;
+            float halfAngle = _visible ? _viewExitHalfAngle : _viewHalfAngle;
+            float maxDist = _visible ? _viewMaxDistance * 1.25f : _viewMaxDistance;
+            bool inCone = cam != null
+                && InViewCone(cam.transform.position, cam.transform.forward, anchor, halfAngle, maxDist);
+            bool holding = _visible && PokeHandNearby(anchor);
+            if (inCone || holding) _lastInViewTime = Time.time;
+            return inCone || holding || (_visible && Time.time - _lastInViewTime < _hideDelay);
+        }
+
+        private bool PokeHandNearby(Vector3 anchor)
+        {
+            Transform hand = PlayerRig.Local != null ? PlayerRig.Local.WristR : null;
+            if (hand == null) return false;
+            return (hand.position - anchor).sqrMagnitude <= _interactHoldRadius * _interactHoldRadius;
         }
 
         /// <summary>The cone test, exposed pure for edit-time verification.</summary>
@@ -131,11 +168,28 @@ namespace TossZone.UI
             if (_btnPrev != null) _btnPrev.gameObject.SetActive(v);
             if (_btnNext != null) _btnNext.gameObject.SetActive(v);
             if (_hologramAnchor != null) _hologramAnchor.gameObject.SetActive(v);
+            if (_backPlate != null) _backPlate.SetActive(v);
+            if (_statusLabel != null) _statusLabel.gameObject.SetActive(v);
 
             if (!v) { DestroyHologram(); return; }
             _nextPeriodicRefresh = 0f;   // refresh immediately on open
             RefreshSlots();
             RebuildHologram();
+            RefreshStatusLabel();
+        }
+
+        private void RefreshStatusLabel()
+        {
+            if (_statusLabel == null || _combat == null) return;
+            _statusLabel.text = "$" + _combat.Money + "   " + AmmoText();
+        }
+
+        private string AmmoText()
+        {
+            int idx = _combat.EquippedIndex;
+            WeaponConfig cfg = _catalog != null && idx >= 0 && idx < _catalog.Length ? _catalog[idx] : null;
+            if (cfg == null || !cfg.IsPayPerUse) return "∞";
+            return _combat.AmmoFor(idx) + "/" + Mathf.Max(1, cfg.magazine);
         }
 
         // ── browse ───────────────────────────────────────────────────────────────
