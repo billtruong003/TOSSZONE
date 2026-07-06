@@ -17,7 +17,6 @@ namespace TossZone.Throwing
         [SerializeField] private Color _color = new Color(1f, 0.95f, 0.7f, 1f);
 
         private MeshRenderer _mr;
-        private Tween _tween;
         private static Material _mat;
 
         public static void Show(Vector3 worldPos, float power)
@@ -36,10 +35,10 @@ namespace TossZone.Throwing
 
         private void Play(float power)
         {
-            _tween?.Kill();
+            BillTween.KillTarget(this);
             float target = _maxScale * Mathf.Lerp(0.6f, 1.2f, Mathf.Clamp01(power));
             transform.localScale = Vector3.zero;
-            _tween = BillTween.Float(0f, 1f, Duration, t =>
+            BillTween.Float(0f, 1f, Duration, t =>
             {
                 // Punch out fast, fade out — no lerp-back-down (a "poof", not a pulse).
                 float scaleT = Mathf.Sin(t * Mathf.PI * 0.5f);   // fast start, eases into the peak
@@ -56,7 +55,7 @@ namespace TossZone.Throwing
               .OnComplete(() => gameObject.ReturnToPool());
         }
 
-        public override void OnReturnedToPool() => _tween?.Kill();
+        public override void OnReturnedToPool() => BillTween.KillTarget(this);
 
         private static Material FlashMaterial(Color c)
         {

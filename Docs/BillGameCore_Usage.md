@@ -46,5 +46,10 @@ phần Fusion để trong `Runtime/Network/Fusion/` + guard `#if PHOTON_FUSION`.
   (chỉ Fusion reset [Networked]).
 - BillTween: **`KillTarget(x)` trước khi Destroy(x)** — tween sống lâu hơn object là MissingReferenceException
   (dính 2 lần: BuffRing consume, held-ball swap).
+- BillTween: **KHÔNG giữ `Tween` ref qua frame rồi `.Kill()` sau** — `TweenService` pool object `Tween`
+  (Rent/Return), tween xong là instance được tái cấp cho tween KHÁC bất kỳ; `Kill()` không check danh tính nên
+  ref cũ giết nhầm tween đang sống của người khác, và Kill không fire OnComplete → nạn nhân đứng hình vĩnh viễn
+  (S15: đạn ném treo lơ lửng trên map — ImpactBurst/ReleaseFlash/BounceNumber/RewardText giữ `_tween` qua đời
+  pool). Luật: luôn `SetTarget(owner)` khi tạo + `BillTween.KillTarget(owner)` khi cần hủy, không lưu field.
 - `CheatConsole`/`DebugOverlay`/`DevCombatPanel` chỉ compile `UNITY_EDITOR || DEVELOPMENT_BUILD` — đừng đặt
   chúng làm scene object (release build sẽ ra missing script); spawn runtime từ code cùng guard.

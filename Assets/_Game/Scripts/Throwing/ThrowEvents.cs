@@ -19,6 +19,7 @@ namespace TossZone.Throwing
     {
         public Vector3 Position;
         public float Power;
+        public ThrowProjectile Ball;
     }
 
     /// <summary>Fired when a projectile hits a player (damage deferred — this drives juice + cross-player haptic).</summary>

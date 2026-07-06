@@ -31,7 +31,6 @@ namespace TossZone.Throwing
         private bool _live;
         private bool _matSet;
         private MeshRenderer _mr;
-        private Tween _flight;
         private System.Action<float> _onFlightCb;   // cached → no per-throw delegate alloc
         private System.Action _onLandedCb;
         private System.Action _returnCb;
@@ -107,7 +106,7 @@ namespace TossZone.Throwing
 
             _onFlightCb ??= OnFlight;
             _onLandedCb ??= OnLanded;
-            _flight = BillTween.Float(0f, tLand, tLand, _onFlightCb)   // value == elapsed seconds
+            BillTween.Float(0f, tLand, tLand, _onFlightCb)   // value == elapsed seconds
                 ?.SetEase(EaseType.Linear)
                 .SetTarget(this)
                 .OnComplete(_onLandedCb);
@@ -124,7 +123,6 @@ namespace TossZone.Throwing
         public override void OnReturnedToPool()
         {
             BillTween.KillTarget(this);
-            _flight = null;
             _live = false;
             transform.localScale = _baseScale;
             if (_trail != null)
@@ -142,8 +140,7 @@ namespace TossZone.Throwing
         {
             if (!_live || mul <= 1f) return;
             Vector3 vel = (_v0 + _gravity * _elapsed) * mul;
-            _flight?.Kill();
-            _flight = null;
+            BillTween.KillTarget(this);
             Launch(transform.position, vel, _power, _config);
         }
 
@@ -184,7 +181,7 @@ namespace TossZone.Throwing
             if (Bill.IsReady)
             {
                 if (_config != null && !string.IsNullOrEmpty(_config.impactSfx)) Bill.Audio.Play(_config.impactSfx);
-                Bill.Events.Fire(new BallLandedEvent { Position = transform.position, Power = _power });
+                Bill.Events.Fire(new BallLandedEvent { Position = transform.position, Power = _power, Ball = this });
             }
 
             _returnCb ??= ReturnSelf;

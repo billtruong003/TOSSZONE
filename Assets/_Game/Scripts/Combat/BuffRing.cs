@@ -50,7 +50,6 @@ namespace TossZone.Combat
 
         private BuffRingConfig _config;
         private Vector3 _originPos;
-        private Tween _driftTween;
         private float _tierScale = 1f;
         private bool _hasDriftZone;
         private Vector3 _driftCenter;
@@ -117,7 +116,6 @@ namespace TossZone.Combat
             // GameObject is destroyed and throws MissingReferenceException. Covers despawn paths other than
             // the consume anim (RingSpawner.ResetRings, respawn cycling).
             BillTween.KillTarget(this);
-            _driftTween = null;
         }
 
         // ── Visual setup ──────────────────────────────────────────────────────────────
@@ -171,7 +169,7 @@ namespace TossZone.Combat
             const float HalfSweep = 1f;
             float speed = BuffRingConfig.DriftSpeedForTier(Tier);
             float period = (HalfSweep * 4f) / Mathf.Max(0.01f, speed);
-            _driftTween = BillTween.Float(0f, 1f, period, t =>
+            BillTween.Float(0f, 1f, period, t =>
             {
                 float x = Mathf.PingPong(t * HalfSweep * 4f, HalfSweep * 2f) - HalfSweep;
                 transform.position = _originPos + Vector3.right * x;
@@ -244,7 +242,7 @@ namespace TossZone.Combat
             // "EFFECTIVE!" flash on label then shrink ring to zero and despawn.
             if (_label != null) _label.text = "EFFECTIVE!";
 
-            _driftTween?.Kill();
+            BillTween.KillTarget(this);
             BillTween.Scale(transform, 0f, 0.25f)
                 ?.SetEase(EaseType.InBack)
                 .SetTarget(this)

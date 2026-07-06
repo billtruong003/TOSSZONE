@@ -17,8 +17,6 @@ namespace TossZone.UI
         [SerializeField] private float _duration = 1.0f;
         [SerializeField] private float _riseHeight = 0.6f;
 
-        private Tween _tween;
-
         /// <summary>Show floating text at <paramref name="worldPos"/> from the pool.</summary>
         public static void Show(string text, Vector3 worldPos, Color? color = null)
         {
@@ -32,14 +30,14 @@ namespace TossZone.UI
 
         public override void OnSpawnedFromPool()
         {
-            _tween?.Kill();
+            BillTween.KillTarget(this);
 
             if (_label != null) { Color c = _label.color; c.a = 1f; _label.color = c; }
 
             Vector3 start = transform.position;
             Vector3 end   = start + Vector3.up * _riseHeight;
 
-            _tween = BillTween.Float(0f, 1f, _duration, t =>
+            BillTween.Float(0f, 1f, _duration, t =>
             {
                 transform.position = Vector3.Lerp(start, end, t);
                 if (_label != null)
@@ -53,6 +51,6 @@ namespace TossZone.UI
               .OnComplete(() => gameObject.ReturnToPool());
         }
 
-        public override void OnReturnedToPool() => _tween?.Kill();
+        public override void OnReturnedToPool() => BillTween.KillTarget(this);
     }
 }

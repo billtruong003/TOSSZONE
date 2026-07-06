@@ -22,7 +22,6 @@ namespace TossZone.Throwing
         [SerializeField] private float _shockwaveDuration = 0.35f;
         [SerializeField] private Color _shockwaveColor = new Color(1f, 1f, 1f, 0.6f);
 
-        private Tween _tween;
         private static Material _shockwaveMat;
 
         public static void Show(Vector3 worldPos, float power)
@@ -53,8 +52,8 @@ namespace TossZone.Throwing
             float target = _shockwaveMaxScale * Mathf.Lerp(0.7f, 1.3f, p);
             if (_shockwave != null) _shockwave.localScale = Vector3.zero;
 
-            _tween?.Kill();
-            _tween = BillTween.Float(0f, 1f, _shockwaveDuration, t =>
+            BillTween.KillTarget(this);
+            BillTween.Float(0f, 1f, _shockwaveDuration, t =>
             {
                 if (_shockwave != null) _shockwave.localScale = Vector3.one * (target * t);
                 if (_shockwaveRenderer != null)
@@ -69,7 +68,7 @@ namespace TossZone.Throwing
               .OnComplete(() => gameObject.ReturnToPool());
         }
 
-        public override void OnReturnedToPool() => _tween?.Kill();
+        public override void OnReturnedToPool() => BillTween.KillTarget(this);
 
         private static Material ShockwaveMaterial(Color c)
         {

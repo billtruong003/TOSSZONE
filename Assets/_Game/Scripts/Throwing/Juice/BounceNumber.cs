@@ -19,8 +19,6 @@ namespace TossZone.Throwing
         [SerializeField] private float _holdAndRiseDuration = 0.55f;
         [SerializeField] private float _riseHeight = 0.4f;
 
-        private Tween _tween;
-
         /// <summary>Show a bounce number at <paramref name="worldPos"/> (e.g. damage dealt on a hit).</summary>
         public static void Show(int amount, Vector3 worldPos, Color? color = null)
         {
@@ -38,7 +36,7 @@ namespace TossZone.Throwing
 
         private void Play()
         {
-            _tween?.Kill();
+            BillTween.KillTarget(this);
             if (_label != null) { Color c = _label.color; c.a = 1f; _label.color = c; }
 
             Vector3 start = transform.position;
@@ -46,7 +44,7 @@ namespace TossZone.Throwing
             transform.localScale = Vector3.zero;
 
             // Punch scale 0 -> punchScale -> 1, THEN hold+rise+fade.
-            _tween = BillTween.Float(0f, 1f, _punchDuration, t =>
+            BillTween.Float(0f, 1f, _punchDuration, t =>
             {
                 transform.localScale = Vector3.one * (_punchScale * t);
             })?.SetEase(EaseType.OutBack)
@@ -69,6 +67,6 @@ namespace TossZone.Throwing
               });
         }
 
-        public override void OnReturnedToPool() => _tween?.Kill();
+        public override void OnReturnedToPool() => BillTween.KillTarget(this);
     }
 }
