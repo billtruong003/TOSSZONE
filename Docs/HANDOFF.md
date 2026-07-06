@@ -22,7 +22,54 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 
 ---
 
-## Session 13 — 2026-07-04 (session vừa xong) — T27 → T30 → T31 → T26 → T28 XONG HẾT, verify từng task qua MCP
+## Session 14 — 2026-07-05 (session vừa xong) — FIX 5 BUG feel/perf owner báo khi test, verify MCP từng cái
+
+> **⚠️ QUY TẮC owner:** code CLEAN, KHÔNG viết comment (gotchas ghi Docs/commit message).
+>
+> **PROMPT KIỂM TRA TOÀN BỘ (đưa cho Fable khi lên cty — check bug):**
+> ```
+> Đọc Docs/HANDOFF.md (mục Session 14 + 13) rồi Docs/GDD_Core_Reference.md rồi Docs/TASKS_WEAPON_UX.md.
+> Nhiệm vụ: RÀ SOÁT TOÀN BỘ hệ chiến đấu tìm bug, KHÔNG code tính năng mới. Set active instance TOSSZONE
+> (Unity MCP, guard "if(!Application.dataPath.Contains(\"TOSSZONE\")) return \"WRONG PROJECT\";"), đọc console
+> qua UnityEditor.LogEntries. LƯU Ý MCP: sau vài lần play/stop editor hay rơi half-state (isPlaying=true nhưng
+> Bill.IsReady=false, FusionNet.Runner=null) — stop/play lại là sạch, luôn check Bill.IsReady sau khi vào play.
+> State sống ngắn (<5s: zone, freeze, đạn bay) HẾT ĐỜI giữa 2 lần execute_code — verify bằng recorder gắn
+> EditorApplication.update ghi EditorPrefs trong 1 call rồi đọc call sau. Trước khi test đường đạn: tắt
+> DummyBotDriver, set RingSpawner _slotCount=0 + despawn hết ring (ring nuốt đạn test), và làm lại mỗi lần play.
+>
+> Kịch bản cần verify trong 02_Arena (play thẳng, gate tự Fusion-load):
+> 1. Ném/bắn TỪNG vũ khí (Đá/Súng/Bom Nhỏ/Bazooka/Bom X/Nuke/Mìn/Kiếm) — KHÔNG có phát nào nổ tại điểm bắt
+>    đầu, KHÔNG để lại projectile stuck (đếm NetworkProjectile về 0 sau khi nổ). Đá/Súng KHÔNG ra cầu lửa.
+> 2. Nổ chạm đất đúng chỗ; effect ExplosionFx pool bounded (nổ 20 lần → ≤8 fireball + ≤3 flash + 1 material).
+> 3. Chuỗi mìn: ném → nằm → arm theo fuseDelay → người khác đạp → nổ. Không tự nổ trên không.
+> 4. Kinh tế/mạng/match GDD (T30): $2/s, +$5/kill+bounty, mất mạng +$10+3s bất tử, 90s/Bo3/đổi bên, tổng
+>    mạng đội khi timeout, Hòa Chung Cuộc.
+> 5. Ring T27: tier matrix, trôi ngang, Băng=freeze không damage (damage giải băng), Lửa 1 mạng/lần, stack ≤3.
+> 6. PPU ammo (T31): mua băng khi grab hologram, bắn hết tự nạp nếu đủ tiền, catch thưởng đạn đúng slot.
+> 7. HUD T28: scoreboard live, announcer đúng event/màu, đạn nhuộm màu element khi xuyên ring.
+> Bug feel VR (joystick không ném #8, grab pose) + haptic/flash CHỈ verify được trong HEADSET — note lại,
+> đừng cố repro headless (VR tracking ghi đè transform). Báo cáo: bug tìm được + mức độ + file:line + cách repro.
+> ```
+
+**6 commit fix (mỗi cái verify MCP riêng) — owner test build phát hiện, session này fix:**
+| Commit | Bug | Fix |
+|---|---|---|
+| `35be6b2` | Đạn tự nổ vào tay lúc buông + Rock ra cầu lửa | `Shooter` set trong onBeforeSpawned (trước Shooter=None vài tick đầu → proximity fuze nổ vào chính mình); tách `_explosive` (SetAoe radius≥1.0m) khỏi "có splash" — Rock 0.8/Súng 0.35 = non-explosive, `HitFirstVictim` damage+despawn không cầu lửa; explosive mới Explode; arm-gate 0.7m cho proximity. |
+| `00ee5eb` | Ném ra bóng vàng generic + ball-leak khi đổi vũ khí | Default `EquippedIndex=0` (Đá thật `MS_WP_Rock`, bỏ sentinel -1); `ThrowController._showVisualHeldBall=false` (WeaponHolder cấp grabbable thật rồi). Generic HeldBall không còn resolve trong flow thường. |
+| `f94cfcd` | Joystick tới lui = ném (không cần vung tay) | Đổi mốc đo vận tốc ROOT→**HEAD** (head+cổ tay đều XR-tracking, cùng timing → locomotion cancel sạch, hết residual physics-vs-tracking của root); + bắt buộc cổ tay đi tới ≥`MinSwingDistance`=0.25m relative to head mới FIRE (jiggle tạo spike nhưng không đi đủ quãng). CHỈ verify được trong headset. |
+| `4e4b50b` | ExplosionFx "dơ" (CreatePrimitive+new Material mỗi nổ) | Pool 8 fireball + 3 flash + 1 material chia sẻ (MPB cho màu/alpha), root DontDestroyOnLoad. Fireball KHÔNG collider/damage — damage chạy OverlapSphere riêng. Verify: 20 nổ → 8 fireball, 1 material. |
+| `4c68117` | **Nổ tại điểm bắt đầu + projectile stuck (nặng)** | Throw-snap: tick FUN đầu network-proj snap origin→twin-xa (twin chạy Update trước tick FUN), `TryGroundContact` raycast cả đoạn dài cắt sàn → nổ ở start. Fix: `_prevPosValid` bỏ qua detection tick đầu, chỉ ghi vị trí; tick sau raycast 2 vị trí thật liền kề. Verify: đoạn snap cắt sàn KHÔNG nổ; đạn nổ thật despawn sạch (netProj→0). |
+| `22c0116` | (WIP owner) | Checkpoint việc editor của owner: ThrowConfig tune (gravity 3→5, velScale 3→2, maxLaunch 30→20) + 11 prefab MS_WP_* orientation/pose + scene 01_Main. **Nếu rotation 11 prefab là churn reimport ngoài ý → revert commit này.** |
+
+**Còn lại (chưa làm — lý do):**
+- **#10 visual child + muzzle/grip anchor drag-drop trên prefab** — BỊ CHẶN: phải sửa 11 prefab `MS_WP_*` mà owner đang có WIP orientation/pose ở đó. Đã commit WIP owner (`22c0116`) → giờ prefab sạch, session sau làm #10 được. Nội dung: bake child empty `Muzzle`/`GripPoint` lên prefab (thay serialized muzzle trên rig), visual thành child swap skin dễ.
+- **#11 spike đạn instanced** — HOÃN (owner chốt). Note đầy đủ trong memory `spike-single-projectile-instancing`: đạn đơn đã pool NetworkPoolable, chỉ nặng khi 5v5+bắn nhanh; làm **hướng C** (hybrid: pellet đơn giản qua burst, đạn nổ phức tạp giữ NetworkObject) khi có profiling Quest thật.
+
+**Gotcha mới:** `isPlaying=true` gửi sát compile xong → half-state IM LẶNG (Bill.IsReady=false, Runner=null vĩnh viễn, KHÔNG error). Stop/play lại là sạch — luôn check `Bill.IsReady` sau khi vào play (đã thêm vào prompt kiểm tra ở trên).
+
+---
+
+## Session 13 — 2026-07-04 — T27 → T30 → T31 → T26 → T28 XONG HẾT, verify từng task qua MCP
 
 > **PROMPT CHẠY TIẾP (paste nguyên văn vào session mới):**
 > ```
