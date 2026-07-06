@@ -1793,6 +1793,67 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1001 &501224357
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 670799437550753115, guid: 173c4a8ad58e95643956c44ad74e6c00, type: 3}
+      propertyPath: editorHand
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 4654434766338581517, guid: 173c4a8ad58e95643956c44ad74e6c00, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -6.37601
+      objectReference: {fileID: 0}
+    - target: {fileID: 4654434766338581517, guid: 173c4a8ad58e95643956c44ad74e6c00, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.314
+      objectReference: {fileID: 0}
+    - target: {fileID: 4654434766338581517, guid: 173c4a8ad58e95643956c44ad74e6c00, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -14.04031
+      objectReference: {fileID: 0}
+    - target: {fileID: 4654434766338581517, guid: 173c4a8ad58e95643956c44ad74e6c00, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 4654434766338581517, guid: 173c4a8ad58e95643956c44ad74e6c00, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 4654434766338581517, guid: 173c4a8ad58e95643956c44ad74e6c00, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 4654434766338581517, guid: 173c4a8ad58e95643956c44ad74e6c00, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 4654434766338581517, guid: 173c4a8ad58e95643956c44ad74e6c00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: -90
+      objectReference: {fileID: 0}
+    - target: {fileID: 4654434766338581517, guid: 173c4a8ad58e95643956c44ad74e6c00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4654434766338581517, guid: 173c4a8ad58e95643956c44ad74e6c00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: -90
+      objectReference: {fileID: 0}
+    - target: {fileID: 5466261016724029111, guid: 173c4a8ad58e95643956c44ad74e6c00, type: 3}
+      propertyPath: m_Name
+      value: MS_WP_Gun
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 173c4a8ad58e95643956c44ad74e6c00, type: 3}
 --- !u!4 &538452045 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 9136378277261632249, guid: a5226a72c9553294abfe172a458b5805, type: 3}
@@ -7845,3 +7906,4 @@ SceneRoots:
   - {fileID: 395825079}
   - {fileID: 182268907}
   - {fileID: 195403439}
+  - {fileID: 501224357}

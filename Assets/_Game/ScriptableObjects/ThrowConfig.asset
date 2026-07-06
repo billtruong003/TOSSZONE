@@ -16,10 +16,10 @@ MonoBehaviour:
   vMinFire: 1
   releaseDrop: 0.7
   cooldown: 0.4
-  gravity: 3
-  velocityScale: 3
+  gravity: 5
+  velocityScale: 2
   minLaunchSpeed: 10
-  maxLaunchSpeed: 30
+  maxLaunchSpeed: 20
   groundMask:
     serializedVersion: 2
     m_Bits: 4294967295
