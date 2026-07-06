@@ -23,7 +23,39 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 
 ---
 
-## Session 14 — 2026-07-05 (session vừa xong) — FIX 5 BUG feel/perf owner báo khi test, verify MCP từng cái
+## Session 15 — 2026-07-06 (session vừa xong) — RÀ TOÀN BỘ theo TEST_CASES + FIX 9 BUG, verify MCP từng cái
+
+Chạy prompt kiểm tra của Session 14: rà checklist TEST_CASES (case MCP chạy live, VR/2P đọc code + note),
+tìm 9 bug rồi owner duyệt fix hết. Chi tiết từng bug trong commit message + bảng Regression REG-13..21
+của TEST_CASES.md.
+
+**8 commit fix (mỗi cái verify MCP riêng):**
+| Commit | Bug (Pri) | Tóm tắt |
+|---|---|---|
+| `9b0774c` | 🔴 Catch không despawn đạn | CatchController nhánh netProj thiếu `RPC_RequestSelfDespawn` — đạn "đã bắt" bay tiếp 5s |
+| `e2c3524` | 🟡 Mìn nổ Error kinematic + ⚪ đạn không né xác chết | guard `!isKinematic` trong Explode; skip `Health<=0` ở HitFirstVictim/DamagePlayersAround/AnyVictimInRange |
+| `f4c013b` | 🟡 Freeze không Max | RPC_Freeze chỉ ghi timer khi `incoming > remaining` (ice tier thấp từng GIẢI SỚM băng tier cao) |
+| `a7e7b12` | 🔴 Wipe Out không theo đội | CheckWinCondition đếm sống PER-TEAM; end khi 1 đội về 0; cả 2 về 0 = Draw; guard roster lệch đội |
+| `e7d7a30` | 🟡 Scoreboard 2 mặt đè khít | offset mỗi mặt 1cm về phía đọc (`localRot * (0,0,-0.01)`) |
+| `a4d6e0d` | 🔴 **Đạn ném TREO vĩnh viễn trên map** | Tween pool tái cấp instance + `_tween?.Kill()` ref cũ giết nhầm tween bay (repro 100% ALIASED_WITH_STALE) → thay hết bằng `KillTarget(this)` owner-scoped, 6 file; luật mới trong BillGameCore_Usage.md §3 |
+| `a4ddceb` | 🟡 Ném liên tiếp giết chéo twin network | slot đơn `_activeNetProj` + BallLandedEvent vô danh → Dictionary ball→twin + `BallLandedEvent.Ball`; spam ném giờ giữ đủ twin mọi viên |
+| `7361eb8` | 🟡 Label training range đè chữ | rect 1.2m→0.34m + autoSize + NoWrap, reparent 13 label vào nút cha, "Chắn"→"Kích Thước" (khớp RC_Area) |
+
+**Gotchas MỚI:**
+1. **BillTween: KHÔNG giữ `Tween` ref qua frame rồi `.Kill()`** — pool tái cấp instance, Kill không check danh
+   tính + không fire OnComplete → nạn nhân ngẫu nhiên đứng hình vĩnh viễn. Luật: `SetTarget(owner)` +
+   `KillTarget(owner)`, không lưu field (chi tiết BillGameCore_Usage.md §3).
+2. Session test mới PHẢI tắt lại DummyBotDriver — đạn bot NUỐT ring test (SpawnSpecific ring biến mất giữa
+   2 call là do bot bắn xuyên, không phải bug).
+3. `rings=0` ngay sau gate reload là BÌNH THƯỜNG (3 ring đầu chết theo scene load, respawn ~10s sau).
+
+**Còn nợ verify 2P (cùng đợt test build):** Wipe Out per-team live 2 máy · twin race nhìn từ client thứ 2 ·
+danh sách 2P cũ của Session 13. **Edge chưa chốt hỏi owner (cuối TEST_CASES.md):** MINE-05 shooter tự đạp
+mìn mình (hiện KHÔNG nổ) · WPN-10 point-blank trúng từ tick 2 (~0.02s) đủ chưa · scale sân theo mode.
+
+---
+
+## Session 14 — 2026-07-05 — FIX 5 BUG feel/perf owner báo khi test, verify MCP từng cái
 
 > **⚠️ QUY TẮC owner:** code CLEAN, KHÔNG viết comment (gotchas ghi Docs/commit message).
 >

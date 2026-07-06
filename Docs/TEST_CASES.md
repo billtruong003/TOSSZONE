@@ -217,6 +217,15 @@
 | REG-10 | InvalidOperationException đọc Element trước Spawned | `83fac0c` | WPN-18 |
 | REG-11 | RewardHit $10/hit (sai luật GDD) | `4629bcc` | ECO-02 |
 | REG-12 | Announcer hô "thắng hiệp" nhầm đầu mỗi hiệp | `674e021` | HUD-02 |
+| REG-13 | Catch không despawn NetworkProjectile — đạn "đã bắt" bay tiếp | `9b0774c` | WPN-13 + catch |
+| REG-14 | Mìn nổ log Error "kinematic body" mỗi lần nổ | `e2c3524` | MINE-03 |
+| REG-15 | Đạn nổ proximity/fire event cạnh XÁC đã chết | `e2c3524` | FRZ-06 |
+| REG-16 | Freeze ngắn tới sau GIẢM thời gian băng còn lại (không Max) | `f4c013b` | FRZ-07 |
+| REG-17 | Wipe Out đếm gộp 2 đội — 2v2+ quét sạch đội địch không kết hiệp | `a7e7b12` | MATCH-09 (2P còn nợ) |
+| REG-18 | Scoreboard 2 mặt chồng khít cùng tọa độ (z-fight) | `e7d7a30` | HUD-01 |
+| REG-19 | **Đạn ném treo lơ lửng vĩnh viễn** — Tween pool tái cấp + `.Kill()` ref cũ | `a4d6e0d` | WPN-05 + repro aliasing |
+| REG-20 | Ném liên tiếp giết chéo twin network (slot đơn + event vô danh) | `a4ddceb` | NET-03 (2P còn nợ) |
+| REG-21 | Label training range đè chữ + tên "Chắn" sót | `7361eb8` | scene hub |
 
 ---
 
