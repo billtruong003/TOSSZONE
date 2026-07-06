@@ -13,7 +13,7 @@ namespace TossZone.Throwing
     ///
     /// On the authority the local ThrowProjectile renderer is visible while this NetworkProjectile renderer is
     /// HIDDEN (set in <see cref="Spawned"/>), avoiding a doubled ball.
-    /// Despawn is driven from <see cref="ThrowController.DespawnNetworkProjectile"/> when
+    /// Despawn is driven from <see cref="ThrowController"/>'s per-ball twin map when
     /// <see cref="BallLandedEvent"/> fires on the authority client.
     /// </summary>
     [RequireComponent(typeof(NetworkTransform))]
@@ -361,7 +361,7 @@ namespace TossZone.Throwing
             for (int i = 0; i < n; i++)
             {
                 PlayerCombat victim = _overlap[i] != null ? _overlap[i].GetComponentInParent<PlayerCombat>() : null;
-                if (victim == null || victim.Object == null) continue;
+                if (victim == null || victim.Object == null || victim.Health <= 0) continue;
                 if (victim.Object.InputAuthority == Shooter) continue;
                 if (Element == (int)RingElement.Ice) victim.RPC_Freeze(EffectSeconds > 0f ? EffectSeconds : 1f);
                 else victim.RPC_TakeHit(dmg, transform.position, Shooter);
@@ -396,7 +396,7 @@ namespace TossZone.Throwing
             for (int i = 0; i < n; i++)
             {
                 PlayerCombat victim = _overlap[i] != null ? _overlap[i].GetComponentInParent<PlayerCombat>() : null;
-                if (victim == null || victim.Object == null) continue;
+                if (victim == null || victim.Object == null || victim.Health <= 0) continue;
                 if (victim.Object.InputAuthority == Shooter) continue;
                 return true;
             }
@@ -408,7 +408,7 @@ namespace TossZone.Throwing
             _hasHit = true;
             Exploded = true;
             transform.position = point;
-            if (_rb != null) _rb.linearVelocity = Vector3.zero;
+            if (_rb != null && !_rb.isKinematic) _rb.linearVelocity = Vector3.zero;
             DamagePlayersAround(point);
             if (Element == (int)RingElement.Ice || Element == (int)RingElement.Fire) SpawnElementZone();
             if (_crossWidth > 0f) SpawnCrossZones();
@@ -423,7 +423,7 @@ namespace TossZone.Throwing
             for (int i = 0; i < n; i++)
             {
                 PlayerCombat victim = _overlap[i] != null ? _overlap[i].GetComponentInParent<PlayerCombat>() : null;
-                if (victim == null || victim.Object == null) continue;
+                if (victim == null || victim.Object == null || victim.Health <= 0) continue;
                 if (victim.Object.InputAuthority == Shooter) continue;
                 if (Element == (int)RingElement.Ice) victim.RPC_Freeze(EffectSeconds > 0f ? EffectSeconds : 1f);
                 else victim.RPC_TakeHit(dmg, point, Shooter);
