@@ -9,6 +9,7 @@
 | **HANDOFF.md** (file này) | Đầu mỗi session — trạng thái + test flow |
 | **GDD_Core_Reference.md** | ⭐ NGUỒN CHÂN LÝ thiết kế (chép từ GDD PDF owner 2026-07-02) — thắng mọi doc khác khi mâu thuẫn. LƯU Ý: không có ring Shield (vòng 5 = Tăng Kích Thước), Băng = freeze không damage, 6 vũ khí (có Bom X, không sword/mine), kinh tế/mạng/sân khác code hiện tại |
 | **TASKS_WEAPON_UX.md** | ⭐ KẾ HOẠCH HIỆN HÀNH (Session 12+): task T18-T32, audit design-vs-code, spec từng vũ khí, UI inventory |
+| **TEST_CASES.md** | ⭐ Bộ test case + edge case đầy đủ hệ chiến đấu (Session 14) — Fable rà bug theo checklist này. Cột Verify MCP/VR/2P, Pri 🔴🟡⚪, mục Regression cho bug đã fix |
 | **T17_Test_Report.html** | Checklist test 2 người khi build (mở bằng browser) |
 | **BillGameCore_Usage.md** | Bản đồ framework: service nào dùng ở đâu + phần đã đắp thêm (tái dùng project khác) + gotchas |
 | **Fusion_Shared_Mode_Gotchas.md** | BẮT BUỘC đọc trước khi viết/sửa bất kỳ networking code nào |
@@ -28,8 +29,9 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 >
 > **PROMPT KIỂM TRA TOÀN BỘ (đưa cho Fable khi lên cty — check bug):**
 > ```
-> Đọc Docs/HANDOFF.md (mục Session 14 + 13) rồi Docs/GDD_Core_Reference.md rồi Docs/TASKS_WEAPON_UX.md.
-> Nhiệm vụ: RÀ SOÁT TOÀN BỘ hệ chiến đấu tìm bug, KHÔNG code tính năng mới. Set active instance TOSSZONE
+> Đọc Docs/HANDOFF.md (mục Session 14 + 13) rồi Docs/TEST_CASES.md rồi Docs/GDD_Core_Reference.md.
+> Nhiệm vụ: RÀ SOÁT TOÀN BỘ hệ chiến đấu tìm bug theo CHECKLIST Docs/TEST_CASES.md (chạy các case Verify=MCP,
+> đọc code + note các case VR/2P), KHÔNG code tính năng mới. Set active instance TOSSZONE
 > (Unity MCP, guard "if(!Application.dataPath.Contains(\"TOSSZONE\")) return \"WRONG PROJECT\";"), đọc console
 > qua UnityEditor.LogEntries. LƯU Ý MCP: sau vài lần play/stop editor hay rơi half-state (isPlaying=true nhưng
 > Bill.IsReady=false, FusionNet.Runner=null) — stop/play lại là sạch, luôn check Bill.IsReady sau khi vào play.
