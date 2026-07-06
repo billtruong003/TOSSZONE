@@ -147,7 +147,12 @@ namespace TossZone.Combat
         public void RPC_Freeze(float seconds)
         {
             if (HasStateAuthority && Health > 0)
-                FrozenTimer = TickTimer.CreateFromSeconds(Runner, Mathf.Clamp(seconds, 0.1f, 10f));
+            {
+                float incoming = Mathf.Clamp(seconds, 0.1f, 10f);
+                float remaining = FrozenTimer.ExpiredOrNotRunning(Runner) ? 0f : (FrozenTimer.RemainingTime(Runner) ?? 0f);
+                if (incoming > remaining)
+                    FrozenTimer = TickTimer.CreateFromSeconds(Runner, incoming);
+            }
             if (Bill.IsReady)
                 Bill.Events.Fire(new PlayerFrozenEvent { Seconds = seconds, IsLocalVictim = HasStateAuthority });
         }
