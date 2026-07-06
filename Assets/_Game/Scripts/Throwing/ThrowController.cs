@@ -49,7 +49,8 @@ namespace TossZone.Throwing
         [Header("Networking (Fusion)")]
         [Tooltip("NetworkProjectile prefab (NetworkObject + NetworkTransform + NetworkProjectile). Assign to replicate projectile flight to remote clients.")]
         [SerializeField] private Fusion.NetworkObject _netProjectilePrefab;
-        private Fusion.NetworkObject _activeNetProj;
+        private readonly System.Collections.Generic.Dictionary<Transform, Fusion.NetworkObject> _twins
+            = new System.Collections.Generic.Dictionary<Transform, Fusion.NetworkObject>();
         private Fusion.NetworkRunner _runner;
 #endif
 
@@ -293,7 +294,7 @@ namespace TossZone.Throwing
             Haptic(_config.hapticImpact, 0.05f);
             ImpactBurst.Show(e.Position, e.Power);
 #if PHOTON_FUSION
-            DespawnNetworkProjectile();
+            if (e.Ball != null) DespawnTwin(e.Ball.transform);
 #endif
         }
 
@@ -303,14 +304,16 @@ namespace TossZone.Throwing
             if (_netProjectilePrefab == null) return;
             TryGetRunner();
             if (_runner == null || !_runner.IsRunning) return;
-            DespawnNetworkProjectile();
+            DespawnTwin(localProj);
             // T20: stamp the equipped weapon's visual id before Spawned (proxies dress it from their catalog).
             int equippedIdx = PlayerCombat.Local != null ? PlayerCombat.Local.EquippedIndex : -1;
             int visualIndex = equippedIdx >= 0 ? equippedIdx + 1 : 0;
             Fusion.PlayerRef shooter = _runner.LocalPlayer;
-            _activeNetProj = _runner.Spawn(_netProjectilePrefab, pos, rot, null,
+            Fusion.NetworkObject netObj = _runner.Spawn(_netProjectilePrefab, pos, rot, null,
                 (runner, o) => { if (o.TryGetComponent(out NetworkProjectile p)) { p.VisualIndex = visualIndex; p.Shooter = shooter; } });
-            NetworkProjectile np = _activeNetProj != null ? _activeNetProj.GetComponent<NetworkProjectile>() : null;
+            if (netObj == null) return;
+            _twins[localProj] = netObj;
+            NetworkProjectile np = netObj.GetComponent<NetworkProjectile>();
             if (np != null)
             {
                 np.LinkTo(localProj);
@@ -342,21 +345,15 @@ namespace TossZone.Throwing
             return (catalog != null && idx < catalog.Length) ? catalog[idx] : null;
         }
 
-        private void DespawnNetworkProjectile()
+        private void DespawnTwin(Transform localProj)
         {
-            if (_activeNetProj == null) return;
-            if (_activeNetProj.IsValid)
-            {
-                NetworkProjectile np = _activeNetProj.GetComponent<NetworkProjectile>();
-                if (np != null && (np.Exploded || np.PersistsAfterLanding))
-                {
-                    _activeNetProj = null;
-                    return;
-                }
-                TryGetRunner();
-                if (_runner != null && _runner.IsRunning) _runner.Despawn(_activeNetProj);
-            }
-            _activeNetProj = null;
+            if (localProj == null || !_twins.TryGetValue(localProj, out Fusion.NetworkObject netObj)) return;
+            _twins.Remove(localProj);
+            if (netObj == null || !netObj.IsValid) return;
+            NetworkProjectile np = netObj.GetComponent<NetworkProjectile>();
+            if (np != null && (np.Exploded || np.PersistsAfterLanding)) return;
+            TryGetRunner();
+            if (_runner != null && _runner.IsRunning) _runner.Despawn(netObj);
         }
 
         private void TryGetRunner()
