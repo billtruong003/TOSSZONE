@@ -9,7 +9,10 @@
       "PowerShell(npm *)",
       "PowerShell(Test-Path *)",
       "Bash(netstat -ano)",
-      "PowerShell(git add *)"
+      "PowerShell(git add *)",
+      "Bash(curl *)",
+      "Bash(npx *)",
+      "PowerShell($env:ANTHROPIC_BASE_URL = \"http://127.0.0.1:47821\"; Write-Output \"ANTHROPIC_BASE_URL set to $env:ANTHROPIC_BASE_URL for this terminal session\")"
     ]
   }
 }
