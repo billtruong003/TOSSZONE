@@ -23,6 +23,27 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 
 ---
 
+## Session 17.3 — 2026-07-07 — VERIFY REPRO đủ 6 bug PT qua MCP (solo sweep) — bằng chứng trong TEST_CASES.md §J
+
+Toàn bộ 6 bug PT-01..06 giờ có repro/bằng chứng live (không còn là suy đoán code-only). Điểm nhấn:
+- **PT-03 nặng hơn báo cáo nhiều (nâng 🔴):** mesh `ColliderRing` sai scale ~100× (bounds gốc 211m)
+  + convex hull torus = đĩa ĐẶC → mỗi ring là trigger ~150m trùm map. Repro: 1 đạn cắt mặt phẳng cụm
+  ring cách tâm >10m → **3 ring tiêu thụ cùng lúc**. Chính là lời giải cho gotcha "ring nuốt đạn test"
+  ghi từ S13. Convex hull KHÔNG BAO GIỜ có lỗ — phải thay bằng compound collider.
+- **PT-02 root cause chính xác:** TMP `_CullMode=0` (double-sided) — thấy chữ mặt xa xuyên qua dạng gương.
+  Fix 1 dòng: Cull Back cả 2 mặt.
+- **PT-06 repro 100%:** Đá hit-radius hiệu lực 0.8m (AreaScale 2.667 đo live), không arm-gate — đạn bay
+  cách dummy 0.6m despawn giữa không trung + dummy mất máu.
+- **PT-04 bằng chứng trực tiếp:** SetDeadBit(300) trên burst Count=400 → IsDead=False (mask 256).
+- **PT-05:** renderer đang chạy fallback Sphere+material cam runtime (field chưa từng gán).
+- **PT-01:** đo thật cả arena (tâm 1.46-2.16m) lẫn hub (1.84-2.79m) — tâm không "sát đất" nhưng tier
+  to mép dưới chỉ ~0.56m; là chuyện zone-Y-range vs đường kính ring, kèm hướng fix trong bảng.
+- Verify thêm solo: V-6 PASS (freeze bị clear đúng khi round reset), C1-C3 PASS (fix ResetForRound sạch).
+- CHƯA chạy được (cần 2P/VR — phiên 2P kế tiếp): II-2 spawn rank live, III-4 grace-kill, V-4 hazard-race,
+  VI-1/2 UI 2 máy, V-1/V-5 (VR), III-16 (3 máy).
+
+---
+
 ## Session 17.2 — 2026-07-07 — Fix spawn-overlap (`451b69e`) + log 6 bug owner playtest thật (Docs/TEST_CASES.md §J)
 
 **Fix nhỏ:** `GetSpawnPosition` đổi random → rank ổn định theo PlayerId trong team (Teams dict) — đồng đội không
