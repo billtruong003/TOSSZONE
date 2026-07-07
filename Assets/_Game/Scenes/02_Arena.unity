@@ -1064,6 +1064,7 @@ MonoBehaviour:
   _roundDuration: 90
   _warmupDuration: 5
   _roundEndDuration: 5
+  _winCheckGraceSeconds: 0.5
   _minigameId: arena
   _spawnPointsA:
   - {fileID: 379173921}
@@ -1078,6 +1079,7 @@ MonoBehaviour:
   _Round: 0
   _ScoreA: 0
   _ScoreB: 0
+  _NetMaxLives: 0
 --- !u!114 &1363877919
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1092,7 +1094,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
   SortKey: 1498981528
   ObjectInterest: 1
-  Flags: 262145
+  Flags: 131073
   NestedObjects: []
   NetworkedBehaviours:
   - {fileID: 1363877918}
@@ -1292,7 +1294,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TossZone.Network.PlayerSpawnManager
   _avatarPrefab: {fileID: 4303279452157685385, guid: 150c6b13f59d19e4fa4b99e866c9ebe3, type: 3}
-  _sessionName: TOSSZONE_DEMO
 --- !u!4 &1666443864
 Transform:
   m_ObjectHideFlags: 0

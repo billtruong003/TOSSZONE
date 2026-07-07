@@ -2,6 +2,7 @@
 using BillGameCore;
 using Fusion;
 using TossZone.Minigame;
+using TossZone.Player;
 using UnityEngine;
 
 namespace TossZone.Combat
@@ -177,6 +178,7 @@ namespace TossZone.Combat
             PlayerCombat.MaxLives = maxLives;
             foreach (PlayerCombat pc in PlayerCombat.AllInstances)
                 pc.ResetForRound();
+            NetworkAvatar.Local?.ResetForRound();
             if (CombatSession.Instance != null) CombatSession.Instance.NotifyRoundStart();
         }
 

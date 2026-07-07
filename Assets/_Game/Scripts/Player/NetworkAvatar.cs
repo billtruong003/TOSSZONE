@@ -184,6 +184,17 @@ namespace TossZone.Player
             }
         }
 
+        /// <summary>Authority: called by every client from ArenaManager.RPC_ResetRound at the start of each
+        /// round — clears a stale death-respawn timer (ResetForRound/RestoreLives already handled the health
+        /// side) and repositions to this round's spawn point so side-swap applies to survivors too, not just
+        /// players who died and went through HandleRespawn.</summary>
+        public void ResetForRound()
+        {
+            if (!HasStateAuthority) return;
+            RespawnTimer = default;
+            TeleportToSpawn();
+        }
+
         private void TeleportToSpawn()
         {
             PlayerRig rig = PlayerRig.Local;
