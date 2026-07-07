@@ -22,6 +22,7 @@ namespace TossZone.Combat
         [SerializeField] private float _roundDuration = 90f;
         [SerializeField] private float _warmupDuration = 5f;
         [SerializeField] private float _roundEndDuration = 5f;
+        [SerializeField] private float _winCheckGraceSeconds = 0.5f;
         [Tooltip("Must match a MinigameDef.id under Resources/Minigames/ — CombatSession reads its weaponCatalog "
                 + "from this id. Nothing else in the real join flow (portal / direct-play gate) calls "
                 + "MinigameManager.Enter(), so THIS is what turns combat 'on' for weapon equip/fire.")]
@@ -41,6 +42,7 @@ namespace TossZone.Combat
         [Networked] public int NetMaxLives { get; private set; }
         [Networked] private int LastWinnerTeam { get; set; }
         [Networked] private NetworkBool RoundHadBothTeams { get; set; }
+        [Networked] private TickTimer WinCheckGrace { get; set; }
         [Networked, Capacity(8)] private NetworkDictionary<PlayerRef, int> Teams => default;
 
         public static ArenaManager Instance { get; private set; }
@@ -139,7 +141,7 @@ namespace TossZone.Combat
                     break;
 
                 case MatchPhase.Playing:
-                    CheckWinCondition();
+                    if (WinCheckGrace.ExpiredOrNotRunning(Runner)) CheckWinCondition();
                     if (PhaseTimer.Expired(Runner)) OnTimeout();
                     break;
 
@@ -157,6 +159,7 @@ namespace TossZone.Combat
             Phase = MatchPhase.Playing;
             PhaseTimer = TickTimer.CreateFromSeconds(Runner, _roundDuration);
             RoundHadBothTeams = HasBothTeams();
+            WinCheckGrace = TickTimer.CreateFromSeconds(Runner, _winCheckGraceSeconds);
             NetMaxLives = PlayerCombat.LivesForPlayerCount(CountRealPlayers());
             if (Runner.SessionInfo.IsValid) Runner.SessionInfo.IsOpen = false;
 
