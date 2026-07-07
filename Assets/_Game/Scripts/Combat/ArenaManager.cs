@@ -1,5 +1,6 @@
 #if PHOTON_FUSION
 using BillGameCore;
+using BillInspector;
 using Fusion;
 using TossZone.Minigame;
 using TossZone.Player;
@@ -271,6 +272,31 @@ namespace TossZone.Combat
         {
             if (Phase == MatchPhase.MatchEnd) return;
             StartRound();
+        }
+
+        [BillButton("Log State")]
+        private void Debug_LogState()
+            => Debug.Log("[ArenaManager] Phase=" + Phase + " Round=" + Round + " ScoreA=" + ScoreA + " ScoreB=" + ScoreB);
+
+        [BillButton("Force Round Reset (Play, master only)")]
+        private void Debug_ForceRoundReset()
+        {
+            if (!HasStateAuthority) { Debug.Log("[ArenaManager] Không phải StateAuthority — bỏ qua."); return; }
+            StartRound();
+        }
+
+        [BillButton("Force Win Team A (Play, master only)")]
+        private void Debug_ForceWinTeamA()
+        {
+            if (!HasStateAuthority) { Debug.Log("[ArenaManager] Không phải StateAuthority — bỏ qua."); return; }
+            EndRound(0);
+        }
+
+        [BillButton("Force Win Team B (Play, master only)")]
+        private void Debug_ForceWinTeamB()
+        {
+            if (!HasStateAuthority) { Debug.Log("[ArenaManager] Không phải StateAuthority — bỏ qua."); return; }
+            EndRound(1);
         }
 
         /// <summary>Team of a player: 0 = A, 1 = B. Single source of truth for team membership — used by

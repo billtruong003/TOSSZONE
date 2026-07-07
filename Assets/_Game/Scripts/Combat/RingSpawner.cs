@@ -1,4 +1,5 @@
 #if PHOTON_FUSION
+using BillInspector;
 using Fusion;
 using UnityEngine;
 
@@ -118,6 +119,20 @@ namespace TossZone.Combat
                 RespawnTimers.Set(i, default);
             }
             for (int i = 0; i < slots; i++) SpawnRingAt(i);
+        }
+
+        [BillButton("Reset Rings (Play, master only)")]
+        private void Debug_ResetRings()
+        {
+            if (!HasStateAuthority) { Debug.Log("[RingSpawner] Không phải StateAuthority — bỏ qua."); return; }
+            ResetRings();
+        }
+
+        [BillButton("Spawn Multi Tier 3 (Play, master only)")]
+        private void Debug_SpawnMultiTier3()
+        {
+            if (!HasStateAuthority) { Debug.Log("[RingSpawner] Không phải StateAuthority — bỏ qua."); return; }
+            SpawnSpecific(RingElement.Multi, 3);
         }
 
         private void SpawnRingAt(int i)

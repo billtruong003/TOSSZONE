@@ -1,5 +1,6 @@
 #if PHOTON_FUSION
 using BillGameCore;
+using BillInspector;
 using Fusion;
 using TMPro;
 using TossZone.UI;
@@ -77,6 +78,20 @@ namespace TossZone.Network
             PlayerRef me = runner.LocalPlayer;
             bool current = Ready.TryGet(me, out NetworkBool r) && r;
             RPC_SetReady(me, !current);
+        }
+
+        [BillButton("Toggle My Ready (Play mode)")]
+        private void Debug_ToggleMyReady()
+        {
+            if (Object == null || !Object.IsValid) { Debug.Log("[PortalReadyGate] Chưa spawn/network — chỉ dùng được lúc Play."); return; }
+            ToggleLocalReady();
+        }
+
+        [BillButton("Log Ready State")]
+        private void Debug_LogState()
+        {
+            if (Object == null || !Object.IsValid) { Debug.Log("[PortalReadyGate] Chưa spawn/network."); return; }
+            Debug.Log("[PortalReadyGate] AllReady=" + AllReady);
         }
 
         private void Update()
