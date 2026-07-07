@@ -8,7 +8,7 @@ using UnityEngine;
 namespace NaughtyAttributes.Editor
 {
 	[CanEditMultipleObjects]
-	[CustomEditor(typeof(UnityEngine.Object), true)]
+	[CustomEditor(typeof(UnityEngine.Object), true, isFallback = true)]
 	public class NaughtyInspector : UnityEditor.Editor
 	{
 		protected List<NaughtyProperty> _serializedProperties = new List<NaughtyProperty>();
