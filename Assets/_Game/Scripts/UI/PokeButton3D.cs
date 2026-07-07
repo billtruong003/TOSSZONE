@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Autohand;
 using BillGameCore;
+using BillInspector;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using XRNode = UnityEngine.XR.XRNode;
@@ -84,10 +85,19 @@ namespace TossZone.UI
         {
             if (!Interactable || Time.time < _readyTime) return;
             _readyTime = Time.time + _cooldown;
-            Haptic(hand);
+            if (hand != null) Haptic(hand);
             PulseScale();
             Poked?.Invoke(hand);
             _onPoked?.Invoke();
+        }
+
+        [BillButton("Simulate Poke (Play mode)")]
+        private void Debug_SimulatePoke()
+        {
+            if (!Application.isPlaying) { Debug.Log("[PokeButton3D] Chỉ mô phỏng được lúc Play."); return; }
+            if (!Interactable) { Debug.Log("[PokeButton3D] Interactable=false — bỏ qua."); return; }
+            if (Time.time < _readyTime) { Debug.Log("[PokeButton3D] Đang cooldown."); return; }
+            TryFire(null);
         }
 
         private static bool GripPressed(Hand hand)
