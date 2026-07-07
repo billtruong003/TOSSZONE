@@ -23,6 +23,44 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 
 ---
 
+## Session 17 — 2026-07-07 — VERIFY Session 16 (compile + solo + 2-client thật qua ParrelSync) + fix 1 bug mới
+
+Pull `17b3109` về công ty, verify toàn bộ theo checklist owner để lại cuối Session 16.
+
+**Compile:** sạch, 0 lỗi (refresh_unity force + compile, đọc console 2 lần).
+
+**Solo (MCP, 02_Bootstrap → hub):** connect gate hiện đúng, `[RoomConsole]` tại (0,1.05,2.6) status
+"Phòng công khai 1/8" → HOST PHÒNG RIÊNG ra mã 5 ký tự (`isVisible=False`) → QUICK PLAY về đúng phòng
+công khai. Không lỗi console.
+
+**2-client thật (ParrelSync `TOSSZONE_clone_0`, 2 Unity editor riêng qua MCP hai port 6400/6403):**
+- Quick-play 2 máy → cùng session GUID, players=2. ✅
+- Host mã phòng máy A → nhập đúng mã máy B (`OnLetter`+`OnJoin`) → cùng phòng riêng `isVisible=False`. ✅
+- Vào arena (`FusionNet.LoadScene(2)` từ master), damage Player non-master xuống 0 máu (gọi
+  `RPC_TakeHit` từ ĐÚNG client sở hữu — gọi từ máy khác không tác dụng vì `HasStateAuthority` gate).
+  Round-reset (`RPC_ResetRound`) verify ĐÚNG: máu/tiền client non-master reset về full, mọi client
+  thấy cùng Round/Phase/Score (bug chính Session 16 đã fix thật). ✅
+- Rage-quit (Stop Play 1 máy giữa round) → round kết thúc NGAY, không chạy hết 90s. ✅
+
+**🐛 Bug MỚI tìm ra khi verify 2-client (fix trong session này, `56bc93a`):** `StartRound()` gọi
+`RPC_ResetRound` cùng tick chuyển `Phase=Playing`, nhưng reset chỉ áp dụng thật khi tới đúng client có
+`StateAuthority` của `PlayerCombat` đó rồi sync ngược lại master — có độ trễ mạng thật (không phải chỉ
+MCP catch-up). Trong lúc đó `CheckWinCondition()` chạy MỌI tick vẫn đọc `Health=0` cũ (từ round trước)
+trên proxy của master → xử thua tiếp round kế, có thể cascade qua nhiều round liên tiếp chỉ vì lag
+(repro thấy: Round 1→3, ScoreA 0→2 trong 1 nhịp catch-up). **Fix:** `WinCheckGrace` TickTimer 0.5s set
+trong `StartRound()`, `CheckWinCondition()` chỉ chạy sau khi hết grace. Re-verify: health=0 → thua đúng
+1 round, round sau bắt đầu sạch (Health=7 cả 2 phía) không cascade; rage-quit vẫn kết thúc round ngay
+(không bị chặn vì round đã chạy lâu hơn 0.5s lúc rage-quit xảy ra).
+
+**Gotcha mới:** domain-reload/recompile giữa lúc đang Play (kể cả do MCP `refresh_unity`/git pull ngoài
+ý muốn) làm `FusionNet.Instance` rớt null vĩnh viễn dù `isPlaying=true` — đúng gotcha cũ đã ghi, khắc
+phục bằng Stop→Play lại, KHÔNG cần debug thêm.
+
+**Còn lại (chưa làm — theo backlog owner để lại):** late-join polish (spawn theo team qua ArenaManager +
+invuln khi vào giữa trận), rồi mới tới skin/cosmetics avatar.
+
+---
+
 ## Session 16 — 2026-07-06 (session vừa xong) — PIVOT: rock-only + rework toàn bộ connect/room flow
 
 Owner chốt hướng mới: tạm khoá hết trừ Đá, tập trung network UX. Audit 3-agent tìm ra: cả thế giới
