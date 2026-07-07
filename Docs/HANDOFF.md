@@ -23,6 +23,31 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 
 ---
 
+## Session 17.2 — 2026-07-07 — Fix spawn-overlap (`451b69e`) + log 6 bug owner playtest thật (Docs/TEST_CASES.md §J)
+
+**Fix nhỏ:** `GetSpawnPosition` đổi random → rank ổn định theo PlayerId trong team (Teams dict) — đồng đội không
+còn trúng chung 1 điểm spawn (`451b69e`).
+
+**6 bug MỚI owner báo từ chơi thật (VR), đã research code + ghi đầy đủ vào TEST_CASES.md §J (PT-01..06),
+CHƯA fix — chờ owner duyệt hướng trước khi code:**
+1. **PT-01** Ring buff spawn sát đất — zone box Y half-extent (0.5m) nhỏ hơn cả bán kính ring tier 1 (0.9m).
+2. **PT-02** Bảng điểm giữa sân 2 mặt đè nhau không đọc được cả 2 phía — REG-18 cũ chỉ offset 1cm, KHÔNG đủ +
+   không có backing panel chắn giữa 2 mặt + `Update()` gán chung 1 string cho cả 2 mặt. Owner đề xuất: bỏ
+   kiểu 2-mặt-chung-1-object, làm 1 bảng hiện theo local-viewer (world-space UI riêng mỗi client).
+3. **PT-03** Ring "ăn" đạn mưa (burst) dù không xuyên miệng vòng thật — đạn đơn có collider/OnTriggerEnter
+   ĐÚNG, nhưng burst check qua khoảng cách phẳng tới tâm ring (không xét hình học vòng).
+4. **PT-04** Đạn mưa bay xuyên người không ngưng — `DeadMaskBits=256` << `MaxProjectilesPerBurst=4096`,
+   pellet index ≥256 trúng damage nhưng không đánh dấu chết được nên render tiếp tục bay xuyên.
+5. **PT-05** Đạn mưa hiện sphere cam generic thay vì model Đá — `ProjectileBurstRenderer` không hề nối với
+   `WeaponVisuals`/`WeaponConfig`, 1 mesh/material cố định cho mọi burst.
+6. **PT-06** Ném Đá nổ/despawn giữa không trung ngang người, chưa chạm đất — `HitFirstVictim()` (đường
+   non-explosive) không có arm-gate như đường `_explosive` (`IsArmed()`/0.7m) — bay gần bất kỳ ai (không chỉ
+   mục tiêu) trong 0.8m là despawn ngay từ tick đầu.
+
+Chi tiết file:line + hướng fix đề xuất từng bug: xem bảng §J trong `Docs/TEST_CASES.md`.
+
+---
+
 ## Session 17.1 — 2026-07-07 — Checklist 50 case spawn/team/late-join + fix 2 bug (`57ca207`)
 
 Chạy checklist chi tiết end-to-end (spawn position, team assign, round lifecycle, disconnect/host

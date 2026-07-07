@@ -229,6 +229,19 @@
 
 ---
 
+## J. Bug mới owner báo từ playtest thật (2026-07-07 — CHƯA fix)
+
+| ID | Hiện tượng | Nguyên nhân (file:line) | Hướng fix đề xuất | Pri |
+|---|---|---|---|---|
+| PT-01 | Ring buff spawn quá thấp, sát/cắm đất | `RingSpawner.cs` zone box Y half-extent chỉ 0.5m (`_zoneSize.y=1f`), `ZoneCenter` không cộng thêm ground clearance — ring tier 1 đường kính 1.8m (`BuffRingConfig.cs:11`) to hơn cả biên độ box | Nâng `_zoneCenter.y` + cộng `ringRadius` vào công thức Y (`c.y + ringRadius + Random.Range(0,h.y)`), không chỉ nới `_zoneSize.y` | 🟡 |
+| PT-02 | Bảng điểm giữa sân 2 mặt đè lên nhau, không đọc được (cả 2 phía) | `ScoreboardUI.cs:17-44` — fix cũ REG-18 chỉ offset 2 mặt ±1cm dọc Z (không đủ ở khoảng cách nhìn thật), KHÔNG có backing panel chắn/culling giữa 2 mặt, và `Update()` gán CÙNG 1 string cho cả `_front`/`_back` — không phải lỗi vị trí đơn thuần mà là thiếu vật chắn + không tách nội dung theo phía | Tách hẳn 2 GameObject bảng riêng (mỗi phía 1 board vật lý, cách nhau đủ xa hoặc quay lưng vào nhau qua 1 tấm chắn dày), hoặc theo đề xuất của owner: chỉ 1 bảng, hiện thông tin theo local-viewer (world-space Canvas billboard riêng mỗi client, không phải geometry chung 2 mặt) | 🔴 |
+| PT-03 | Ring "kích hoạt" dù đạn không thực sự chạm/xuyên qua vòng | Đạn đơn (`NetworkProjectile`) qua `BuffRing.OnTriggerEnter` — ĐÚNG, có collider thật. Nhưng đạn MƯA (burst) qua `ProjectileBurstSystem.TryStackThroughRing` (`ProjectileBurstSystem.cs:253-281`) chỉ so khoảng cách phẳng 0.4m tới TÂM ring (`ring.transform.position`), không xét hình học/hướng vòng thật — trúng dù bay ngoài miệng vòng | Đổi check burst sang so với mặt phẳng vòng thật (normal + bán kính trong/ngoài), hoặc raycast/OverlapBox theo hướng vòng thay vì khoảng cách tới tâm | 🟡 |
+| PT-04 | Đạn mưa (burst) bay xuyên qua người, không ngưng khi trúng | `ProjectileBurstSystem.cs` — `DeadMaskBits=256` nhưng `MaxProjectilesPerBurst=4096`; `SetDeadBit` no-op cho index ≥256 (`:70-78`), trong khi hit-test scan HẾT `b.Count` (`:222-243`) — pellet index ≥256 vẫn trúng damage (RPC bắn đúng) nhưng không đánh dấu chết được nên **render tiếp tục bay xuyên** + có thể trúng lại nhiều lần | Tăng `DeadMaskBits` lên khớp `MaxProjectilesPerBurst` (hoặc dùng `BitArray`/`NativeBitArray` không giới hạn 256), hoặc giới hạn `scan` theo `DeadMaskBits` thay vì `b.Count` | 🔴 |
+| PT-05 | Đạn mưa (burst) hiện hình bóng tròn generic (ThrowBall) thay vì Đá | `ProjectileBurstRenderer.cs:23-59` — 1 `_mesh`/`_material` CỐ ĐỊNH cho toàn bộ renderer, fallback primitive Sphere + vật liệu cam nếu chưa gán tay; `ProjectileBurstSystem`/`Burst` struct không hề mang `WeaponConfig`/visual index — hoàn toàn tách biệt khỏi `WeaponVisuals.SpawnProjectileVisual` mà đường ném đơn dùng | Thêm field visual/prefab vào `Burst` struct (hoặc field mesh/material trên `ProjectileBurstRenderer` set từ `WeaponConfig` của vũ khí gây nổ Multi), fallback mới nên là model Đá thay vì sphere cam | 🟡 |
+| PT-06 | Ném Đá — nổ/despawn giữa không trung ngang tầm người, CHƯA chạm đất | `NetworkProjectile.HitFirstVictim()` (đường non-explosive, Đá dùng) — `OverlapSphereNonAlloc(transform.position, _hitRadius*AreaScale=0.8m, ...)` chạy MỌI tick từ lúc thả tay, KHÔNG có arm-gate/khoảng cách tối thiểu (khác đường `_explosive` có `IsArmed()`/`MinArmDistance=0.7m` ở dòng 344) — chỉ cần bay gần bất kỳ ai khác (đồng đội/dummy/người ngoài) trong 0.8m là despawn ngay, giống hệt "nổ" sớm | Thêm arm-gate tương tự `IsArmed()` (khoảng cách tối thiểu từ `_origin`) vào nhánh non-explosive trước khi cho `HitFirstVictim()` chạy, hoặc giảm hit-radius hiệu lực trong N tick đầu | 🔴 |
+
+---
+
 ## Ghi chú edge case chưa chốt (hỏi owner)
 - **MINE-05**: shooter đứng lên mìn của chính mình — hiện KHÔNG nổ (loại trừ shooter). Owner muốn nổ không?
 - **WPN-10 vs clearance**: point-blank súng — clearance tick-đầu có bỏ lỡ địch cực gần không? Cần test thật.
