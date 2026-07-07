@@ -23,6 +23,36 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 
 ---
 
+## Session 17.1 — 2026-07-07 — Checklist 50 case spawn/team/late-join + fix 2 bug (`57ca207`)
+
+Chạy checklist chi tiết end-to-end (spawn position, team assign, round lifecycle, disconnect/host
+migration, cross-client UI — xem yêu cầu owner trong chat) qua 2-client MCP. Code-review tĩnh trả lời
+nhiều case nhanh (side-swap parity đúng công thức, `GetSpawnPosition` fallback an toàn, `IsOpen` late-join
+chỉ mở lại ở MatchEnd — xác nhận suốt CẢ TRẬN không ai vào thêm được, Warmup rage-quit không fast-end
+phải chờ hết 90s — 2 điểm này để lại note, KHÔNG fix, vì là câu hỏi thiết kế thuộc backlog "late-join
+polish" chứ không phải bug rõ ràng).
+
+**🔴 Bug nặng nhất — fix rồi:** `ArenaManager` (scene NetworkObject) có flag `DestroyWhenStateAuthorityLeaves`
+(262145 = V1+DestroyWhenStateAuthorityLeaves, verify bit-value qua reflection `Fusion.NetworkObjectFlags`,
+KHÔNG đoán mò). Host (holder StateAuthority) rời giữa trận → Fusion HUỶ LUÔN object trên máy còn lại
+(`ArenaManager.Instance=null`, `IsValid=False`) thay vì chuyển giao — mất sạch Round/Score/Phase/Teams,
+kẹt vĩnh viễn, không tự hồi phục. Fix: đổi Flags → `MasterClientObject` (131073) — đúng theo
+Fusion_Shared_Mode_Gotchas.md §7 ("current Master Client always holds State Authority").
+**⚠️ CHƯA re-verify sạch được** — sau nhiều domain-reload/half-state dồn trong phiên dài, máy non-master
+bị treo dormant (`IsValid=False`) khi attach ArenaManager **CẢ VỚI FLAG GỐC** (loại trừ do fix gây ra),
+nghĩa là môi trường test đã xuống cấp chứ không phải do thay đổi. Recommend: verify lại migration thật
+(disconnect master giữa Playing, xem máy còn lại có tiếp tục Round/Score đúng không) ở phiên Unity MỚI,
+sạch, chưa qua nhiều domain-reload.
+
+**🟡 Bug thứ 2 — fix rồi:** `NetworkAvatar.RespawnTimer` không bị `RPC_ResetRound` clear (field khác
+component, ArenaManager chỉ loop `PlayerCombat.AllInstances`) — timer hồi sinh 3s cũ có thể trigger
+`RestoreLives()+TeleportToSpawn()` lạc giữa round MỚI đã bắt đầu. Đồng thời `TeleportToSpawn`/side-swap
+theo Round (T30) CHỈ chạy qua đường chết→respawn — người sống sót cả round không bao giờ re-position dù
+thiết kế đổi bên mỗi round. Fix: `NetworkAvatar.ResetForRound()` mới (clear `RespawnTimer` + teleport về
+spawn point đúng side) gọi từ `RPC_ResetRound` cho MỌI client — không riêng người vừa chết.
+
+---
+
 ## Session 17 — 2026-07-07 — VERIFY Session 16 (compile + solo + 2-client thật qua ParrelSync) + fix 1 bug mới
 
 Pull `17b3109` về công ty, verify toàn bộ theo checklist owner để lại cuối Session 16.
