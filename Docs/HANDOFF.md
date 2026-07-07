@@ -23,6 +23,36 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 
 ---
 
+## Session 17.6 — 2026-07-07 — Nút Inspector debug (`7ca703f`) + fix tay dính gốc trong XR Device Simulator (`5c6a976`)
+
+**Nút Inspector (`[BillButton]`, namespace `BillInspector`, chạy cả Edit/Play mode):** `PortalReadyGate`
+(Toggle My Ready, Log State), `ArenaManager` (Log State, Force Round Reset, Force Win Team A/B),
+`RingSpawner` (Reset Rings, Spawn Multi Tier 3) — owner test trực tiếp trong Editor bằng cách bấm nút
+thay vì nhờ MCP reflection.
+
+**Bug owner báo:** dùng AutoHand + XR Device Simulator (Tools ▸ TOSSZONE ▸ XR Sim, đã có sẵn + bật mặc
+định), di chuyển joystick chạy bình thường nhưng 2 tay đứng yên dính 1 chỗ gần sàn, không tách 2 bên.
+
+**Root cause:** `XRPlayer.prefab` (`Assets/AutoHand/Examples/Scenes/XR/Prefabs/XRPlayer.prefab`,
+`TrackerOffsets/Camera (head)` + `Controller (left/right)`) dùng `TrackedPoseDriver` **LEGACY**
+(`UnityEngine.SpatialTracking`, đọc qua `UnityEngine.XR.InputTracking`/`XRNodeState` — API XR SDK cũ).
+XR Device Simulator chỉ đẩy dữ liệu qua **Input System MỚI** (`XRSimulatedHMD`/`XRSimulatedController`),
+không hề chạm API cũ đó → driver cũ không bao giờ nhận pose, 3 transform đứng yên ở local gốc y hệt
+lúc author (cả 2 tay đều `(0,0,0)` — dính liền nhau). Locomotion joystick vẫn chạy vì
+`AutoHandPlayer.Move()` di chuyển cả `TrackerOffsets` độc lập với tracking từng transform con.
+
+**Fix:** đổi sang `UnityEngine.InputSystem.XR.TrackedPoseDriver`, bind action trực tiếp (không cần asset
+"XRI Default Input Actions" — project chưa có) vào `<XRHMD>/centerEyePosition|Rotation` và
+`<XRController>{LeftHand,RightHand}/devicePosition|Rotation` — cùng 1 pipeline hoạt động với CẢ Simulator
+lẫn headset thật qua OpenXR (đều expose qua layout Input System này). Sửa bằng
+`PrefabUtility.LoadPrefabContents` + code trực tiếp qua MCP (không có action mở prefab stage trong bản
+`manage_prefabs` hiện tại — dùng cách này thay thế).
+
+**Verify Play mode:** `wristL=(-0.15, 0.10, 0.30)` `wristR=(0.15, 0.10, 0.30)` — tách đúng 2 bên, khác hẳn
+`(0,0,0)` dính liền trước fix.
+
+---
+
 ## Session 17.5 — 2026-07-07 — Portal cần cả 2 bấm SẴN SÀNG mới teleport + ring cao hơn (commit `4f8553a`)
 
 **Bug owner báo (playtest thật):** 2 người cùng phòng, 1 người đụng portal (hoặc chỉ mới host xong) là
