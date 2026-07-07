@@ -23,6 +23,37 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 
 ---
 
+## Session 17.9 — 2026-07-07 — 🔴 BillInspector CHƯA BAO GIỜ hoạt động — bị NaughtyInspector (AutoHand) đè (`2c601db`)
+
+**Phát hiện quan trọng, ảnh hưởng TOÀN PROJECT:** owner báo `[BillButton]` không hiện trong Inspector.
+Verify bằng `Editor.CreateEditor(target).GetType()` — cách chắc chắn duy nhất để biết Unity THẬT SỰ dùng
+class Editor nào — lộ ra: `NaughtyInspector` (bundled kèm AutoHand,
+`Assets/AutoHand/Scripts/Attributes/NaughtyAttributes/Editor/NaughtyInspector.cs`) đăng ký
+`[CustomEditor(typeof(UnityEngine.Object), true)]` **KHÔNG đánh dấu `isFallback`** → thắng tuyệt đối MỌI
+`MonoBehaviour` trong project, kể cả `BillInspectorEditor` (đăng ký `isFallback=true` cho
+`MonoBehaviour`/`ScriptableObject`). NaughtyInspector chỉ hiểu `NaughtyAttributes.ButtonAttribute` của
+riêng nó — không biết `BillButtonAttribute` tồn tại. Nghĩa là **mọi `[Bill*]` attribute trong TOÀN BỘ
+project (WeaponConfig, ThrowConfig, BuffRingConfig, MinigameDef, và mọi nút debug thêm hôm nay) chưa bao
+giờ render qua BillInspector** — luôn hiện qua NaughtyInspector (hoặc default nếu NaughtyInspector cũng
+không có gì để vẽ), một bug âm thầm tồn tại từ lâu, chỉ lộ ra khi thử thêm nút và không thấy.
+
+**Fix:** thêm `isFallback = true` vào `NaughtyInspector` — giờ `BillInspectorEditor` (target
+`MonoBehaviour`, cụ thể hơn `UnityEngine.Object` của Naughty) thắng đúng theo độ cụ thể của Unity.
+
+**Tradeoff đã được owner duyệt:** các component GỐC của AutoHand dùng NaughtyAttributes
+(`[ShowIf]`/`[BoxGroup]`/`[ReadOnly]` — `Grabbable`/`Hand`/`AutoHandPlayer`/`HandFollow`/`PlacePoint`...)
+mất giao diện điều kiện/gom nhóm, về inspector mặc định phẳng của Unity — **chỉ ảnh hưởng hiển thị**,
+không đụng gì tới serialize/gameplay.
+
+**Verify:** `Editor.CreateEditor(pokeButton).GetType()` = `BillInspector.Editor.BillMonoBehaviourInspector`
+(trước: `NaughtyInspector`). `CreateInspectorGUI()` trả về `VisualElement` `childCount=6` (không còn null).
+
+**Bài học cho lần sau:** khi thêm `[BillButton]`/Bill attribute mới mà nghi ngờ không hiện, verify NGAY
+bằng `UnityEditor.Editor.CreateEditor(target).GetType()` — đừng chỉ test bằng cách gọi method qua
+reflection (logic đúng không có nghĩa là UI Inspector thật sự render nó).
+
+---
+
 ## Session 17.8 — 2026-07-07 — Fix nút SẴN SÀNG lạc vị trí trên client remote (`99133e0`)
 
 Owner báo: nút "SẴN SÀNG" hiện trên máy host, nhưng máy clone (remote) không thấy. Kiểm tra 2-client
