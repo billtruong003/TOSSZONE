@@ -23,7 +23,53 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 
 ---
 
-## Session 15 — 2026-07-06 (session vừa xong) — RÀ TOÀN BỘ theo TEST_CASES + FIX 9 BUG, verify MCP từng cái
+## Session 16 — 2026-07-06 (session vừa xong) — PIVOT: rock-only + rework toàn bộ connect/room flow
+
+Owner chốt hướng mới: tạm khoá hết trừ Đá, tập trung network UX. Audit 3-agent tìm ra: cả thế giới
+chung 1 phòng cứng `TOSSZONE_DEMO`, cap thực 10 (không phải 8), connect chạy NỀN sau khi hub đã hiện
+(đúng phàn nàn UX của owner), zero xử lý fail/disconnect, round-reset không tới client remote.
+
+**Gỡ tạm (reversible, 1 chỗ mỗi cái):**
+- Ring lửa/băng OFF: `RingSpawner.AllowedElements = {Multi, Speed, Area}` (KHÔNG đụng catalog — gỡ
+  config asset sẽ ra ring ma kẹt slot). Nút training hub vẫn spawn được lửa/băng (owner chấp nhận).
+- Vũ khí rock-only: `Resources/Minigames/arena.asset` weaponCatalog trim còn WC_Rock. WC_*.asset giữ nguyên.
+- Wrist panel OFF: override `m_IsActive: 0` trong NetworkAvatar.prefab (untick lại là hồi). Đây từng là
+  HUD tiền/đạn duy nhất — rock free/vô hạn nên không sao.
+
+**Connect flow mới (schema):** Splash 00_Bootstrap giờ là gate thật — `StartupConnectStep` đăng ký
+BillStartup step gọi `ConnectionFlowController.QuickPlay()` (random-join phòng mở, cap 8), retry vô hạn
+kèm status text; hub chỉ load khi ĐÃ vào phòng. `ConnectionFlowController` (DDOL, file mới) là NƠI DUY
+NHẤT start/switch session: state machine bắn `MatchmakingStatusEvent` (trước là dead code, giờ sống),
+backoff retry, mất kết nối giữa trận → fade về hub + tự QuickPlay lại. `ConnectionStatusHud` (runtime,
+không cần wire scene) hiện status trước mặt camera. PlayerSpawnManager không tự connect nữa (chỉ còn
+fallback EnsureConnected cho editor direct-play) + fix race `_spawnInFlight` kẹt vĩnh viễn khi Spawn throw.
+
+**Room flow:** cap 8 mọi đường (StartGameArgs + NetworkProjectConfig). Private room: API
+`HostPrivateRoom()` → code 5 chữ (bộ ký tự không nhầm lẫn, IsVisible=false), `JoinPrivateRoom(code)`
+(JoinOnly — không tự tạo phòng ma; fail → tự fallback QuickPlay sau 2s); FusionConnectArgs thêm
+`HideFromMatchmaking`/`JoinOnly`. UI: `RoomCodeConsole` (`[RoomConsole]` trong hub, pos 0/1.05/2.6 —
+owner chỉnh vị trí tuỳ ý) — console DỰNG RUNTIME toàn bộ (backboard + HOST/QUICK PLAY + bàn phím 31 ký
+tự PokeButton3D + XÓA/VÀO PHÒNG), không có prefab để tune; muốn đổi layout thì sửa `Build()` trong
+RoomCodeConsole.cs. Đây là bản pragmatic — GDD §VII (letter blocks/hologram keyboard) là bản art sau.
+
+**ArenaManager rework (bug Shared-mode thật):**
+- Round-reset qua `RPC_ResetRound(maxLives)` (StateAuthority→All) — trước đây master gọi thẳng
+  `ResetForRound()` nên máu/tiền remote KHÔNG BAO GIỜ reset giữa round (chỉ lộ khi 2+ người thật).
+  `NetMaxLives` [Networked] cho late-joiner. `NotifyRoundStart` cũng theo RPC (RoundElapsed từng sai trên non-master).
+- `RoundEndEvent`/`MatchEndEvent` giờ bắn qua ChangeDetector trên Phase (Render) → MỌI client thấy
+  THẮNG/THUA (trước chỉ master thấy). `LastWinnerTeam` [Networked].
+- Team qua `Teams` NetworkDictionary (master gán join-order balance, sync khi join/leave) — thay
+  `PlayerId % 2` từng ra 3v0 khi có gap ID. GetTeam giữ nguyên signature, fallback %2 ngoài arena.
+- Team trống giữa round (rage-quit) → end round ngay thay vì chạy hết 90s (`RoundHadBothTeams`).
+- `IsOpen=false` khi round start (chặn late-join rơi giữa trận), mở lại ở MatchEnd/Despawned.
+
+**CHƯA VERIFY:** Unity chưa recompile lúc kết session (cần focus editor). Cần test: solo hub flow,
+2-client (round reset remote — bug chính), quick-play 2 máy ra cùng phòng, host/join code qua console.
+Task UI room code + polish late-join (spawn theo team + invuln khi vào giữa trận) còn mở.
+
+---
+
+## Session 15 — 2026-07-06 — RÀ TOÀN BỘ theo TEST_CASES + FIX 9 BUG, verify MCP từng cái
 
 Chạy prompt kiểm tra của Session 14: rà checklist TEST_CASES (case MCP chạy live, VR/2P đọc code + note),
 tìm 9 bug rồi owner duyệt fix hết. Chi tiết từng bug trong commit message + bảng Regression REG-13..21
