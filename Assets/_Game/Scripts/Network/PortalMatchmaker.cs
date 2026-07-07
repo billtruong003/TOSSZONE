@@ -7,9 +7,12 @@ using TossZone.Player;
 namespace TossZone.Network
 {
     /// <summary>
-    /// Walk-through portal. When the LOCAL player's rig enters, asks Fusion to load the arena scene.
-    /// Shared Mode: only the master client actually performs the load (Fusion guards LoadScene); every
-    /// other client follows automatically. Sits on the [ArenaPortal] trigger in 01_TOSSZONE_Main.
+    /// Walk-through portal. When the LOCAL player's rig enters, asks Fusion to load the arena scene — but
+    /// ONLY once every active player has pressed "SẴN SÀNG" on <see cref="PortalReadyGate"/>. Before this
+    /// gate existed, a single player brushing the trigger (or just hosting) yanked everyone else across the
+    /// map with no warning. Shared Mode: only the master client actually performs the load (Fusion guards
+    /// LoadScene); every other client follows automatically. Sits on the [ArenaPortal] trigger in
+    /// 01_TOSSZONE_Main.
     /// </summary>
     public class PortalMatchmaker : MonoBehaviour
     {
@@ -28,6 +31,13 @@ namespace TossZone.Network
 
             FusionNet net = FusionNet.Instance;
             if (net == null || !net.IsRunning) return;
+
+            PortalReadyGate gate = PortalReadyGate.Instance;
+            if (gate == null || !gate.AllReady)
+            {
+                Debug.Log("[Portal] Chưa đủ mọi người bấm SẴN SÀNG — không teleport.");
+                return;
+            }
 
             // LoadScene is master-only (FusionNet guards it) — a NON-master walking through gets refused, and
             // burning _used on that refusal would permanently disarm this client's portal. Only latch after a

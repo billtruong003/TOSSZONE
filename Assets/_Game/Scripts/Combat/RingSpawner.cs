@@ -23,8 +23,8 @@ namespace TossZone.Combat
         [SerializeField] private Transform _zoneCenter;
         [SerializeField] private Vector3 _zoneSize = new Vector3(8f, 1f, 4f);
         [SerializeField] private int _slotCount = 3;
-        [Tooltip("Mép DƯỚI của ring không bao giờ thấp hơn cao độ này (world Y) — tier to (đường kính 1.8m) từng lết sát đất vì zone box không biết gì về bán kính ring (PT-01).")]
-        [SerializeField] private float _minRingBottomY = 1f;
+        [Tooltip("Mép DƯỚI của ring không bao giờ thấp hơn cao độ này (world Y) — tier to (đường kính 1.8m) từng lết sát đất vì zone box không biết gì về bán kính ring (PT-01; owner feedback 2026-07-07: vẫn thấy thấp, nâng 1→1.6).")]
+        [SerializeField] private float _minRingBottomY = 1.6f;
 
         private static readonly RingElement[] AllowedElements = { RingElement.Multi, RingElement.Speed, RingElement.Area };
 
