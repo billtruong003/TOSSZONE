@@ -23,6 +23,26 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 
 ---
 
+## Session 17.4 — 2026-07-07 — FIX + VERIFY cả 6 bug PT (commit `a587a93`)
+
+Cả 6 bug PT-01..06 giờ đã fix và verify PASS qua MCP (bảng chi tiết + kết quả từng test trong
+`Docs/TEST_CASES.md` §J). Điểm đáng chú ý:
+- **PT-03** (nặng nhất, giải luôn gotcha "ring nuốt đạn" từ S13): `ColliderRing` mesh convex hull sai
+  scale ~100× → đổi sang `BoxCollider` đúng size + double-check bán kính local-space; burst-stack đổi
+  từ "khoảng cách tới tâm" sang plane-crossing thật.
+- **PT-06**: tách CONTACT radius khỏi SPLASH radius trong `HitFirstVictim()` — trước dùng chung khiến
+  Đá "chạm" người từ xa 0.7m và nổ giữa không trung.
+- **PT-04**: `SpawnBurst`/stack giờ clamp Count theo `DeadMaskBits` (256) thay vì 4096 — hết pellet
+  "trúng nhưng không chết được".
+- **PT-02**: TMP `_CullMode=Back` cả 2 mặt scoreboard — hết hiện tượng chữ xuyên mặt.
+- **PT-05**: gán `MS_WP_Rock`/`M_Pallet` cho `ProjectileBurstRenderer` (scene object, không phải prefab).
+- **PT-01**: `RingSpawner._minRingBottomY` mới, kẹp mép dưới ring theo bán kính tier.
+
+Mỗi fix đều test regression (case cũ hoạt động đúng KHÔNG bị fix mới phá) song song với case bug —
+chi tiết đầy đủ trong bảng TEST_CASES.md §J.
+
+---
+
 ## Session 17.3 — 2026-07-07 — VERIFY REPRO đủ 6 bug PT qua MCP (solo sweep) — bằng chứng trong TEST_CASES.md §J
 
 Toàn bộ 6 bug PT-01..06 giờ có repro/bằng chứng live (không còn là suy đoán code-only). Điểm nhấn:
