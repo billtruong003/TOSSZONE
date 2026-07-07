@@ -23,6 +23,28 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 
 ---
 
+## Session 17.8 — 2026-07-07 — Fix nút SẴN SÀNG lạc vị trí trên client remote (`99133e0`)
+
+Owner báo: nút "SẴN SÀNG" hiện trên máy host, nhưng máy clone (remote) không thấy. Kiểm tra 2-client
+qua MCP: nút vẫn TỒN TẠI + active trên remote, nhưng đứng ở toạ độ `(0,0,0)` thay vì cạnh portal
+`(1.30, 1.30, 6.30)` — không phải "thiếu nút" mà "nút lạc chỗ".
+
+**Root cause:** `PortalReadyGate.prefab` chỉ có `NetworkObject` + script component, KHÔNG có
+`NetworkTransform`. `Runner.Spawn(prefab, pos, rot, ...)` chỉ đặt đúng vị trí trên máy GỌI spawn
+(master); các client khác chỉ dựng lại prefab ở vị trí gốc author (0,0,0) vì không có gì đồng bộ
+transform sau đó.
+
+**Fix:** thêm `Fusion.NetworkTransform` vào prefab.
+
+**Verify 2-client** (vai trò master đổi giữa 2 lần test do thứ tự join): non-master giờ đúng
+`pos=(1.30, 1.30, 6.30)` khớp master, `Btn_SanSang` active trên cả 2 máy.
+
+**Lưu ý chung cho prefab networked tương lai:** bất kỳ prefab spawn qua `Runner.Spawn` với vị trí cụ thể
+(không phải luôn ở gốc/scene-fixed) đều cần `NetworkTransform` nếu muốn vị trí đó đúng trên MỌI client,
+không chỉ máy gọi spawn.
+
+---
+
 ## Session 17.7 — 2026-07-07 — XR Device Simulator: fix rest-pose gần sàn (`710a41a`)
 
 Sau fix Session 17.6 (đổi sang Input System `TrackedPoseDriver`), owner test lại báo tay "rớt thẳng
