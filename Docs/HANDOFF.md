@@ -39,8 +39,11 @@ Toàn bộ 6 bug PT-01..06 giờ có repro/bằng chứng live (không còn là 
 - **PT-01:** đo thật cả arena (tâm 1.46-2.16m) lẫn hub (1.84-2.79m) — tâm không "sát đất" nhưng tier
   to mép dưới chỉ ~0.56m; là chuyện zone-Y-range vs đường kính ring, kèm hướng fix trong bảng.
 - Verify thêm solo: V-6 PASS (freeze bị clear đúng khi round reset), C1-C3 PASS (fix ResetForRound sạch).
-- CHƯA chạy được (cần 2P/VR — phiên 2P kế tiếp): II-2 spawn rank live, III-4 grace-kill, V-4 hazard-race,
-  VI-1/2 UI 2 máy, V-1/V-5 (VR), III-16 (3 máy).
+- 2P chạy được TRƯỚC khi Photon rate-limit (Code 104 ServerLogic) chặn tiếp: host/join mã `4YFZX` ✅,
+  **II-2 PASS** (spawn 2 player deterministic đúng 2 phía (0,0,±9), hết random). Còn kẹt lại vì
+  rate-limit: III-4 grace-kill live, II-7 side-swap live, VI-1/2 UI 2 máy, V-4 hazard-race.
+  **Bài học cứng:** free-tier Photon đếm connect/disconnect CẢ NGÀY — hôm sau test 2P phải gom hết case
+  vào 1-2 phiên play DUY NHẤT, không start/stop lặp. V-1/V-5 cần VR, III-16 cần 3 máy.
 
 ---
 
