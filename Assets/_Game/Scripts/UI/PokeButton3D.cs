@@ -92,7 +92,7 @@ namespace TossZone.UI
         }
 
         [BillButton("Simulate Poke (Play mode)")]
-        private void Debug_SimulatePoke()
+        public void Debug_SimulatePoke()
         {
             if (!Application.isPlaying) { Debug.Log("[PokeButton3D] Chỉ mô phỏng được lúc Play."); return; }
             if (!Interactable) { Debug.Log("[PokeButton3D] Interactable=false — bỏ qua."); return; }
@@ -124,7 +124,7 @@ namespace TossZone.UI
         {
             BillTween.KillTarget(transform);
             transform.localScale = _baseScale;
-            BillTween.Scale(transform, _baseScale.x * 0.85f, 0.07f)
+            BillTween.Float(1f, 0.85f, 0.07f, v => transform.localScale = _baseScale * v)
                 ?.SetEase(EaseType.OutQuad).SetLoops(1, LoopType.Yoyo).SetTarget(transform);
         }
     }
