@@ -23,6 +23,30 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 
 ---
 
+## Session 17.10 — 2026-07-07 — Fix scale nút poke + nút VỀ HUB + chặn solo vào portal (`1e9c802`, `a4171a0`)
+
+**Fix nút poke bounce không về đúng tỉ lệ:** `PulseScale()` (PokeButton3D) dùng `BillTween.Scale()` — hàm
+này ÉP UNIFORM cả 3 trục (`new Vector3(v,v,v)`), nhưng nút không scale đều (VD `Btn_SanSang` =
+`(0.5, 0.16, 0.05)`). Sau Yoyo, nút bị kẹt ở hình lập phương thay vì về đúng hình dẹt/mỏng ban đầu. Fix:
+tween 1 factor 0→0.85→0 rồi nhân vào `_baseScale` mỗi trục thay vì ép uniform.
+
+**Nút "VỀ HUB" trong arena (`ArenaQuickMenu`, local-only, không networked):** giữ nút B (secondary) tay
+phải → hiện panel cố định TRONG WORLD SPACE trước mặt lúc bấm (không gắn theo player rig, không đuổi
+theo) → chọt "VỀ HUB" → thả B ẩn lại. Nút chỉ gọi `FusionNet.Instance.Shutdown()` — tái dùng ĐÚNG flow
+disconnect-recovery đã có sẵn của `ConnectionFlowController` (fade về hub + tự QuickPlay lại), không cần
+code plumbing mới.
+
+**Chặn solo vào portal:** `PortalReadyGate.AllReady` giờ yêu cầu **≥2 active player** (trước chỉ cần ≥1)
+— vào một mình vẫn bấm được nút SẴN SÀNG nhưng không đủ điều kiện qua cổng, status hiện
+"(ĐANG CHỜ THÊM NGƯỜI)" khi `total < 2`.
+
+**Verify Play mode:** solo + bấm ready → `AllReady=False`, portal vẫn chặn (còn ở hub). `ArenaQuickMenu`
+spawn panel đúng công thức (`head.position + head.forward * 1m`, world-space cố định). Poke "VỀ HUB" →
+log `[ConnectionFlow] Mất kết nối (Ok) — đang quay về sảnh` → tự QuickPlay → về `01_TOSSZONE_Main` thành
+công.
+
+---
+
 ## Session 17.9 — 2026-07-07 — 🔴 BillInspector CHƯA BAO GIỜ hoạt động — bị NaughtyInspector (AutoHand) đè (`2c601db`)
 
 **Phát hiện quan trọng, ảnh hưởng TOÀN PROJECT:** owner báo `[BillButton]` không hiện trong Inspector.
