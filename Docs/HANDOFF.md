@@ -23,6 +23,29 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 
 ---
 
+## Session 17.7 — 2026-07-07 — XR Device Simulator: fix rest-pose gần sàn (`710a41a`)
+
+Sau fix Session 17.6 (đổi sang Input System `TrackedPoseDriver`), owner test lại báo tay "rớt thẳng
+xuống sàn" — tưởng là bug mới nhưng thực ra là **đúng hành vi mặc định của Simulator lộ ra lần đầu**:
+`XRDeviceSimulator` đặt rest-pose HMD tại `(0,0,0)` và 2 tay ở `y≈-0.05` (gần sàn) cho tới khi người test
+CHỦ ĐỘNG giữ phím nâng lên. Trước fix 17.6, driver legacy không nhận được gì nên đứng yên ở giá trị
+author (nhìn như "dính gốc" chứ không phải "rớt sàn") — bug thật ẩn phía sau, giờ mới lộ ra rõ.
+
+**Fix:** `XrDeviceSimulatorAutoSpawn.cs` tự đặt lại pose chuẩn ngay sau khi Instantiate simulator — head
+`(0,1.6,0)`, tay trái `(-0.25,1.1,0.3)`, tay phải `(0.25,1.1,0.3)` — qua reflection (field
+`m_HMDState`/`m_Left/RightControllerState` private, không setter public).
+
+**Phím điều khiển XR Device Simulator (để owner tự thao tác thêm nếu cần chỉnh vị trí):**
+- Giữ **chuột phải** = điều khiển HMD (nhìn quanh bằng chuột, WASD di chuyển X/Z, Q/E lên xuống)
+- Giữ **Shift trái** = điều khiển tay TRÁI · Giữ **Space** = điều khiển tay PHẢI (cùng kiểu WASD/Q/E)
+- Không giữ phím nào → WASD/chuột điều khiển thân "FPS" mặc định (không phải HMD/tay)
+- **Tab** = cycle qua các thiết bị · **V** = reset (chỉ về gần pose mặc định, không phải pose chuẩn mình set)
+
+**Verify Play mode:** head=(0,1.6,0) wristL=(-0.3,1.07,0.3) wristR=(0.3,1.07,0.3), RobotHand vật lý bám
+đúng follow target — không còn rớt sàn.
+
+---
+
 ## Session 17.6 — 2026-07-07 — Nút Inspector debug (`7ca703f`) + fix tay dính gốc trong XR Device Simulator (`5c6a976`)
 
 **Nút Inspector (`[BillButton]`, namespace `BillInspector`, chạy cả Edit/Play mode):** `PortalReadyGate`
