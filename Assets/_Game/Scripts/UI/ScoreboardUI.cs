@@ -31,6 +31,11 @@ namespace TossZone.UI
             tmp.color = _color;
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.rectTransform.sizeDelta = new Vector2(10f, 4f);
+            // TMP's SDF shader is double-sided by default (_CullMode=0): each viewer saw BOTH faces' glyphs
+            // superimposed (the far face mirrored through the near one) — the REG-18 1cm offset couldn't fix
+            // that. Cull backfaces so each side only ever sees its own face (PT-02).
+            if (tmp.fontMaterial.HasProperty("_CullMode"))
+                tmp.fontMaterial.SetFloat("_CullMode", 2f);
             return tmp;
         }
 

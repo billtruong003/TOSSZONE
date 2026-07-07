@@ -23,6 +23,8 @@ namespace TossZone.Combat
         [SerializeField] private Transform _zoneCenter;
         [SerializeField] private Vector3 _zoneSize = new Vector3(8f, 1f, 4f);
         [SerializeField] private int _slotCount = 3;
+        [Tooltip("Mép DƯỚI của ring không bao giờ thấp hơn cao độ này (world Y) — tier to (đường kính 1.8m) từng lết sát đất vì zone box không biết gì về bán kính ring (PT-01).")]
+        [SerializeField] private float _minRingBottomY = 1f;
 
         private static readonly RingElement[] AllowedElements = { RingElement.Multi, RingElement.Speed, RingElement.Area };
 
@@ -79,17 +81,25 @@ namespace TossZone.Combat
         public NetworkObject SpawnSpecific(RingElement element, int tier)
         {
             if (_ringPrefab == null || Object == null || !Object.IsValid || !HasStateAuthority) return null;
-            Vector3 c = ZoneCenter, h = ZoneHalfExtents;
-            Vector3 pos = new Vector3(
-                c.x + Random.Range(-h.x, h.x),
-                c.y + Random.Range(-h.y, h.y),
-                c.z + Random.Range(-h.z, h.z));
             int clamped = Mathf.Clamp(tier, 1, 5);
+            Vector3 pos = RollSpawnPos(clamped);
             return Runner.Spawn(_ringPrefab, pos, Quaternion.identity, PlayerRef.None,
                 (runner, o) =>
                 {
                     if (o.TryGetComponent(out BuffRing ring)) { ring.Element = element; ring.Tier = clamped; }
                 });
+        }
+
+        private Vector3 RollSpawnPos(int tier)
+        {
+            Vector3 c = ZoneCenter, h = ZoneHalfExtents;
+            Vector3 pos = new Vector3(
+                c.x + Random.Range(-h.x, h.x),
+                c.y + Random.Range(-h.y, h.y),
+                c.z + Random.Range(-h.z, h.z));
+            float radius = BuffRingConfig.DiameterForTier(tier) * 0.5f;
+            pos.y = Mathf.Max(pos.y, _minRingBottomY + radius);
+            return pos;
         }
 
         public void ResetRings()
@@ -114,12 +124,6 @@ namespace TossZone.Combat
         {
             if (_ringPrefab == null || i >= SlotCount) return;
 
-            Vector3 c = ZoneCenter, h = ZoneHalfExtents;
-            Vector3 pos = new Vector3(
-                c.x + Random.Range(-h.x, h.x),
-                c.y + Random.Range(-h.y, h.y),
-                c.z + Random.Range(-h.z, h.z));
-
             // Pick a random element (from AllowedElements — Ice/Fire tạm khoá) + a rarity-weighted tier (T11),
             // and set both in onBeforeSpawned so they are written BEFORE BuffRing.Spawned() runs — otherwise
             // Spawned() resolves its config with Element still = None (0 → null slot), leaving the ring
@@ -127,6 +131,7 @@ namespace TossZone.Combat
             var element = AllowedElements[Random.Range(0, AllowedElements.Length)];
             int tier = RollTier();
             if (tier >= 4 && HasActiveTier(tier)) tier = Random.Range(1, 4);
+            Vector3 pos = RollSpawnPos(tier);
 
             NetworkObject obj = Runner.Spawn(_ringPrefab,
                 pos, Quaternion.identity, PlayerRef.None,

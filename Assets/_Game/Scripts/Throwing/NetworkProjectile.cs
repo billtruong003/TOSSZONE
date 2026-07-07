@@ -345,19 +345,37 @@ namespace TossZone.Throwing
             }
             else
             {
-                if (!HitFirstVictim() && onGround) { _hasHit = true; Runner.Despawn(Object); }
+                bool hit = IsArmed() && HitFirstVictim();
+                if (!hit && onGround) { _hasHit = true; Runner.Despawn(Object); }
             }
             _prevPos = transform.position;
         }
 
         private bool IsArmed() => (transform.position - _origin).sqrMagnitude >= MinArmDistance * MinArmDistance;
 
+        // Contact uses the BASE _hitRadius (~ball size); the buffed/config AoE radius only widens the SPLASH
+        // applied after a real contact. Using _hitRadius*AreaScale for contact made the rock "touch" people
+        // 0.7m from its surface and pop mid-air near bystanders (PT-06).
         private bool HitFirstVictim()
         {
-            int dmg = _damageOverride > 0 ? _damageOverride : _baseDamage;
-            int n = Physics.OverlapSphereNonAlloc(transform.position, _hitRadius * AreaScale, _overlap,
+            int n = Physics.OverlapSphereNonAlloc(transform.position, _hitRadius, _overlap,
                 _hittableMask, QueryTriggerInteraction.Collide);
-            bool hit = false;
+            bool contact = false;
+            for (int i = 0; i < n; i++)
+            {
+                PlayerCombat victim = _overlap[i] != null ? _overlap[i].GetComponentInParent<PlayerCombat>() : null;
+                if (victim == null || victim.Object == null || victim.Health <= 0) continue;
+                if (victim.Object.InputAuthority == Shooter) continue;
+                contact = true;
+                break;
+            }
+            if (!contact) return false;
+
+            int dmg = _damageOverride > 0 ? _damageOverride : _baseDamage;
+            float splash = _isAoe ? _hitRadius * AreaScale : _hitRadius;
+            n = Physics.OverlapSphereNonAlloc(transform.position, splash, _overlap,
+                _hittableMask, QueryTriggerInteraction.Collide);
+            bool applied = false;
             for (int i = 0; i < n; i++)
             {
                 PlayerCombat victim = _overlap[i] != null ? _overlap[i].GetComponentInParent<PlayerCombat>() : null;
@@ -365,16 +383,16 @@ namespace TossZone.Throwing
                 if (victim.Object.InputAuthority == Shooter) continue;
                 if (Element == (int)RingElement.Ice) victim.RPC_Freeze(EffectSeconds > 0f ? EffectSeconds : 1f);
                 else victim.RPC_TakeHit(dmg, transform.position, Shooter);
-                hit = true;
+                applied = true;
                 if (!_isAoe) break;
             }
-            if (hit)
+            if (applied)
             {
                 _hasHit = true;
                 if (Element == (int)RingElement.Ice || Element == (int)RingElement.Fire) SpawnElementZone();
                 Runner.Despawn(Object);
             }
-            return hit;
+            return applied;
         }
 
         private bool TryGroundContact(out Vector3 point)

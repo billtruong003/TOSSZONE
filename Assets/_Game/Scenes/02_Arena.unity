@@ -713,8 +713,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 379a41b1b671c93499ae1e29358ca821, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TossZone.Combat.ProjectileBurstRenderer
-  _mesh: {fileID: 0}
-  _material: {fileID: 0}
+  _mesh: {fileID: 9159749084851893927, guid: 8988ecefed2562e44ac50afa9257308c, type: 3}
+  _material: {fileID: 2100000, guid: e45f261f35ea1284c8769c82ea3a3c62, type: 2}
   _scale: 0.12
   _maxRenderDistance: 80
 --- !u!114 &772337261
@@ -734,7 +734,6 @@ MonoBehaviour:
   _lifetime: 4
   _hitRadius: 0.35
   _damage: 1
-  _ringPassRadius: 0.4
   _ringCheckSampleCount: 24
 --- !u!114 &772337262
 MonoBehaviour:
@@ -993,6 +992,7 @@ MonoBehaviour:
   _zoneCenter: {fileID: 804859354}
   _zoneSize: {x: 8, y: 1, z: 6}
   _slotCount: 3
+  _minRingBottomY: 1
 --- !u!114 &1358483357
 MonoBehaviour:
   m_ObjectHideFlags: 0

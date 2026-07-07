@@ -35,9 +35,6 @@ namespace TossZone.Combat
         [SerializeField] private float _lifetime = 4f;
         [SerializeField] private float _hitRadius = 0.35f;
         [SerializeField] private int _damage = 1;
-        [Tooltip("Approximates the ring's torus opening for burst-stacking (T7) — a burst has no collider to " +
-                 "trigger BuffRing.OnTriggerEnter normally, so we check projectile-to-ring-center distance instead.")]
-        [SerializeField] private float _ringPassRadius = 0.4f;
         [Tooltip("Per-tick, per-burst cap on how many projectiles are checked against rings — the cone is " +
                  "spatially clustered so a sample is representative; avoids an O(count) scan at 4096.")]
         [SerializeField] private int _ringCheckSampleCount = 24;
@@ -115,7 +112,7 @@ namespace TossZone.Combat
             PlayerRef shooter, int ringsApplied = 1)
         {
             if (!HasStateAuthority) return -1;
-            count = Mathf.Clamp(count, 1, MaxProjectilesPerBurst);
+            count = Mathf.Clamp(count, 1, DeadMaskBits);
             for (int i = 0; i < Bursts.Length; i++)
             {
                 if (Bursts.Get(i).Active) continue;
@@ -207,7 +204,7 @@ namespace TossZone.Combat
                 // Stacking (T7): a burst passing through a Multi ring multiplies Count (e.g. 12x12x12). Bursts
                 // have no collider so they can't trigger BuffRing.OnTriggerEnter normally — sample a subset of
                 // projectile positions against each live Multi ring's center instead.
-                if (b.Count < MaxProjectilesPerBurst && b.RingsApplied < TossZone.Throwing.NetworkProjectile.MaxRingStack)
+                if (b.Count < DeadMaskBits && b.RingsApplied < TossZone.Throwing.NetworkProjectile.MaxRingStack)
                 {
                     rings ??= FindObjectsByType<BuffRing>(FindObjectsSortMode.None);
                     if (TryStackThroughRing(ref b, t, rings, out BuffRing consumedRing))
@@ -247,16 +244,18 @@ namespace TossZone.Combat
 
         /// <summary>T7 stacking: sample up to <see cref="_ringCheckSampleCount"/> live projectile positions of
         /// <paramref name="b"/> against every active Multi ring; on the first pass-through, multiply Count
-        /// (clamped to <see cref="MaxProjectilesPerBurst"/>) and report which ring to consume. One stack per
-        /// tick per burst — the ring is removed from the scene by the caller before the next tick can re-trigger,
-        /// so no extra "already consumed this ring" bookkeeping is needed on the burst itself.</summary>
+        /// (clamped to <see cref="DeadMaskBits"/>) and report which ring to consume. Pass-through = the pellet's
+        /// last-tick→this-tick segment crosses the ring's PLANE within its opening radius — a center-distance
+        /// check triggered on pellets merely flying past the ring's face (PT-03). One stack per tick per burst —
+        /// the ring is removed from the scene by the caller before the next tick can re-trigger.</summary>
         private bool TryStackThroughRing(ref Burst b, float t, BuffRing[] rings, out BuffRing consumedRing)
         {
             consumedRing = null;
             if (rings == null || rings.Length == 0) return false;
 
             int scan = Mathf.Min(b.Count, DeadMaskBits, _ringCheckSampleCount);
-            float rSq = _ringPassRadius * _ringPassRadius;
+            float tPrev = Mathf.Max(0f, t - (Runner != null ? Runner.DeltaTime : 0.02f));
+            if (tPrev >= t) return false;
 
             for (int r = 0; r < rings.Length; r++)
             {
@@ -264,14 +263,21 @@ namespace TossZone.Combat
                 if (ring == null || ring.Object == null || !ring.Object.IsValid || ring.IsConsumed
                     || ring.Element != RingElement.Multi) continue;
                 Vector3 ringPos = ring.transform.position;
+                Vector3 planeN = ring.transform.forward;
+                float openSq = ring.OpeningRadius * ring.OpeningRadius;
 
                 for (int i = 0; i < scan; i++)
                 {
                     if (IsDead(b, i)) continue;
-                    if ((ProjectilePosition(b, i, t) - ringPos).sqrMagnitude > rSq) continue;
+                    Vector3 p1 = ProjectilePosition(b, i, t);
+                    Vector3 p0 = ProjectilePosition(b, i, tPrev);
+                    float d1 = Vector3.Dot(p1 - ringPos, planeN);
+                    float d0 = Vector3.Dot(p0 - ringPos, planeN);
+                    if (d0 * d1 > 0f || Mathf.Approximately(d0, d1)) continue;
+                    Vector3 cross = Vector3.Lerp(p0, p1, d0 / (d0 - d1));
+                    if ((cross - ringPos).sqrMagnitude > openSq) continue;
 
-                    int newCount = Mathf.Min(b.Count * Mathf.Max(2, ring.StackMultiplier), MaxProjectilesPerBurst);
-                    b.Count = newCount;
+                    b.Count = Mathf.Min(b.Count * Mathf.Max(2, ring.StackMultiplier), DeadMaskBits);
                     b.RingsApplied++;
                     consumedRing = ring;
                     return true;

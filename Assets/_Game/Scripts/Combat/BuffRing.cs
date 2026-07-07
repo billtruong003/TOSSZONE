@@ -67,11 +67,15 @@ namespace TossZone.Combat
             _consumed = false;   // defensive reset (matches NetworkProjectile's per-life pattern) in case
                                   // this prefab is ever pooled later — a fresh instance already starts false.
             _block = new MaterialPropertyBlock();
-            // The prefab carries a convex ColliderRing mesh collider (not a SphereCollider); take whatever
-            // Collider is present and make sure it's a trigger. GetComponent<SphereCollider>() here threw a
-            // MissingComponentException and aborted the rest of Spawned() (no color/label/drift).
             Collider col = GetComponent<Collider>();
-            if (col != null) col.isTrigger = true;
+            if (col is MeshCollider)
+            {
+                Destroy(col);
+                BoxCollider box = gameObject.AddComponent<BoxCollider>();
+                box.size = new Vector3(_prefabDiameter, _prefabDiameter, 1f);
+                box.isTrigger = true;
+            }
+            else if (col != null) col.isTrigger = true;
 
             _config = ResolveConfig();
             _tierScale = BuffRingConfig.DiameterForTier(Tier) / Mathf.Max(0.01f, _prefabDiameter);
@@ -180,12 +184,19 @@ namespace TossZone.Combat
 
         // ── Hit detection ─────────────────────────────────────────────────────────────
 
+        /// <summary>World radius of the ring opening at the current tier scale.</summary>
+        public float OpeningRadius => _prefabDiameter * 0.5f * Mathf.Max(0.01f, transform.lossyScale.x);
+
         private void OnTriggerEnter(Collider other)
         {
             if (!HasStateAuthority || _config == null || _consumed) return;
             if (!other.TryGetComponent(out NetworkProjectile proj)) return;
             if (proj.Object == null || !proj.Object.IsValid) return;
             if (proj.RingsApplied >= NetworkProjectile.MaxRingStack) return;
+
+            Vector3 local = transform.InverseTransformPoint(other.transform.position);
+            local.z = 0f;
+            if (local.magnitude > _prefabDiameter * 0.5f) return;
 
             ApplyBuff(proj);
             PlayConsumeAnim();
