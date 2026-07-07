@@ -151,6 +151,8 @@ namespace BillGameCore
                     ObjectProvider = GetOrAddObjectProvider(),
                 };
                 if (args.MaxPlayers > 0) startArgs.PlayerCount = args.MaxPlayers;
+                if (args.HideFromMatchmaking) startArgs.IsVisible = false;
+                if (args.JoinOnly) startArgs.EnableClientSessionCreation = false;
 
                 StartGameResult result = await _runner.StartGame(startArgs);
                 _isConnecting = false;

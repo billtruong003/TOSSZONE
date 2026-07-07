@@ -18,7 +18,6 @@ namespace TossZone.Network
     {
         [Tooltip("Thin NetworkAvatar prefab (NOT the local AutoHand rig).")]
         [SerializeField] private NetworkObject _avatarPrefab;
-        [SerializeField] private string _sessionName = "TOSSZONE_DEMO";
 
         private bool _initialized;
 
@@ -59,7 +58,9 @@ namespace TossZone.Network
                 TrySpawn();
                 return;
             }
-            net.StartShared(_sessionName); // join the shared session; stay in this scene
+            // The splash (StartupConnectStep) owns the real connect. This is the fallback for editor
+            // direct-play in hub/arena, where the bootstrap returns to the edited scene without the splash.
+            ConnectionFlowController.GetOrCreate().EnsureConnected();
         }
 
         private void OnConnected(FusionConnectedEvent _) => TrySpawn();
@@ -97,8 +98,21 @@ namespace TossZone.Network
                                  "Add an AutoHand rig with a PlayerRig component to the scene.");
 
             _spawnInFlight = true;
-            NetworkObject obj = net.Spawn(
-                _avatarPrefab, transform.position, transform.rotation, net.LocalPlayer, OnBeforeSpawned);
+            NetworkObject obj;
+            try
+            {
+                obj = net.Spawn(
+                    _avatarPrefab, transform.position, transform.rotation, net.LocalPlayer, OnBeforeSpawned);
+            }
+            catch (System.Exception e)
+            {
+                // Session-12 gotcha: IsRunning flips true before the simulation can assign ids, and Spawn in
+                // that window throws. Leaving the STATIC flag latched here would block avatar spawning for the
+                // rest of the session — clear it so the next OnConnected/OnSceneLoaded retries.
+                _spawnInFlight = false;
+                Debug.LogError("[PlayerSpawn] Spawn threw (will retry on next connect/scene event): " + e.Message);
+                return;
+            }
             if (obj == null) { _spawnInFlight = false; return; }
 
             net.SetPlayerObject(net.LocalPlayer, obj);

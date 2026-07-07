@@ -12,6 +12,8 @@ namespace BillGameCore
         public string SessionName;     // null/empty = random matchmaking; fixed name = lobby room
         public int SceneIndex;         // build index loaded on connect; -1 = none
         public int MaxPlayers;         // 0 = Fusion default
+        public bool HideFromMatchmaking; // true = IsVisible false (private/coded rooms never random-matched)
+        public bool JoinOnly;            // true = fail if the session doesn't exist instead of creating it
 
         public static FusionConnectArgs Shared(string session, int sceneIndex = -1, int maxPlayers = 0)
             => new FusionConnectArgs { Mode = NetworkMode.FusionShared, SessionName = session, SceneIndex = sceneIndex, MaxPlayers = maxPlayers };
