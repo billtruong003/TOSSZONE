@@ -23,6 +23,33 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 
 ---
 
+## Session 17.5 — 2026-07-07 — Portal cần cả 2 bấm SẴN SÀNG mới teleport + ring cao hơn (commit `4f8553a`)
+
+**Bug owner báo (playtest thật):** 2 người cùng phòng, 1 người đụng portal (hoặc chỉ mới host xong) là
+CẢ HAI bị kéo qua arena ngay lập tức, không cảnh báo. Root cause: `PortalMatchmaker.OnTriggerEnter` gọi
+thẳng `net.LoadScene()` — mà Fusion LoadScene ảnh hưởng TOÀN SESSION, không chỉ người chạm trigger.
+
+**Fix — `PortalReadyGate` mới** (NetworkBehaviour, runtime-spawned qua `PortalReadyBootstrap` vì hub không
+Fusion-load nên scene-placed sẽ dormant — giống gotcha `RingSpawnerHub` cũ): `NetworkDictionary<PlayerRef,
+bool> Ready` + RPC ai cũng gọi được để set CHÍNH MÌNH sẵn sàng, UI runtime "SẴN SÀNG" cạnh portal (mẫu
+code giống RoomCodeConsole). `PortalMatchmaker` giờ chặn teleport trừ khi `gate.AllReady` (MỌI player
+active đã bấm — không phải chỉ 1). Đụng portal khi chưa đủ người là no-op an toàn.
+
+**Verify solo qua MCP:** chặn đúng khi chưa ready (log rõ lý do) → toggle ready → `AllReady=True` → portal
+teleport thành công sang 02_Arena, `ArenaManager` attach sạch. Case "cần CẢ HAI" đảm bảo bởi logic
+`AllReady` tự nó (duyệt mọi `ActivePlayers`) — chưa live-test 2 người thật (rate-limit Photon + môi trường
+không ổn định phiên này), nhưng logic không phụ thuộc số người nên tin tưởng hợp lý.
+
+**Tune thêm:** `RingSpawner._minRingBottomY` 1→1.6 theo feedback owner (vẫn thấy ring thấp sau PT-01).
+
+**⚠️ Gotcha MỚI phát hiện:** `mcpforunity://editor/state` (resource read KHÔNG kèm `unity_instance`) có
+lúc trả về state của editor SAI (thấy scene lạ `Assets/_TEABAG/.../SpaceStationMap.unity` — hoá ra là
+content một project khác "Teabag" bị copy nhầm vào trong `Assets/` của TOSSZONE, KHÔNG phải do mình gây
+ra). Bài học: khi nghi ngờ, luôn verify bằng `execute_code` với `unity_instance` chỉ định rõ + check
+`Application.dataPath` — đáng tin hơn resource read không chỉ định instance.
+
+---
+
 ## Session 17.4 — 2026-07-07 — FIX + VERIFY cả 6 bug PT (commit `a587a93`)
 
 Cả 6 bug PT-01..06 giờ đã fix và verify PASS qua MCP (bảng chi tiết + kết quả từng test trong
