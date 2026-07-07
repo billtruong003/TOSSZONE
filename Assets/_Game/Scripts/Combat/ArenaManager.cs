@@ -38,28 +38,95 @@ namespace TossZone.Combat
         [Networked] public int ScoreA { get; private set; }
         [Networked] public int ScoreB { get; private set; }
         [Networked] public TickTimer PhaseTimer { get; private set; }
+        [Networked] public int NetMaxLives { get; private set; }
+        [Networked] private int LastWinnerTeam { get; set; }
+        [Networked] private NetworkBool RoundHadBothTeams { get; set; }
+        [Networked, Capacity(8)] private NetworkDictionary<PlayerRef, int> Teams => default;
+
+        public static ArenaManager Instance { get; private set; }
 
         private int _winsNeeded;
+        private ChangeDetector _changes;
+        private static readonly PlayerRef[] TeamScratch = new PlayerRef[8];
 
         public override void Spawned()
         {
+            Instance = this;
             _winsNeeded = (_bestOf + 1) / 2;
+            _changes = GetChangeDetector(ChangeDetector.Source.SimulationState);
 
             // Fire on EVERY client (not just authority) — Bill.Events is a local, per-process bus, and
             // CombatSession (which resolves the weapon catalog for HandWeapon/WristWeaponSelector) needs to
             // react locally on each client. Nothing else in the real join flow fires this: PortalMatchmaker
             // just does a Fusion scene load, and ArenaNetworkLoadGate only fixes up dormant scene objects.
-            if (Bill.IsReady) Bill.Events.Fire(new MinigameEnteredEvent { Id = _minigameId });
+            if (Bill.IsReady)
+            {
+                Bill.Events.Fire(new MinigameEnteredEvent { Id = _minigameId });
+                Bill.Events.Subscribe<FusionPlayerJoinedEvent>(OnPlayerJoined);
+                Bill.Events.Subscribe<FusionPlayerLeftEvent>(OnPlayerLeft);
+            }
+
+            // Late joiner: the round's lives value was decided before we arrived — the RPC_ResetRound that
+            // carried it never reached us, so read the replicated copy instead.
+            if (!HasStateAuthority && NetMaxLives > 0) PlayerCombat.MaxLives = NetMaxLives;
 
             if (!HasStateAuthority) return;
+            SyncTeams();
             Phase = MatchPhase.Warmup;
             PhaseTimer = TickTimer.CreateFromSeconds(Runner, _warmupDuration);
         }
 
         public override void Despawned(NetworkRunner runner, bool hasState)
         {
-            if (Bill.IsReady) Bill.Events.Fire(new MinigameExitedEvent { Id = _minigameId });
+            if (Instance == this) Instance = null;
+            if (hasState && runner != null && Object != null && Object.HasStateAuthority && runner.SessionInfo.IsValid)
+                runner.SessionInfo.IsOpen = true;
+            if (Bill.IsReady)
+            {
+                Bill.Events.Fire(new MinigameExitedEvent { Id = _minigameId });
+                Bill.Events.Unsubscribe<FusionPlayerJoinedEvent>(OnPlayerJoined);
+                Bill.Events.Unsubscribe<FusionPlayerLeftEvent>(OnPlayerLeft);
+            }
         }
+
+        public override void Render()
+        {
+            if (_changes == null) return;
+            foreach (string change in _changes.DetectChanges(this))
+                if (change == nameof(Phase)) OnPhaseChanged();
+        }
+
+        // RoundEnd/MatchEnd events used to fire inside EndRound(), which only runs on the master — remote
+        // clients never saw THẮNG/THUA announcements. Detecting the replicated Phase flip fires them locally
+        // on every client (including the master, which no longer fires them directly).
+        private void OnPhaseChanged()
+        {
+            if (!Bill.IsReady) return;
+            switch (Phase)
+            {
+                case MatchPhase.RoundEnd:
+                    FireRoundEnd();
+                    break;
+                case MatchPhase.MatchEnd:
+                    FireRoundEnd();
+                    Bill.Events.Fire(new MatchEndEvent { WinnerTeam = ScoreA > ScoreB ? 0 : ScoreB > ScoreA ? 1 : -1 });
+                    break;
+            }
+        }
+
+        private void FireRoundEnd()
+        {
+            Bill.Events.Fire(new RoundEndEvent
+            {
+                WinnerTeam = LastWinnerTeam,
+                Round = Round,
+                ScoreA = ScoreA,
+                ScoreB = ScoreB
+            });
+        }
+
+        private void OnPlayerJoined(FusionPlayerJoinedEvent _) => SyncTeams();
+        private void OnPlayerLeft(FusionPlayerLeftEvent _) => SyncTeams();
 
         public override void FixedUpdateNetwork()
         {
@@ -89,12 +156,24 @@ namespace TossZone.Combat
             Round++;
             Phase = MatchPhase.Playing;
             PhaseTimer = TickTimer.CreateFromSeconds(Runner, _roundDuration);
+            RoundHadBothTeams = HasBothTeams();
+            NetMaxLives = PlayerCombat.LivesForPlayerCount(CountRealPlayers());
+            if (Runner.SessionInfo.IsValid) Runner.SessionInfo.IsOpen = false;
 
-            PlayerCombat.MaxLives = PlayerCombat.LivesForPlayerCount(CountRealPlayers());
-            ResetAllCombat();
+            RPC_ResetRound(NetMaxLives);
             _ringSpawner?.ResetRings();
             ClearLeftoverHazards();
+        }
 
+        // ResetForRound()/NotifyRoundStart() only act on state the CALLING client has authority over — in
+        // Shared mode the master has no authority over remote avatars, so calling them directly here reset
+        // nothing but the master's own combat. Every client resets its own avatar via this RPC instead.
+        [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+        private void RPC_ResetRound(int maxLives)
+        {
+            PlayerCombat.MaxLives = maxLives;
+            foreach (PlayerCombat pc in PlayerCombat.AllInstances)
+                pc.ResetForRound();
             if (CombatSession.Instance != null) CombatSession.Instance.NotifyRoundStart();
         }
 
@@ -137,6 +216,14 @@ namespace TossZone.Combat
                 }
             }
 
+            // A round that STARTED with both teams populated must not run out the full 90s clock when one
+            // team leaves mid-round — award it to whoever is still standing.
+            if (RoundHadBothTeams && realPlayerCount >= 1 && (playersA == 0 || playersB == 0))
+            {
+                EndRound(playersA > 0 ? 0 : playersB > 0 ? 1 : -1);
+                return;
+            }
+
             // Decide a round by elimination only once at least 2 real players are in the match. Gating on the
             // bot-inclusive AllInstances.Count let a solo player (or a bot-only arena) end the round every tick,
             // spinning Warmup→Playing→RoundEnd forever and constantly resetting combat health.
@@ -162,25 +249,17 @@ namespace TossZone.Combat
         {
             Phase = MatchPhase.RoundEnd;
             PhaseTimer = TickTimer.CreateFromSeconds(Runner, _roundEndDuration);
+            LastWinnerTeam = winnerTeam;
 
             if (winnerTeam == 0) ScoreA++;
             else if (winnerTeam == 1) ScoreB++;
-
-            if (Bill.IsReady) Bill.Events.Fire(new RoundEndEvent
-            {
-                WinnerTeam = winnerTeam,
-                Round = Round,
-                ScoreA = ScoreA,
-                ScoreB = ScoreB
-            });
 
             bool decided = ScoreA >= _winsNeeded || ScoreB >= _winsNeeded;
             bool allRoundsPlayed = Round >= _bestOf;
             if (!decided && !allRoundsPlayed) return;
 
             Phase = MatchPhase.MatchEnd;
-            int matchWinner = ScoreA > ScoreB ? 0 : ScoreB > ScoreA ? 1 : -1;
-            if (Bill.IsReady) Bill.Events.Fire(new MatchEndEvent { WinnerTeam = matchWinner });
+            if (Runner.SessionInfo.IsValid) Runner.SessionInfo.IsOpen = true;
         }
 
         private void AdvanceRound()
@@ -189,15 +268,59 @@ namespace TossZone.Combat
             StartRound();
         }
 
-        /// <summary>Team of a player: 0 = A, 1 = B (alternating by PlayerId). Single source of truth for team
-        /// membership — used by scoring and spawn sides so they can never disagree. No networked field needed:
-        /// every client already knows every PlayerId, so this is a pure deterministic function.</summary>
-        public static int GetTeam(PlayerRef player) => player.PlayerId % 2;
-
-        private void ResetAllCombat()
+        /// <summary>Team of a player: 0 = A, 1 = B. Single source of truth for team membership — used by
+        /// scoring and spawn sides so they can never disagree. Backed by the replicated Teams dictionary
+        /// (master assigns by join-order balance — PlayerId%2 could produce 3v0 once leavers left ID gaps);
+        /// falls back to PlayerId%2 outside the arena or before assignment replicates.</summary>
+        public static int GetTeam(PlayerRef player)
         {
+            ArenaManager am = Instance;
+            if (am != null && am.Object != null && am.Object.IsValid && am.Teams.TryGet(player, out int team))
+                return team;
+            return player.PlayerId % 2;
+        }
+
+        private void SyncTeams()
+        {
+            if (Object == null || !Object.IsValid || !HasStateAuthority) return;
+
+            int stale = 0;
+            foreach (var kv in Teams)
+            {
+                bool active = false;
+                foreach (PlayerRef p in Runner.ActivePlayers)
+                    if (p == kv.Key) { active = true; break; }
+                if (!active && stale < TeamScratch.Length) TeamScratch[stale++] = kv.Key;
+            }
+            for (int i = 0; i < stale; i++) Teams.Remove(TeamScratch[i]);
+
+            int countA = 0, countB = 0;
+            foreach (var kv in Teams)
+            {
+                if (kv.Value == 0) countA++;
+                else countB++;
+            }
+
+            foreach (PlayerRef p in Runner.ActivePlayers)
+            {
+                if (Teams.ContainsKey(p)) continue;
+                int team = countA <= countB ? 0 : 1;
+                Teams.Add(p, team);
+                if (team == 0) countA++;
+                else countB++;
+            }
+        }
+
+        private bool HasBothTeams()
+        {
+            int a = 0, b = 0;
             foreach (PlayerCombat pc in PlayerCombat.AllInstances)
-                pc.ResetForRound();
+            {
+                if (!pc.IsPlayer || pc.Object == null) continue;
+                if (GetTeam(pc.Object.InputAuthority) == 0) a++;
+                else b++;
+            }
+            return a > 0 && b > 0;
         }
 
         /// <summary>World spawn position for a player, by team (see <see cref="GetTeam"/>). Used by respawn.
