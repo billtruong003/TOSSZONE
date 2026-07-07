@@ -33,13 +33,13 @@ namespace TossZone.Network
             get
             {
                 if (Object == null || !Object.IsValid) return false;
-                bool any = false;
+                int count = 0;
                 foreach (PlayerRef p in Runner.ActivePlayers)
                 {
-                    any = true;
+                    count++;
                     if (!Ready.TryGet(p, out NetworkBool r) || !r) return false;
                 }
-                return any;
+                return count >= 2;
             }
         }
 
@@ -111,7 +111,9 @@ namespace TossZone.Network
                 if (Ready.TryGet(p, out NetworkBool r) && r) ready++;
             }
             bool localReady = Ready.TryGet(Runner.LocalPlayer, out NetworkBool lr) && lr;
-            string status = "SẴN SÀNG: " + ready + "/" + total + (localReady ? "  (BẠN: OK)" : "");
+            string status = total < 2
+                ? "SẴN SÀNG: " + ready + "/" + total + "  (ĐANG CHỜ THÊM NGƯỜI)"
+                : "SẴN SÀNG: " + ready + "/" + total + (localReady ? "  (BẠN: OK)" : "");
             if (status == _lastStatus) return;
             _lastStatus = status;
             _statusText.text = status;
