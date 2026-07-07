@@ -1554,6 +1554,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: WristSelectorPanel
       objectReference: {fileID: 0}
+    - target: {fileID: 7460960464993466362, guid: a2d6b4b46a931824980b87ee43396524, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

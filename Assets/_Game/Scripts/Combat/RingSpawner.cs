@@ -24,6 +24,8 @@ namespace TossZone.Combat
         [SerializeField] private Vector3 _zoneSize = new Vector3(8f, 1f, 4f);
         [SerializeField] private int _slotCount = 3;
 
+        private static readonly RingElement[] AllowedElements = { RingElement.Multi, RingElement.Speed, RingElement.Area };
+
         private static readonly float[] TierWeights0to30 = { 65f, 25f, 8f, 2f, 0f };
         private static readonly float[] TierWeights31to60 = { 38f, 26f, 20f, 10f, 5f };
         private static readonly float[] TierWeights61to90 = { 20f, 25f, 25f, 20f, 10f };
@@ -118,12 +120,11 @@ namespace TossZone.Combat
                 c.y + Random.Range(-h.y, h.y),
                 c.z + Random.Range(-h.z, h.z));
 
-            // Pick a random element + a rarity-weighted tier (T11), and set both in onBeforeSpawned so they are
-            // written BEFORE BuffRing.Spawned() runs — otherwise Spawned() resolves its config with Element
-            // still = None (0 → null slot), leaving the ring colorless. (Setting these after Runner.Spawn() is
-            // too late.)
-            int pick = Random.Range(1, System.Enum.GetValues(typeof(RingElement)).Length);
-            var element = (RingElement)pick;
+            // Pick a random element (from AllowedElements — Ice/Fire tạm khoá) + a rarity-weighted tier (T11),
+            // and set both in onBeforeSpawned so they are written BEFORE BuffRing.Spawned() runs — otherwise
+            // Spawned() resolves its config with Element still = None (0 → null slot), leaving the ring
+            // colorless. (Setting these after Runner.Spawn() is too late.)
+            var element = AllowedElements[Random.Range(0, AllowedElements.Length)];
             int tier = RollTier();
             if (tier >= 4 && HasActiveTier(tier)) tier = Random.Range(1, 4);
 

@@ -21,12 +21,5 @@ MonoBehaviour:
   maxPlayers: 8
   weaponCatalog:
   - {fileID: 11400000, guid: 846181d4ad5c8fc40ba94e82e5041e3b, type: 2}
-  - {fileID: 11400000, guid: f0869f4e57377304488beb7edc58382d, type: 2}
-  - {fileID: 11400000, guid: 49a67c862da09d74b89f4b3503a22ae3, type: 2}
-  - {fileID: 11400000, guid: 8196dcf3e401adc4384d793dc236ed31, type: 2}
-  - {fileID: 11400000, guid: 499242c1d9e3a3b48b455bdbbd67706e, type: 2}
-  - {fileID: 11400000, guid: 4c9da668493c5a04fadfc04ac25205d6, type: 2}
-  - {fileID: 11400000, guid: 46d163f3babc88a45ad28fc18d1d5751, type: 2}
-  - {fileID: 11400000, guid: e73ab59d15c1f094fa1ad0aedea25455, type: 2}
   bestOf: 3
   roundDuration: 90
