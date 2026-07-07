@@ -7,37 +7,10 @@ namespace TossZone.UI
 {
     public class ScoreboardUI : MonoBehaviour
     {
-        [SerializeField] private float _fontSize = 6f;
-        [SerializeField] private Color _color = Color.white;
+        [SerializeField] private TextMeshPro _front;
+        [SerializeField] private TextMeshPro _back;
 
-        private TextMeshPro _front;
-        private TextMeshPro _back;
         private ArenaManager _arena;
-
-        private void Awake()
-        {
-            _front = CreateFace("Front", Quaternion.identity);
-            _back = CreateFace("Back", Quaternion.Euler(0f, 180f, 0f));
-        }
-
-        private TextMeshPro CreateFace(string faceName, Quaternion localRot)
-        {
-            var go = new GameObject("Scoreboard" + faceName);
-            go.transform.SetParent(transform, false);
-            go.transform.localRotation = localRot;
-            go.transform.localPosition = localRot * new Vector3(0f, 0f, -0.01f);
-            var tmp = go.AddComponent<TextMeshPro>();
-            tmp.fontSize = _fontSize;
-            tmp.color = _color;
-            tmp.alignment = TextAlignmentOptions.Center;
-            tmp.rectTransform.sizeDelta = new Vector2(10f, 4f);
-            // TMP's SDF shader is double-sided by default (_CullMode=0): each viewer saw BOTH faces' glyphs
-            // superimposed (the far face mirrored through the near one) — the REG-18 1cm offset couldn't fix
-            // that. Cull backfaces so each side only ever sees its own face (PT-02).
-            if (tmp.fontMaterial.HasProperty("_CullMode"))
-                tmp.fontMaterial.SetFloat("_CullMode", 2f);
-            return tmp;
-        }
 
         private void Update()
         {

@@ -12,7 +12,12 @@
       "PowerShell(git add *)",
       "Bash(curl *)",
       "Bash(npx *)",
-      "PowerShell($env:ANTHROPIC_BASE_URL = \"http://127.0.0.1:47821\"; Write-Output \"ANTHROPIC_BASE_URL set to $env:ANTHROPIC_BASE_URL for this terminal session\")"
+      "PowerShell($env:ANTHROPIC_BASE_URL = \"http://127.0.0.1:47821\"; Write-Output \"ANTHROPIC_BASE_URL set to $env:ANTHROPIC_BASE_URL for this terminal session\")",
+      "Bash(powershell -Command \"Get-ChildItem 'D:\\\\Projects' -Directory | Where-Object { \\\\$_.Name -match 'TOSSZONE.*clone|Clone.*TOSSZONE' } | Select-Object FullName\")",
+      "Bash(powershell -Command \"Start-Process 'C:\\\\Program Files\\\\Unity\\\\Hub\\\\Editor\\\\6000.3.8f1\\\\Editor\\\\Unity.exe' -ArgumentList '-projectpath','D:\\\\Projects\\\\TOSSZONE_clone_0'\" 2>&1)",
+      "Bash(powershell -Command \"Get-CimInstance Win32_Process | Where-Object { \\\\$_.CommandLine -match 'TOSSZONE_clone_0' } | Select-Object ProcessId, Name, CreationDate\")",
+      "Bash(ssh -T git@gitlab.com -o ConnectTimeout=8)",
+      "Bash(echo \"exit:$?\")"
     ]
   }
 }

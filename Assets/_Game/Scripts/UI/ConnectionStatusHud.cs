@@ -7,17 +7,19 @@ namespace TossZone.UI
 {
     /// <summary>
     /// Minimal world-space readout for <see cref="MatchmakingStatusEvent"/> — floats in front of the camera
-    /// while connecting/failed, fades away shortly after Connected. Built entirely at runtime (no scene
-    /// wiring) and added by <see cref="ConnectionFlowController"/> to its own DDOL object, so connection
-    /// feedback exists in every scene including the hub.
+    /// while connecting/failed, fades away shortly after Connected. Instantiated from
+    /// Assets/_Game/Resources/UI/ConnectionStatusHud.prefab by <see cref="ConnectionFlowController"/> onto
+    /// its own DDOL object, so connection feedback exists in every scene including the hub.
     /// </summary>
     public class ConnectionStatusHud : MonoBehaviour
     {
+        public const string ResourcePath = "UI/ConnectionStatusHud";
+
         private const float Distance = 2f;
         private const float HeightOffset = -0.25f;
         private const float ConnectedLinger = 2.5f;
 
-        private TextMeshPro _text;
+        [SerializeField] private TextMeshPro _text;
         private bool _subscribed;
         private float _hideAt = -1f;
 
@@ -37,7 +39,7 @@ namespace TossZone.UI
 
         private void OnStatus(MatchmakingStatusEvent e)
         {
-            EnsureText();
+            if (_text == null) return;
             _text.text = e.Message;
             _text.color = e.Phase == MatchPhase.Connected ? new Color(0.5f, 1f, 0.6f)
                 : e.Phase == MatchPhase.Failed || e.Phase == MatchPhase.TimedOut ? new Color(1f, 0.45f, 0.4f)
@@ -62,17 +64,6 @@ namespace TossZone.UI
             Vector3 target = cam.transform.position + cam.transform.forward * Distance + Vector3.up * HeightOffset;
             t.position = Vector3.Lerp(t.position, target, 8f * Time.unscaledDeltaTime);
             t.rotation = Quaternion.LookRotation(t.position - cam.transform.position);
-        }
-
-        private void EnsureText()
-        {
-            if (_text != null) return;
-            var go = new GameObject("ConnectionStatusText");
-            go.transform.SetParent(transform, false);
-            _text = go.AddComponent<TextMeshPro>();
-            _text.fontSize = 1.6f;
-            _text.alignment = TextAlignmentOptions.Center;
-            _text.textWrappingMode = TextWrappingModes.NoWrap;
         }
     }
 }

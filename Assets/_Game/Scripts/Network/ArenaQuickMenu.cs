@@ -1,6 +1,5 @@
 #if PHOTON_FUSION
 using BillGameCore;
-using TMPro;
 using TossZone.Player;
 using TossZone.UI;
 using UnityEngine;
@@ -20,15 +19,18 @@ namespace TossZone.Network
     {
         [SerializeField] private float _spawnDistance = 1.0f;
         [SerializeField] private float _spawnHeightOffset = -0.15f;
+        [SerializeField] private GameObject _panel;
+        [SerializeField] private PokeButton3D _button;
 
         private InputAction _menuButton;
-        private GameObject _panel;
         private bool _shown;
 
         private void Awake()
         {
             _menuButton = new InputAction("ArenaQuickMenu", InputActionType.Button, "<XRController>{RightHand}/secondaryButton");
             _menuButton.Enable();
+            if (_button != null) _button.Poked += _ => ReturnToHub();
+            if (_panel != null) _panel.SetActive(false);
         }
 
         private void OnDestroy()
@@ -47,6 +49,7 @@ namespace TossZone.Network
         private void Show()
         {
             _shown = true;
+            if (_panel == null) return;
             Transform head = PlayerRig.Local != null ? PlayerRig.Local.Head : null;
             if (head == null) return;
 
@@ -57,52 +60,14 @@ namespace TossZone.Network
 
             Vector3 pos = head.position + fwd * _spawnDistance;
             pos.y = head.position.y + _spawnHeightOffset;
-            Build(pos, Quaternion.LookRotation(fwd));
+            _panel.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(fwd));
+            _panel.SetActive(true);
         }
 
         private void Hide()
         {
             _shown = false;
-            if (_panel != null) Destroy(_panel);
-            _panel = null;
-        }
-
-        private void Build(Vector3 pos, Quaternion rot)
-        {
-            _panel = new GameObject("[ArenaQuickMenu]");
-            _panel.transform.SetPositionAndRotation(pos, rot);
-
-            GameObject board = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            board.name = "Backboard";
-            Destroy(board.GetComponent<Collider>());
-            board.transform.SetParent(_panel.transform, false);
-            board.transform.localPosition = new Vector3(0f, 0f, 0.02f);
-            board.transform.localScale = new Vector3(0.4f, 0.22f, 0.02f);
-            board.GetComponent<MeshRenderer>().material = new Material(Shader.Find("Universal Render Pipeline/Unlit"))
-                { color = new Color(0.10f, 0.12f, 0.18f) };
-
-            GameObject btnGo = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            btnGo.name = "Btn_VeHub";
-            btnGo.transform.SetParent(_panel.transform, false);
-            btnGo.transform.localPosition = new Vector3(0f, -0.02f, 0f);
-            btnGo.transform.localScale = new Vector3(0.3f, 0.1f, 0.05f);
-            var col = btnGo.GetComponent<BoxCollider>();
-            col.isTrigger = true;
-            btnGo.GetComponent<MeshRenderer>().material = new Material(Shader.Find("Universal Render Pipeline/Unlit"))
-                { color = new Color(0.48f, 0.20f, 0.18f) };
-
-            var poke = btnGo.AddComponent<PokeButton3D>();
-            poke.Poked += _ => ReturnToHub();
-
-            var label = new GameObject("Label_VỀ HUB").AddComponent<TextMeshPro>();
-            label.transform.SetParent(btnGo.transform, false);
-            label.transform.localPosition = new Vector3(0f, 0f, -0.52f);
-            label.transform.localScale = new Vector3(1f / btnGo.transform.localScale.x, 1f / btnGo.transform.localScale.y, 1f / btnGo.transform.localScale.z);
-            label.text = "VỀ HUB";
-            label.fontSize = 0.3f;
-            label.color = Color.white;
-            label.alignment = TextAlignmentOptions.Center;
-            label.textWrappingMode = TextWrappingModes.NoWrap;
+            if (_panel != null) _panel.SetActive(false);
         }
 
         private void ReturnToHub()

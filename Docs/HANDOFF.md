@@ -23,6 +23,131 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 
 ---
 
+## Session 17.12 — 2026-07-07 — 🔴 4 bug owner báo sau build test (CHƯA FIX — chỉ mới điều tra + note)
+
+Owner build test xong báo 4 bug. Chưa fix gì trong session này — chỉ tra code để khoanh vùng nghi phạm,
+lưu lại đây cho session sau (hoặc chính owner) verify + fix. Đã viết sẵn prompt điều tra ở cuối mục này.
+
+### 1. Mất material các thứ (chưa rõ vật thể nào / lúc nào)
+Owner báo chung chung "mất material" — **cần thêm chi tiết trước khi tra**: vật thể nào (character, UI,
+ring, prop?), pink hay trong suốt hay đúng-mất-hẳn-renderer, xảy ra trong Editor hay chỉ Build APK, có phải
+mới xuất hiện sau Session 17.11 (convert prefab UI) hay có từ trước. Đã tự kiểm tra nhanh: `create_from_gameobject`
+ở Session 17.11 có auto-tạo `Assets/_Game/Prefabs/Materials/*.mat` cho các UI console (board/nút/scoreboard)
+— đây là hành vi ĐÚNG của tool (persist Material instance thành asset thật), không phải bug, và toàn bộ
+material đó là Unlit đơn sắc cho UI, không liên quan character/ring. Nên khả năng cao đây là bug KHÁC,
+độc lập — nghi vấn hàng đầu vẫn là GUID lệch của StylizedToonWorldKit (xem mục "Git/pull workflow — Session 11"
+phía dưới, bài học "pink material sau pull").
+
+### 2. 🔴 Vòng (BuffRing) spawn thấp hơn ở remote, không đồng bộ với host — NGHI PHẠM CHÍNH ĐÃ TÌM RA
+**Rất giống bug PortalReadyGate đã fix ở Session 17.8 (`99133e0`)**: thiếu `Fusion.NetworkTransform` trên prefab.
+Đã kiểm tra `Assets/_Game/Prefabs/BuffRing.prefab` — **KHÔNG có NetworkTransform** (so khớp GUID script
+`9ccc9e8d2efc6b74380ba2d80b71c7b1` dùng trên PortalReadyGate.prefab, không xuất hiện trong BuffRing.prefab).
+Thêm vào đó, `BuffRing.cs:85-104` (`Spawned()` capture `_originPos = transform.position` rồi mỗi client tự
+chạy `Update()` → `transform.position = DriftPosition(...)` local, không gate `HasStateAuthority`) — nếu
+`transform.position` tại thời điểm `Spawned()` chưa đồng bộ đúng trên remote (vì thiếu NetworkTransform),
+`_originPos`/`_driftAnchor` mỗi client sẽ neo ở độ cao KHÁC NHAU → ring trôi (bob) quanh baseline khác nhau
+vĩnh viễn trên remote so với host. Khớp 100% với mô tả "vòng ở remote spawn thấp hơn, không sync với host".
+**Fix nghi ngờ:** thêm `Fusion.NetworkTransform` vào BuffRing.prefab (y hệt cách đã làm với PortalReadyGate) —
+nhưng CHƯA làm, cần owner/session sau tự verify qua 2-client trước khi apply (rule: không sửa mù, phải repro
+trước).
+
+### 3. 🔴 Collider giữa 2 character rất khó ném trúng nhau
+`NetworkProjectile.cs:359-372` (`HitFirstVictim()`) chỉ check **1 điểm duy nhất** mỗi tick
+(`Physics.OverlapSphereNonAlloc(transform.position, _hitRadius=0.3f, ...)`) — KHÔNG sweep dọc theo đoạn di
+chuyển giữa 2 tick như `TryGroundContact()` đã làm cho mặt đất (dùng `Physics.Raycast(_prevPos, delta, dist, ...)`).
+Bóng bay nhanh + bán kính nhỏ (0.3m) + tick rời rạc → bóng có thể "xuyên qua" người chơi giữa 2 tick mà
+không tick nào bắt được overlap (tunneling kinh điển). Thêm nữa, `IsArmed()` (dòng 354) chặn hit detection
+cho tới khi bóng bay xa `MinArmDistance=0.7f` từ điểm ném (`_origin`) — ném cự ly gần (dưới 0.7m, ví dụ 2
+người đứng sát nhau) sẽ KHÔNG BAO GIỜ trúng vì chưa kịp "arm". Đây là 2 nguyên nhân riêng biệt cộng dồn,
+không phải 1 bug — cả hai đều nên xem lại.
+
+### 4. 🔴 Ném tới trước mặt là bóng biến mất (nghi sync/interpolation)
+Khi `HitFirstVictim()` trúng, authority `Runner.Despawn(Object)` ngay lập tức (dòng 393). Trên remote,
+transform hiển thị đi qua `NetworkTransform` interpolation (có độ trễ buffer riêng so với tick thật của
+authority) — nếu Despawn-RPC/state tới remote NHANH HƠN interpolation kịp "đuổi" tới đúng vị trí va chạm,
+người xem trên remote sẽ thấy bóng biến mất SỚM hơn (trước khi hình như chạm mặt), đúng như mô tả "ném tới
+trước mặt là biến mất". Đây là mismatch cổ điển giữa authority-tick-timing và proxy-interpolation-timing,
+KHÔNG hẳn là do bug #3 tunneling — có thể là 2 hiện tượng khác nhau bị owner nhìn thấy cùng lúc nên gộp lại.
+Cần repro có quay lại góc nhìn remote để phân biệt "biến mất do miss hẳn" (bug #3) vs "biến mất sớm dù có
+trúng" (bug #4 — interpolation lag) trước khi sửa.
+
+### Prompt điều tra "về nhà" (copy nguyên văn vào Claude Code)
+
+```
+Điều tra 4 bug TOSSZONE vừa phát hiện sau build test, đã note sơ bộ ở Docs/HANDOFF.md mục
+"Session 17.12". Đọc mục đó trước để có đầy đủ context + nghi phạm đã khoanh vùng, sau đó:
+
+1. Bug "mất material": hỏi t rõ vật thể nào bị mất material + lúc nào (mở app / vào phòng / ném /
+   trong Editor hay chỉ Build APK) trước khi tra — hiện chưa đủ info để khoanh vùng.
+
+2. Bug vòng (BuffRing) spawn thấp ở remote không sync host: verify giả thuyết đã note (BuffRing.prefab
+   thiếu Fusion.NetworkTransform, giống bug PortalReadyGate đã fix Session 17.8 commit 99133e0) bằng
+   2-client test qua MCP (ParrelSync clone) — so sánh Y-position của cùng 1 ring trên host vs remote lúc
+   Spawned(). Nếu đúng, fix bằng cách thêm NetworkTransform vào BuffRing.prefab y hệt cách đã làm với
+   PortalReadyGate, rồi verify lại.
+
+3. Bug collider khó ném trúng: verify 2 giả thuyết đã note trong NetworkProjectile.cs —
+   (a) HitFirstVictim() chỉ OverlapSphere 1 điểm mỗi tick, không sweep như TryGroundContact() đã làm cho
+   mặt đất → có thể tunnel qua người ở tốc độ cao;
+   (b) IsArmed() chặn hit trong 0.7m đầu từ điểm ném → ném cự ly gần không bao giờ trúng.
+   Test cả 2 case (ném xa và ném sát) để tách bạch nguyên nhân, rồi quyết định fix (thêm sweep test hoặc
+   giảm/bỏ MinArmDistance tuỳ finding).
+
+4. Bug bóng biến mất trước mặt: phân biệt xem đây là bug #3 (miss hẳn, ball tunnel qua) hay là
+   interpolation lag riêng (NetworkTransform trên NetworkProjectile có buffer riêng so với FixedUpdateNetwork
+   tick lúc Despawn) bằng cách quay lại từ góc nhìn remote client lúc va chạm. Nếu là interpolation lag,
+   tìm hiểu NetworkTransform interpolation settings trên NetworkProjectile.prefab.
+
+Full verify qua MCP (ParrelSync 2-client), note lại root cause CONFIRMED trước khi sửa (đừng sửa mù),
+rồi fix + update Docs/HANDOFF.md + Docs/TEST_CASES.md như các session trước.
+```
+
+---
+
+## Session 17.11 — 2026-07-07 — Chuyển hết 6 UI runtime-build thành prefab thật
+
+Owner nhắc lại rule "mọi thứ phải là prefab, không build sống bằng code" và yêu cầu audit toàn bộ. Tìm ra
+6 file còn vi phạm (build hierachy bằng `new GameObject`/`CreatePrimitive` trong C#): `PortalReadyGate.cs`,
+`ArenaQuickMenu.cs`, `RoomCodeConsole.cs`, `ScoreboardUI.cs`, `AnnouncerUI.cs`, `ConnectionStatusHud.cs`.
+Owner duyệt convert hết + đặt lên scene + đảm bảo ref/init đúng trước khi build test.
+
+**Cách làm (lặp lại cho cả 6):** với prefab có sẵn (`PortalReadyGate`) mở bằng `open_prefab_stage`, còn lại
+build trực tiếp trên scene instance → reflection-invoke method `Build()` cũ để tạo hết children/label/nút →
+sửa script đổi field build-runtime thành `[SerializeField]`, xoá hẳn `Build()`/`CreateButton()`/`CreateLabel()`,
+dời `Poked +=` vào `Awake()`/`Spawned()` → recompile (0 lỗi) → wire lại field bằng
+`SerializedObject.FindProperty(...).objectReferenceValue` trên children đã bake sẵn (mảng 31 nút chữ của
+RoomCodeConsole set qua `arraySize` + `GetArrayElementAtIndex`) → `create_from_gameobject` để bake thành
+`.prefab` thật.
+
+Kết quả:
+- **CombatHud.prefab** (`02_Arena`) — gộp `ScoreboardUI` (2 mặt TMP) + `AnnouncerUI` (1 label) thành 1 prefab,
+  cả 2 field giờ `[SerializeField]`, wire xong.
+- **PortalReadyGate.prefab** — bake Backboard + status label + nút SẴN SÀNG vào prefab asset (trước giờ
+  NetworkObject prefab nhưng children vẫn build lúc `Spawned()`).
+- **ArenaQuickMenu.prefab** (`02_Arena`) — panel "VỀ HUB" giờ là child cố định (ẩn/hiện bằng `SetActive`
+  thay vì `Instantiate`/`Destroy` mỗi lần giữ nút B).
+- **ConnectionStatusHud.prefab** — vì object này thuần code-spawn (`ConnectionFlowController.GetOrCreate()`
+  không có scene placement), đặt prefab ở `Assets/_Game/Resources/UI/` và đổi `AddComponent` thành
+  `Resources.Load<GameObject>("UI/ConnectionStatusHud")` + `Instantiate` (vẫn là "instantiate prefab từ
+  code", không phải "assemble trong code").
+- **RoomCodeConsole.prefab** (`01_TOSSZONE_Main`) — phức tạp nhất: 39 children (Backboard + HOST/QUICK PLAY +
+  31 nút chữ/số keyboard + XÓA/VÀO PHÒNG). 31 nút chữ giờ là 1 mảng `[SerializeField] PokeButton3D[]
+  _letterButtons`, wire theo thứ tự `ConnectionFlowController.CodeChars` trong `Awake()` thay vì closure
+  riêng từng nút lúc build.
+
+**Verify:** Play mode cả 2 scene (`01_TOSSZONE_Main`, `02_Arena`) — 0 lỗi console (chỉ có
+`[MetaXRFeature] ErrorFormFactorUnavailable` vốn đã biết, không liên quan). `RoomCodeConsole`: gọi
+`PokeButton3D.Debug_SimulatePoke()` qua reflection lên nút "A" → entry text đổi đúng `A _ _ _ _`, xác nhận
+wiring hoạt động end-to-end, không chỉ compile sạch. `CombatHud`: `ScoreboardFront.text` cập nhật đúng
+"XANH 0 - 0 ĐỎ / HIỆP 1 / SẴN SÀNG…", `Announcer` đúng trạng thái ẩn ban đầu.
+
+Lưu ý: `PortalReadyGate`/`ArenaQuickMenu` không test được network-spawn thật qua Play trực tiếp (gotcha cũ:
+play thẳng scene không load qua Fusion LoadScene nên NetworkObjects không spawn) — chỉ verify compile +
+field non-null trên prefab asset, chưa verify hành vi network lúc runtime thật. Nên test lại qua build/2-client
+khi owner build test.
+
+---
+
 ## Session 17.10 — 2026-07-07 — Fix scale nút poke + nút VỀ HUB + chặn solo vào portal (`1e9c802`, `a4171a0`)
 
 **Fix nút poke bounce không về đúng tỉ lệ:** `PulseScale()` (PokeButton3D) dùng `BillTween.Scale()` — hàm

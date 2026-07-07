@@ -31,7 +31,8 @@ namespace TossZone.Network
             var go = new GameObject("[ConnectionFlow]");
             DontDestroyOnLoad(go);
             Instance = go.AddComponent<ConnectionFlowController>();
-            go.AddComponent<TossZone.UI.ConnectionStatusHud>();
+            var hudPrefab = Resources.Load<GameObject>(TossZone.UI.ConnectionStatusHud.ResourcePath);
+            if (hudPrefab != null) Instantiate(hudPrefab, go.transform);
             return Instance;
         }
 

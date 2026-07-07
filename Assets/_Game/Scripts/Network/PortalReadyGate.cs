@@ -23,8 +23,8 @@ namespace TossZone.Network
 
         [Networked, Capacity(8)] private NetworkDictionary<PlayerRef, NetworkBool> Ready => default;
 
-        private TMP_Text _statusText;
-        private PokeButton3D _button;
+        [SerializeField] private TMP_Text _statusText;
+        [SerializeField] private PokeButton3D _button;
         private string _lastStatus = "";
         private float _nextPoll;
 
@@ -46,7 +46,7 @@ namespace TossZone.Network
         public override void Spawned()
         {
             Instance = this;
-            Build();
+            if (_button != null) _button.Poked += _ => ToggleLocalReady();
         }
 
         public override void Despawned(NetworkRunner runner, bool hasState)
@@ -120,55 +120,6 @@ namespace TossZone.Network
             if (_button != null)
                 _button.GetComponent<MeshRenderer>().material.color = localReady
                     ? new Color(0.2f, 0.7f, 0.3f) : new Color(0.55f, 0.42f, 0.12f);
-        }
-
-        // ── Runtime build (local visuals only — no networked state here) ───────────────
-
-        private void Build()
-        {
-            var panelMat = new Material(Shader.Find("Universal Render Pipeline/Unlit")) { color = new Color(0.10f, 0.12f, 0.18f) };
-
-            GameObject board = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            board.name = "Backboard";
-            Destroy(board.GetComponent<Collider>());
-            board.transform.SetParent(transform, false);
-            board.transform.localPosition = new Vector3(0f, 0.3f, 0.05f);
-            board.transform.localScale = new Vector3(0.9f, 0.55f, 0.04f);
-            board.GetComponent<MeshRenderer>().sharedMaterial = panelMat;
-
-            _statusText = CreateLabel("Chưa sẵn sàng", new Vector3(0f, 0.5f, -0.001f), 0.42f);
-
-            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            go.name = "Btn_SanSang";
-            go.transform.SetParent(transform, false);
-            go.transform.localPosition = new Vector3(0f, 0.2f, 0f);
-            go.transform.localScale = new Vector3(0.5f, 0.16f, 0.05f);
-            var col = go.GetComponent<BoxCollider>();
-            col.isTrigger = true;
-            go.GetComponent<MeshRenderer>().material = new Material(Shader.Find("Universal Render Pipeline/Unlit"))
-                { color = new Color(0.55f, 0.42f, 0.12f) };
-
-            _button = go.AddComponent<PokeButton3D>();
-            _button.Poked += _ => ToggleLocalReady();
-
-            TMP_Text label = CreateLabel("SẴN SÀNG", Vector3.zero, 0.28f);
-            label.transform.SetParent(go.transform, false);
-            label.transform.localPosition = new Vector3(0f, 0f, -0.52f);
-            label.transform.localScale = new Vector3(1f / go.transform.localScale.x, 1f / go.transform.localScale.y, 1f / go.transform.localScale.z);
-        }
-
-        private TMP_Text CreateLabel(string content, Vector3 localPos, float fontSize)
-        {
-            var go = new GameObject("Label_" + content);
-            go.transform.SetParent(transform, false);
-            go.transform.localPosition = localPos;
-            var text = go.AddComponent<TextMeshPro>();
-            text.text = content;
-            text.fontSize = fontSize;
-            text.color = Color.white;
-            text.alignment = TextAlignmentOptions.Center;
-            text.textWrappingMode = TextWrappingModes.NoWrap;
-            return text;
         }
     }
 }

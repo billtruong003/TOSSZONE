@@ -9,11 +9,10 @@ namespace TossZone.UI
 {
     public class AnnouncerUI : MonoBehaviour
     {
-        [SerializeField] private float _fontSize = 1.6f;
+        [SerializeField] private TextMeshPro _label;
         [SerializeField] private float _holdSeconds = 1.4f;
         [SerializeField] private float _distance = 2.2f;
 
-        private TextMeshPro _label;
         private bool _subscribed;
 
         private void OnEnable() => TrySubscribe();
@@ -106,8 +105,7 @@ namespace TossZone.UI
         private void Show(string text, Color color)
         {
             Camera cam = Camera.main;
-            if (cam == null) return;
-            if (_label == null) CreateLabel();
+            if (cam == null || _label == null) return;
 
             Vector3 fwd = cam.transform.forward;
             fwd.y = 0f;
@@ -133,16 +131,6 @@ namespace TossZone.UI
                         ?.SetTarget(_label.transform)
                         .OnComplete(() => { if (_label != null) _label.gameObject.SetActive(false); });
                 });
-        }
-
-        private void CreateLabel()
-        {
-            var go = new GameObject("Announcer");
-            _label = go.AddComponent<TextMeshPro>();
-            _label.fontSize = _fontSize;
-            _label.alignment = TextAlignmentOptions.Center;
-            _label.rectTransform.sizeDelta = new Vector2(3f, 1f);
-            go.SetActive(false);
         }
 
         private static void Pulse(XRNode node, float amplitude)
