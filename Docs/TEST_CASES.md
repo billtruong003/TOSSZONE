@@ -244,6 +244,21 @@
 
 ---
 
+## K. Bug owner báo từ build test 2026-07-07 (Session 17.12→17.13, ĐÃ FIX 3/4 — chưa commit)
+
+| ID | Hiện tượng | Nguyên nhân | Fix đã áp dụng | Verify sau fix | Pri |
+|---|---|---|---|---|---|
+| PT-07 | Ring (BuffRing) spawn thấp/lệch hẳn ở máy remote so với host | `BuffRing.prefab` thiếu `Fusion.NetworkTransform` — remote không nhận vị trí spawn thật, `_driftAnchor.y` neo tại transform local gốc (Y=0) | Thêm `Fusion.NetworkTransform` vào `BuffRing.prefab` (giống fix PortalReadyGate Session 17.8) | 2-client MCP thật: remote trước fix Y=0.00 cả 3 ring (host Y=2.05-2.20); fix áp dụng, chưa re-verify 2-client sau fix (owner build test lại) | ✅ (fix, chờ re-verify) |
+| PT-08 | Ném cự ly gần (2 người đứng sát nhau) không bao giờ trúng | `NetworkProjectile.IsArmed()` chặn `HitFirstVictim()` hoàn toàn trong 0.7m đầu từ điểm ném (`MinArmDistance`) | Giảm `MinArmDistance` 0.7f→0.1f | Solo MCP: ném thẳng tâm từ 0.3m → Health dummy KHÔNG đổi (trước fix); ném thẳng tâm 0.3m tốc độ chậm sau fix → Health giảm đúng (5→4) | ✅ |
+| PT-09 | Ném trúng đích nhưng đôi khi xuyên qua không trúng (đặc biệt tốc độ cao/buff Speed ring) | `HitFirstVictim()` chỉ `OverlapSphere` 1 điểm/tick (không sweep như `TryGroundContact`) — CỘNG THÊM bug sâu hơn: tick đầu tiên của đời đạn bị bỏ qua hoàn toàn (`_prevPosValid` early-return) dù `_prevPos` đã seed đúng, nên nếu đạn bay hết quãng đường tới mục tiêu ngay trong tick đầu, đoạn đó không bao giờ được kiểm tra | Thêm `Physics.SphereCast(_prevPos→pos)` trước overlap check; bỏ early-return ở tick đầu (chỉ set `_prevPosValid=true`, vẫn chạy full check) | Ném 12m/s (max speed thật) 5.37m → trúng đúng, không regress. Manual reflection gọi thẳng `HitFirstVictim()` với `_prevPos`/`pos` set tay → trả `True` đúng. Case 24-40m/s qua harness RPC còn miss không ổn định — nghi artifact test (xem HANDOFF Session 17.13), cần owner tự test buff Speed 2-3 tầng trong VR thật | ✅ (fix, còn 1 case tốc độ cực cao chưa chốt) |
+| PT-10 | Ném gần trúng mặt đối phương thì bóng biến mất trước khi chạm | Chưa live-verify được (2-client không ổn định session này) — phân tích: nhiều khả năng CHÍNH LÀ PT-08/PT-09 (miss thật do arm-gate/tunneling, không phải bug interpolation riêng); NetworkTransform trên NetworkProjectile.prefab dùng config mặc định, không sai | Không fix riêng — PT-08/PT-09 nhiều khả năng đã giải quyết | Owner build test lại sau fix PT-08/09; nếu VẪN thấy biến mất dù Health đối phương THẬT SỰ giảm → mới là interpolation-lag thật, quay lại đào riêng | 🟡 chờ re-verify |
+
+**Setup verify PT-07:** 2-client MCP thật (ParrelSync), so world-position cùng 1 `NetworkId` BuffRing trên host vs remote ngay sau `Spawned()`.
+
+**Setup verify PT-08/09:** solo MCP đủ dùng (hit detection chạy phía authority) — spawn `NetworkProjectile` qua reflection nhắm vào `DummyAvatar` có sẵn trong TrainingRange (hub scene), **bắt buộc `Shooter = FusionNet.Instance.LocalPlayer`** (để `PlayerRef.None` sẽ trùng `InputAuthority=None` của chính DummyAvatar → bị loại như tự bắn mình, cho miss giả).
+
+---
+
 ## Ghi chú edge case chưa chốt (hỏi owner)
 - **MINE-05**: shooter đứng lên mìn của chính mình — hiện KHÔNG nổ (loại trừ shooter). Owner muốn nổ không?
 - **WPN-10 vs clearance**: point-blank súng — clearance tick-đầu có bỏ lỡ địch cực gần không? Cần test thật.

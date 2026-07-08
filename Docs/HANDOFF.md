@@ -23,6 +23,101 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 
 ---
 
+## Session 17.13 — 2026-07-08 — VERIFY + FIX 3/4 bug Session 17.12 (2-client MCP + solo reflection test, CHƯA COMMIT)
+
+Chạy đúng prompt "về nhà" cuối Session 17.12. 3/4 bug đã CONFIRM root cause bằng live test (không sửa mù) rồi fix; bug #4 phân
+tích xong nhưng chưa live-verify được do hạ tầng 2-client không ổn định (xem "Gotcha hạ tầng mới" bên dưới).
+
+### 1. Mất material — KHÔNG REPRO, audit sạch
+Owner: "bây giờ k thấy mất nữa vì assign tay rồi", yêu cầu check hết map + prefab mới. Quét toàn bộ **41 prefab** dưới
+`Assets/_Game/Prefabs/` + **cả 3 scene** (`00_Bootstrap`, `01_TOSSZONE_Main`, `02_Arena`) tìm slot `sharedMaterials`
+null trên mọi `Renderer` — **0 missing material** ở bất kỳ đâu, kể cả 6 prefab UI mới convert Session 17.11. Không có
+gì để fix; nghi vấn GUID-lệch-sau-pull (bài học cũ) đã tự hết khi owner assign tay. Nếu tái diễn, cần thêm chi tiết
+(vật thể/lúc nào) để tra tiếp — hiện tại coi như đã đóng.
+
+### 2. 🔴 FIXED — Ring (BuffRing) spawn thấp ở remote, không sync host
+**CONFIRMED bằng 2-client MCP thật** (ParrelSync `TOSSZONE_clone_0`, 2 Editor riêng qua MCP port 6400/6401 + 6402).
+Sau khi cả 2 máy join chung session + `FusionNet.LoadScene(2)`, so `BuffRing` cùng `NetworkId` trên 2 máy:
+
+| | Master (host) | Remote |
+|---|---|---|
+| Ring 525328 | (-3.85, **2.05**, 2.39) | (1.37, **0.00**, 0.00) |
+| Ring 525329 | (-3.03, **2.06**, -1.06) | (2.18, **0.00**, 0.00) |
+| Ring 525330 | (-2.22, **2.20**, 0.63) | (2.99, **0.00**, 0.00) |
+
+Remote Y luôn = 0.00 (khớp mô tả "spawn thấp hơn"), X hoàn toàn khác master (đúng công thức trôi `DriftPosition()`
+tính từ `Object.Id.Raw`, không liên quan gì tới vị trí spawn thật) — xác nhận 100% giả thuyết: `BuffRing.prefab`
+thiếu `Fusion.NetworkTransform` (giống hệt bug PortalReadyGate Session 17.8). **Fix:** thêm `Fusion.NetworkTransform`
+vào `BuffRing.prefab` (qua `manage_prefabs modify_contents`, cùng cách đã làm với PortalReadyGate). Compile sạch.
+
+### 3. 🔴 FIXED — Collider khó ném trúng (`NetworkProjectile.cs`)
+Verify solo (không cần 2-client — hit detection chạy hoàn toàn phía authority) bằng cách spawn `NetworkProjectile`
+qua reflection nhắm thẳng vào 3 con `DummyAvatar` có sẵn trong TrainingRange ở hub, đo `PlayerCombat.Health`
+trước/sau mỗi phát. **Lưu ý setup:** phải set `Shooter = LocalPlayer.InputAuthority` — để `PlayerRef.None` (như
+bot) sẽ trùng `InputAuthority=None` của chính DummyAvatar → bị loại như "tự bắn chính mình", cho kết quả miss giả.
+
+**(a) `MinArmDistance=0.7f` — CONFIRMED 100% bằng live test:** ném thẳng tâm từ 0.3m (trong khoảng cách gate cũ) →
+bay xuyên qua dummy, **Health không đổi (5→5)**, dù cùng hướng/tốc độ mà ném từ 6m (ngoài gate) thì trúng ngay
+(Health 5→4). Đây là guard cứng, luôn luôn chặn — khớp 100% "ném cự ly gần không bao giờ trúng". **Fix:** giảm
+`MinArmDistance` 0.7f→0.1f (đủ để không tự trúng ngay tại điểm buông, không còn chặn ném cự ly gần thật).
+
+**(b) Tunneling — CONFIRMED + tìm ra bug SÂU HỠN dự kiến:** `HitFirstVictim()` gốc chỉ `OverlapSphereNonAlloc` 1
+điểm/tick, không sweep như `TryGroundContact()`. Thêm `Physics.SphereCast(_prevPos → transform.position, ...)`
+trước overlap check (fix #1). Nhưng retest ở tốc độ cao (24-40 m/s, tương đương buff Speed ring 1-3 tầng: base 12
+m/s × 2.0 = 24, × 2³=8 nếu stack 3 ring T5 = 96 m/s) **vẫn miss** dù đã sweep — đào sâu bằng reflection (gọi thẳng
+`HitFirstVictim()` với `_prevPos`/`transform.position` set tay) chứng minh LOGIC sweep đúng, lỗi nằm ở chỗ khác:
+**`_prevPosValid` gate bỏ qua toàn bộ tick đầu tiên** (`if (!_prevPosValid) { _prevPos = transform.position;
+_prevPosValid = true; return; }`) — trong khi `_prevPos` đã được seed đúng = điểm spawn từ `Spawned()`. Nếu bóng
+bay đủ nhanh (hoặc tick đầu bị trễ vì lý do khác) để đi hết quãng đường tới mục tiêu NGAY TRONG tick đầu, đoạn
+"origin → vị trí hiện tại" đó chưa bao giờ được sweep — bóng xuyên qua vô hình. **Fix #2:** bỏ early-return, để tick
+đầu tiên cũng chạy sweep bình thường (đoạn origin→current đã có sẵn dữ liệu hợp lệ, không cần bỏ qua).
+
+Verify sau cả 2 fix: ném 12 m/s (tốc độ max thật của game) từ 5.37m, armed → **trúng đúng (Health 5→4)**, không
+regress. Ném cự ly gần 0.3m tốc độ chậm (1.5 m/s, đủ phân giải tick để quan sát) → **trúng đúng (Health 5→4)**,
+xác nhận fix #1 hoạt động. **Lưu ý còn nợ:** test tốc độ cực cao (24-40 m/s) qua harness reflection/RPC vẫn cho kết
+quả miss không nhất quán — nghi là artifact của chính cách test (spawn+set velocity qua `execute_code` RPC có độ
+trễ round-trip thật, khiến Editor "bắt kịp" nhiều tick dồn cục trong 1 frame, khác hẳn nhịp game thật) chứ không
+phải lỗi logic (đã chứng minh logic đúng bằng reflection trực tiếp + tốc độ thật 12 m/s live-fire vẫn trúng bình
+thường). Owner nên tự test lại case buff Speed 2-3 tầng ném liên tục trong VR thật; nếu vẫn miss rõ ràng, quay lại
+đào tiếp phần "first-tick" này với công cụ đo chính xác hơn (không qua RPC).
+
+### 4. 🟡 PHÂN TÍCH XONG, CHƯA LIVE-VERIFY — Bóng biến mất trước mặt
+Không dựng được 2-client ổn định đủ lâu để quay góc nhìn remote lúc va chạm thật (xem gotcha hạ tầng bên dưới).
+Kiểm tra tĩnh: `NetworkTransform` trên `NetworkProjectile.prefab` dùng cấu hình MẶC ĐỊNH
+(`DisableSharedModeInterpolation: 0` = interpolation buffer đang BẬT, đúng chuẩn, không phải config sai). Suy luận
+mạnh nhất: **bug #4 nhiều khả năng CHÍNH LÀ bug #3(a)/(b) nhìn từ góc độ khác** — ném gần mặt đối phương là đúng
+kiểu ném cự ly gần/tốc độ cao dễ bị arm-gate hoặc tunneling nuốt mất (miss thật, không phải despawn sớm) — bóng
+"biến mất" vì bay xuyên qua không trúng, không phải vì bug interpolation riêng. Fix #3 rất có thể đã giải quyết
+luôn bug #4. Còn lại 1 khả năng phụ (không loại trừ hẳn): nếu SAU fix #3, remote vẫn thấy bóng biến mất sớm dù
+Health đối phương THẬT SỰ giảm (tức là trúng thật, chỉ lệch hình) — đó mới là interpolation-lag thật, cần fix riêng
+(vd: delay Despawn theo interpolation buffer, hoặc spawn 1 impact VFX ngắn tại điểm chạm để che khoảng lệch hình).
+**Việc cần làm tiếp:** owner build test lại sau fix #3, nếu vẫn thấy "biến mất trước mặt" thì quay video góc remote
+kèm theo dõi Health đối phương cùng lúc để tách 2 case.
+
+### Gotcha hạ tầng mới phát hiện (quan trọng cho session sau dùng 2-client MCP)
+- **2 Editor Play cùng lúc + Meta XR Simulator → crash native.** Cả 2 instance `manage_editor action=play` gần như
+  đồng thời (trong vài giây) từng làm CLONE crash cứng (native crash trong
+  `UnityEngine.XR.OpenXR.OpenXRLoaderBase:Internal_PumpMessageLoop` lúc `RenderPlayModeViewCamerasInternal`) — cả 2
+  Editor cùng tranh XR runtime/simulator instance. **Workaround:** stagger — Play máy A, đợi ~15-45s cho
+  `FusionNet.Instance.Runner.IsRunning=True` xác nhận qua `execute_code` (ĐỪNG tin field `is_changing` của
+  `mcpforunity://editor/state` — field này có thể kẹt `true` cả trăm giây dù session đã chạy thật, luôn verify bằng
+  `FusionNet.Instance.Runner` trực tiếp), rồi mới Play máy B.
+- **Domain-reload-giữa-Play lặp lại nhiều lần trong session này** (gotcha đã ghi Session 17) — mỗi lần
+  `FusionNet.Instance` rớt null vĩnh viễn dù `isPlaying=true`, không debug thêm, chỉ Stop→Play lại.
+- **QuickPlay 2 máy có thể random-match 2 REGION Photon khác nhau** (vd 1 máy ra `hk`, máy kia ra `asia`) — 2 phòng
+  công khai khác region KHÔNG BAO GIỜ thấy nhau dù cùng `QuickPlay()`. Nguyên nhân nghi là cache "best region" ping
+  riêng theo `Library/` mỗi Editor (main vs ParrelSync clone có Library riêng). Workaround thử: `Shutdown()` +
+  `QuickPlay()` lại (đôi khi ra lại đúng region cũ, không đổi) — chưa tìm được cách ép `FixedRegion` gọn qua
+  `ConnectionFlowController` hiện có (phải tự dựng `StartGameArgs.CustomPhotonAppSettings` bằng reflection, việc
+  riêng nếu cần làm thường xuyên). Session này cuối cùng bỏ 2-client cho bug #3/#4, chuyển qua test solo (đủ dùng
+  cho #3 vì hit detection chạy phía authority, không cần remote).
+
+**File đã sửa (chưa commit):** `Assets/_Game/Prefabs/BuffRing.prefab` (+NetworkTransform),
+`Assets/_Game/Scripts/Throwing/NetworkProjectile.cs` (MinArmDistance 0.7→0.1, thêm SphereCast sweep, bỏ
+early-return tick đầu). Compile sạch, không lỗi console ở cả 2 lần refresh.
+
+---
+
 ## Session 17.12 — 2026-07-07 — 🔴 4 bug owner báo sau build test (CHƯA FIX — chỉ mới điều tra + note)
 
 Owner build test xong báo 4 bug. Chưa fix gì trong session này — chỉ tra code để khoanh vùng nghi phạm,

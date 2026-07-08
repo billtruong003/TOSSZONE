@@ -76,7 +76,11 @@ namespace TossZone.Throwing
         private MaterialPropertyBlock _tintBlock;
 
         private const float ExplosiveAoeThreshold = 1.0f;
-        private const float MinArmDistance = 0.7f;
+        // T-bugfix (Session 17.12): was 0.7f — blocked ALL close-range hits (players standing near each other),
+        // since IsArmed() gates HitFirstVictim() entirely. Self-hits are already excluded separately via the
+        // Shooter/InputAuthority check below, so this only needs to guard against a same-tick hit at the spawn
+        // point itself, not real point-blank throws.
+        private const float MinArmDistance = 0.1f;
         private bool _isMine;
         private float _mineFuse;
         private bool _mineLanded;
@@ -315,12 +319,12 @@ namespace TossZone.Throwing
 
             if (_hasHit) return;
 
-            if (!_prevPosValid)
-            {
-                _prevPos = transform.position;
-                _prevPosValid = true;
-                return;
-            }
+            // T-bugfix (Session 17.12): used to `return` here on the very first tick without checking anything —
+            // _prevPos is already seeded to the spawn origin in Spawned(), so skipping meant the origin→current
+            // segment of tick 1 was NEVER swept. A fast projectile (buffed Speed rings, or a thrown ball whose
+            // local-simulation position already advanced before its first network tick) can cover its entire
+            // distance to a close target within that unblinded first tick and tunnel through undetected.
+            _prevPosValid = true;
 
             if (_mineLanded)
             {
@@ -358,16 +362,31 @@ namespace TossZone.Throwing
         // 0.7m from its surface and pop mid-air near bystanders (PT-06).
         private bool HitFirstVictim()
         {
+            bool contact = false;
+
+            // Swept check first — at high speed (base + Speed-ring stacking can reach 8x) the ball can travel
+            // farther than _hitRadius between two ticks, so a point-sample OverlapSphere at the CURRENT position
+            // alone can skip clean over a victim standing in its path (same tunneling class TryGroundContact()
+            // already guards against for the ground plane).
+            Vector3 delta = transform.position - _prevPos;
+            float dist = delta.magnitude;
+            if (dist > 1e-5f && Physics.SphereCast(_prevPos, _hitRadius, delta / dist, out RaycastHit sweepHit,
+                    dist, _hittableMask, QueryTriggerInteraction.Collide))
+            {
+                PlayerCombat sweptVictim = sweepHit.collider.GetComponentInParent<PlayerCombat>();
+                if (sweptVictim != null && sweptVictim.Object != null && sweptVictim.Health > 0
+                    && sweptVictim.Object.InputAuthority != Shooter)
+                    contact = true;
+            }
+
             int n = Physics.OverlapSphereNonAlloc(transform.position, _hitRadius, _overlap,
                 _hittableMask, QueryTriggerInteraction.Collide);
-            bool contact = false;
-            for (int i = 0; i < n; i++)
+            for (int i = 0; i < n && !contact; i++)
             {
                 PlayerCombat victim = _overlap[i] != null ? _overlap[i].GetComponentInParent<PlayerCombat>() : null;
                 if (victim == null || victim.Object == null || victim.Health <= 0) continue;
                 if (victim.Object.InputAuthority == Shooter) continue;
                 contact = true;
-                break;
             }
             if (!contact) return false;
 
