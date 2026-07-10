@@ -23,6 +23,30 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 
 ---
 
+## Session 17.15 — 2026-07-10 — Đã push code fix (#2,#3,#4) + import Beautify/AutoHand; CHỜ playtest Quest Link thật
+
+**Đã push lên `origin/main` (commit `51ed827`)**: toàn bộ code fix của Session 17.13 (BuffRing proxy-anchor sync,
+NetworkProjectile sphere-sweep + delayed despawn), `RingSpawnerHub._slotCount` restore, ArenaQuickMenu VE HUB
+tweaks, cập nhật `TEST_CASES.md`/`HANDOFF.md`, và import mới **Beautify** (Builtin+URP) + **AutoHand Packages
+(Setup)** (chỉ `.meta`, `.unitypackage` gitignore — bình thường). Các thay đổi này ĐÃ NẰM SẴN trong working tree
+từ trước (Session 17.13), phiên này chỉ review + commit + push, KHÔNG có code mới.
+
+**Việc tiếp theo (owner làm khi quay lại):** playtest thật qua **Meta Quest Link** (không phải XR Device
+Simulator) để verify các case chỉ kiểm được bằng headset thật, cột `VR`/`2P` trong `TEST_CASES.md`:
+
+1. Tắt `Tools ▸ TOSSZONE ▸ XR Sim: Toggle Auto-Spawn` trước khi Play (để Quest Link đưa input thật thay vì
+   giả lập bàn phím/chuột).
+2. Ưu tiên test theo thứ tự: **Mục F (ThrowController, THR-01..10)** trước — đây là nhóm ném/vung tay
+   CHỦ YẾU cần headset thật, chưa từng verify bằng VR thật. Sau đó tới **Session 17.14 backlog** (REFF/CTCH/
+   SEL/PRTL/FLOW/QMNU/ROOM/TRNG/UXH) — ưu tiên case đánh dấu ⚠️ (nghi bug/design-flaw thật từ code).
+3. Case nhóm `2P` (NET-*) cần thêm 1 ParrelSync clone làm client thứ 2 — không test được chỉ với 1 headset.
+4. Bug tìm được: ghi hiện tượng + bước repro theo format Session 17.12 (`PT-*`/mục "Bug owner báo") vào
+   `HANDOFF.md`, rồi báo lại để tra code + fix (đừng tự đoán nguyên nhân khi chưa repro).
+5. **Bug #1 "mất material" (Session 17.12) vẫn CHƯA rõ chi tiết** — nếu gặp lại lúc playtest Quest Link,
+   chụp/ghi rõ: vật thể nào, pink hay trong suốt hay mất renderer hẳn, Editor hay chỉ Build APK.
+
+---
+
 ## Session 17.13 — 2026-07-07 — ✅ Bug #2 (BuffRing sync) FIXED & verified 2-client
 
 Repro/verify bằng 2 editor (master `TOSSZONE016e33989` + clone `TOSSZONE_clone_0@6bd44053`), Fusion Shared Mode.
