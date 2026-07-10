@@ -9,7 +9,10 @@ namespace TossZone.Combat
     public class BuffRingConfig : ScriptableObject
     {
         public static readonly float[] DiameterPerTier = { 1.8f, 1.5f, 1.2f, 0.9f, 0.6f };
-        public static readonly float[] DriftSpeedPerTier = { 1f, 1.5f, 2f, 2.5f, 3.5f };
+        // REFF (Session 17.13): old drift {1, 1.5, 2, 2.5, 3.5} double-penalized high tiers — T5 was both
+        // the smallest ring (0.6m) AND the fastest, so angular difficulty scaled ~10× over T1
+        // (drift/diameter 0.56 → 5.83/s). Flattened so size stays the main difficulty axis.
+        public static readonly float[] DriftSpeedPerTier = { 1f, 1.4f, 1.8f, 2.2f, 2.6f };
 
         [BillTitle("Identity")]
         [BillRequired] public string id = "ring_ice";

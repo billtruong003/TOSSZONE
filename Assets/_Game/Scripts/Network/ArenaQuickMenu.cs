@@ -21,6 +21,8 @@ namespace TossZone.Network
         [SerializeField] private float _spawnHeightOffset = -0.15f;
         [SerializeField] private GameObject _panel;
         [SerializeField] private PokeButton3D _button;
+        [Tooltip("Optional — visible only while Phase == MatchEnd: requests a rematch (RPC to master) instead of leaving.")]
+        [SerializeField] private PokeButton3D _rematchButton;
 
         private InputAction _menuButton;
         private bool _shown;
@@ -30,6 +32,7 @@ namespace TossZone.Network
             _menuButton = new InputAction("ArenaQuickMenu", InputActionType.Button, "<XRController>{RightHand}/secondaryButton");
             _menuButton.Enable();
             if (_button != null) _button.Poked += _ => ReturnToHub();
+            if (_rematchButton != null) _rematchButton.Poked += _ => RequestRematch();
             if (_panel != null) _panel.SetActive(false);
         }
 
@@ -61,6 +64,15 @@ namespace TossZone.Network
             Vector3 pos = head.position + fwd * _spawnDistance;
             pos.y = head.position.y + _spawnHeightOffset;
             _panel.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(fwd));
+
+            // Rematch only makes sense while the match is over — hide the button the rest of the time.
+            if (_rematchButton != null)
+            {
+                TossZone.Combat.ArenaManager am = TossZone.Combat.ArenaManager.Instance;
+                _rematchButton.gameObject.SetActive(
+                    am != null && am.Phase == TossZone.Combat.ArenaManager.MatchPhase.MatchEnd);
+            }
+
             _panel.SetActive(true);
         }
 
@@ -74,6 +86,13 @@ namespace TossZone.Network
         {
             Hide();
             FusionNet.Instance?.Shutdown();
+        }
+
+        private void RequestRematch()
+        {
+            Hide();
+            TossZone.Combat.ArenaManager am = TossZone.Combat.ArenaManager.Instance;
+            if (am != null && am.Object != null && am.Object.IsValid) am.RPC_RequestRematch();
         }
     }
 }

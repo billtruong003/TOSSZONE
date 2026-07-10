@@ -29,9 +29,12 @@ namespace TossZone.Combat
 
         private static readonly RingElement[] AllowedElements = { RingElement.Multi, RingElement.Speed, RingElement.Area };
 
+        // REFF (Session 17.13): band B was {38,26,20,10,5} = 99 (typo) → bumped T2 to 27 for a clean 100.
+        // Added a 90s+ band so long rounds keep ramping pressure instead of freezing at the 60-90s curve.
         private static readonly float[] TierWeights0to30 = { 65f, 25f, 8f, 2f, 0f };
-        private static readonly float[] TierWeights31to60 = { 38f, 26f, 20f, 10f, 5f };
+        private static readonly float[] TierWeights31to60 = { 38f, 27f, 20f, 10f, 5f };
         private static readonly float[] TierWeights61to90 = { 20f, 25f, 25f, 20f, 10f };
+        private static readonly float[] TierWeights90Plus = { 12f, 20f, 28f, 25f, 15f };
 
         [Networked, Capacity(8)] private NetworkArray<NetworkId> SlotRings    => default;
         [Networked, Capacity(8)] private NetworkArray<TickTimer> RespawnTimers => default;
@@ -144,8 +147,7 @@ namespace TossZone.Combat
             // Spawned() resolves its config with Element still = None (0 → null slot), leaving the ring
             // colorless. (Setting these after Runner.Spawn() is too late.)
             var element = AllowedElements[Random.Range(0, AllowedElements.Length)];
-            int tier = RollTier();
-            if (tier >= 4 && HasActiveTier(tier)) tier = Random.Range(1, 4);
+            int tier = RollTier();   // T4/T5 cap handled inside RollTier by renormalizing (REFF, Session 17.13)
             Vector3 pos = RollSpawnPos(tier);
 
             NetworkObject obj = Runner.Spawn(_ringPrefab,
@@ -162,21 +164,35 @@ namespace TossZone.Combat
         private int RollTier()
         {
             float elapsed = CombatSession.Instance != null ? CombatSession.Instance.RoundElapsed : 0f;
-            float[] weights = elapsed < 30f ? TierWeights0to30 : elapsed < 60f ? TierWeights31to60 : TierWeights61to90;
+            float[] weights = elapsed < 30f ? TierWeights0to30
+                            : elapsed < 60f ? TierWeights31to60
+                            : elapsed < 90f ? TierWeights61to90
+                            : TierWeights90Plus;
             if (weights == null || weights.Length == 0) return 1;
 
+            // Tiers 4-5 are capped at one active instance each. The old downgrade (roll T4/T5 while one is
+            // active → uniform Random.Range(1,4)) dumped the whole high-tier probability mass into a flat
+            // 33/33/33 — inflating T3 far above its designed weight. Renormalizing over the tiers that are
+            // actually available keeps the curve's ratios intact.
             float total = 0f;
-            for (int i = 0; i < weights.Length; i++) total += Mathf.Max(0f, weights[i]);
+            for (int i = 0; i < weights.Length; i++)
+            {
+                int t = i + 1;
+                if (t >= 4 && HasActiveTier(t)) continue;
+                total += Mathf.Max(0f, weights[i]);
+            }
             if (total <= 0f) return 1;
 
             float roll = Random.Range(0f, total);
             float accum = 0f;
             for (int i = 0; i < weights.Length; i++)
             {
+                int t = i + 1;                     // index 0 = Tier1 .. index 4 = Tier5
+                if (t >= 4 && HasActiveTier(t)) continue;
                 accum += Mathf.Max(0f, weights[i]);
-                if (roll <= accum) return i + 1;   // index 0 = Tier1 .. index 4 = Tier5
+                if (roll <= accum) return t;
             }
-            return weights.Length;
+            return 1;
         }
 
         private bool HasActiveTier(int tier)

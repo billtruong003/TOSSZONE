@@ -43,6 +43,14 @@ namespace TossZone.Combat
         /// RingSpawner flow.</summary>
         [Networked] public int Tier { get; set; }
 
+        /// <summary>Session 17.12 bug #2 — spawn-time anchor, replicated once. This prefab intentionally has no
+        /// NetworkTransform (drift is deterministic + local), but that also means the SPAWN POSITION never
+        /// replicates: proxies attach at the prefab default (0,0,0), so _driftAnchor resolved to ground level /
+        /// zone center on every remote client. Authority writes its rolled spawn position here in Spawned();
+        /// proxies snap to it before caching anchors. Do NOT replace this with a NetworkTransform — the local
+        /// per-frame drift in Update() would fight NT interpolation on proxies.</summary>
+        [Networked] private Vector3 SpawnAnchor { get; set; }
+
         public int StackMultiplier => _config != null
             ? Mathf.Max(2, Mathf.RoundToInt(_config.ValueForTier(Tier))) : 2;
 
@@ -81,6 +89,11 @@ namespace TossZone.Combat
             _tierScale = BuffRingConfig.DiameterForTier(Tier) / Mathf.Max(0.01f, _prefabDiameter);
             ApplyColor();
             ApplyLabel();
+
+            // Anchor sync (bug #2): authority publishes its spawn position; proxies snap to it BEFORE caching
+            // anchors below — at attach time a proxy's transform still sits at the prefab default (0,0,0).
+            if (HasStateAuthority) SpawnAnchor = transform.position;
+            else if (SpawnAnchor != Vector3.zero) transform.position = SpawnAnchor;
 
             _originPos = transform.position;
             _driftAnchor = transform.position;

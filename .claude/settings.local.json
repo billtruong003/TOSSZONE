@@ -17,7 +17,14 @@
       "Bash(powershell -Command \"Start-Process 'C:\\\\Program Files\\\\Unity\\\\Hub\\\\Editor\\\\6000.3.8f1\\\\Editor\\\\Unity.exe' -ArgumentList '-projectpath','D:\\\\Projects\\\\TOSSZONE_clone_0'\" 2>&1)",
       "Bash(powershell -Command \"Get-CimInstance Win32_Process | Where-Object { \\\\$_.CommandLine -match 'TOSSZONE_clone_0' } | Select-Object ProcessId, Name, CreationDate\")",
       "Bash(ssh -T git@gitlab.com -o ConnectTimeout=8)",
-      "Bash(echo \"exit:$?\")"
+      "Bash(echo \"exit:$?\")",
+      "Bash(dir /A:D)",
+      "Bash(findstr /I \"TOSSZONE\")",
+      "Bash(\"C:\\\\Program Files\\\\Unity\\\\Hub\\\\Editor\\\\6000.3.8f1\\\\Editor\\\\Unity.exe\" -projectPath \"D:\\\\Projects\\\\TOSSZONE_clone_0\")",
+      "Bash(echo \"launched pid $!\")",
+      "mcp__UnityMCP__manage_asset",
+      "Bash(git status *)"
     ]
-  }
+  },
+  "prefersReducedMotion": false
 }

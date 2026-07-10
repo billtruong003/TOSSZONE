@@ -73,7 +73,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 79ea68b5d5e2e7140a208d67f7a6fc55, type: 2}
   _zoneCenter: {fileID: 0}
   _zoneSize: {x: 6, y: 1, z: 3}
-  _slotCount: 0
+  _slotCount: 3
   _tierWeights0to30:
   - 40
   - 30

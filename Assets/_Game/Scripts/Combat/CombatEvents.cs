@@ -41,7 +41,12 @@ namespace TossZone.Combat
     }
 
     /// <summary>The full match ended. WinnerTeam: 0 = A, 1 = B, -1 = Hòa Chung Cuộc.</summary>
-    public struct MatchEndEvent : IEvent { public int WinnerTeam; }
+    public struct MatchEndEvent : IEvent
+    {
+        public int WinnerTeam;
+        public int ScoreA;
+        public int ScoreB;
+    }
 
     public struct DeflectEvent : IEvent
     {

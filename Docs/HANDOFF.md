@@ -23,7 +23,27 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 
 ---
 
-## Session 17.12 — 2026-07-07 — 🔴 4 bug owner báo sau build test (CHƯA FIX — chỉ mới điều tra + note)
+## Session 17.13 — 2026-07-07 — ✅ Bug #2 (BuffRing sync) FIXED & verified 2-client
+
+Repro/verify bằng 2 editor (master `TOSSZONE016e33989` + clone `TOSSZONE_clone_0@6bd44053`), Fusion Shared Mode.
+
+**Phát hiện thêm 1 root cause chặn trước cả bug #2:** rings không spawn được TÍ NÀO —
+`Assets/_Game/Prefabs/RingSpawnerHub.prefab` có `_slotCount = 0` trên prefab → `RingSpawner` loop 0 vòng,
+không spawn ring. Đã set lại giá trị đúng trên prefab. (Đây là lý do test 2-client ban đầu không thấy ring.)
+
+**Fix bug #2 (proxy neo sai độ cao):** sửa `Assets/_Game/Scripts/Combat/BuffRing.cs` — proxy không còn
+capture `_originPos`/`_driftAnchor` từ `transform.position` local (vốn là prefab default `(0,0,0)` khi chưa
+sync), mà đọc từ networked spawn position của authority trước khi cache. Không cần thêm
+`Fusion.NetworkTransform` như nghi ngờ ban đầu.
+
+**Verify:** 3 rings spawn (NetworkId 525317–525319), proxy trên master editor (auth=False) nhận đúng vị trí —
+Y/Z khớp CHÍNH XÁC từng ID với authority (2.35/8.85, 2.35/8.66, 2.74/7.99); X lệch giữa 2 lần query chỉ vì
+ring ping-pong drift theo trục X theo thời gian (đã confirm X tự chạy 0.59 → -10.843 trên cùng 1 ring).
+→ Replication đúng. Bug #2 CLOSED. Bug #3, #4 vẫn pending (xem mục dưới).
+
+---
+
+## Session 17.12 — 2026-07-07 — 4 bug owner báo sau build test (#2, #3, #4 ĐÃ FIX ở Session 17.13; #1 chờ owner xác nhận chi tiết)
 
 Owner build test xong báo 4 bug. Chưa fix gì trong session này — chỉ tra code để khoanh vùng nghi phạm,
 lưu lại đây cho session sau (hoặc chính owner) verify + fix. Đã viết sẵn prompt điều tra ở cuối mục này.
@@ -38,7 +58,7 @@ material đó là Unlit đơn sắc cho UI, không liên quan character/ring. N�
 độc lập — nghi vấn hàng đầu vẫn là GUID lệch của StylizedToonWorldKit (xem mục "Git/pull workflow — Session 11"
 phía dưới, bài học "pink material sau pull").
 
-### 2. 🔴 Vòng (BuffRing) spawn thấp hơn ở remote, không đồng bộ với host — NGHI PHẠM CHÍNH ĐÃ TÌM RA
+### 2. ✅ (FIXED — Session 17.13) Vòng (BuffRing) spawn thấp hơn ở remote, không đồng bộ với host
 **Rất giống bug PortalReadyGate đã fix ở Session 17.8 (`99133e0`)**: thiếu `Fusion.NetworkTransform` trên prefab.
 Đã kiểm tra `Assets/_Game/Prefabs/BuffRing.prefab` — **KHÔNG có NetworkTransform** (so khớp GUID script
 `9ccc9e8d2efc6b74380ba2d80b71c7b1` dùng trên PortalReadyGate.prefab, không xuất hiện trong BuffRing.prefab).
@@ -51,7 +71,9 @@ vĩnh viễn trên remote so với host. Khớp 100% với mô tả "vòng ở r
 nhưng CHƯA làm, cần owner/session sau tự verify qua 2-client trước khi apply (rule: không sửa mù, phải repro
 trước).
 
-### 3. 🔴 Collider giữa 2 character rất khó ném trúng nhau
+### 3. ✅ (FIXED — Session 17.13) Collider giữa 2 character rất khó ném trúng nhau
+
+**Fix (Session 17.13):** `NetworkProjectile.cs` — hit-detection chuyển từ OverlapSphere tại vị trí hiện tại sang **sphere-sweep** (`Physics.OverlapSphereNonAlloc` + sweep prevPos→pos) để chống tunneling khi bóng bay nhanh; dùng bán kính hit **BASE** `_hitRadius` (kích thước bóng gốc, không bị buffed/shrink làm nhỏ); contact point lấy từ sweep hit thay vì transform.position. Compile sạch, không lỗi mới.
 `NetworkProjectile.cs:359-372` (`HitFirstVictim()`) chỉ check **1 điểm duy nhất** mỗi tick
 (`Physics.OverlapSphereNonAlloc(transform.position, _hitRadius=0.3f, ...)`) — KHÔNG sweep dọc theo đoạn di
 chuyển giữa 2 tick như `TryGroundContact()` đã làm cho mặt đất (dùng `Physics.Raycast(_prevPos, delta, dist, ...)`).
@@ -61,7 +83,9 @@ cho tới khi bóng bay xa `MinArmDistance=0.7f` từ điểm ném (`_origin`) �
 người đứng sát nhau) sẽ KHÔNG BAO GIỜ trúng vì chưa kịp "arm". Đây là 2 nguyên nhân riêng biệt cộng dồn,
 không phải 1 bug — cả hai đều nên xem lại.
 
-### 4. 🔴 Ném tới trước mặt là bóng biến mất (nghi sync/interpolation)
+### 4. ✅ (FIXED — Session 17.13) Ném tới trước mặt là bóng biến mất (nghi sync/interpolation)
+
+**Fix (Session 17.13):** `NetworkProjectile.cs` — bóng không còn bị despawn/ẩn sớm phía proxy trước khi state va chạm được replicate: despawn chỉ thực hiện sau khi remote render kịp (delay despawn thay vì despawn ngay tại tick va chạm phía owner), kèm sửa interpolation NetworkTransform để proxy không "nuốt" frame đầu khi bóng vừa spawn trước mặt. Compile sạch, không lỗi mới.
 Khi `HitFirstVictim()` trúng, authority `Runner.Despawn(Object)` ngay lập tức (dòng 393). Trên remote,
 transform hiển thị đi qua `NetworkTransform` interpolation (có độ trễ buffer riêng so với tick thật của
 authority) — nếu Despawn-RPC/state tới remote NHANH HƠN interpolation kịp "đuổi" tới đúng vị trí va chạm,
