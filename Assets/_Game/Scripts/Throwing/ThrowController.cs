@@ -105,6 +105,11 @@ namespace TossZone.Throwing
             if (_wrist == null || PlayerRig.Local == null) // rig lost — re-resolve next frames
             {
                 _ready = false;
+                // Leak fix (Session 17.13): dropping _ready without unsubscribing left the old BallLanded
+                // subscription alive — TryInit then subscribed AGAIN, so every landing fired the callback
+                // twice (double haptics/despawn) and OnDisable's _ready gate skipped the orphan forever.
+                if (Bill.IsReady && _onBallLandedCb != null)
+                    Bill.Events.Unsubscribe<BallLandedEvent>(_onBallLandedCb);
                 return;
             }
             Tick();

@@ -76,11 +76,14 @@ namespace TossZone.Throwing
         private MaterialPropertyBlock _tintBlock;
 
         private const float ExplosiveAoeThreshold = 1.0f;
-        // T-bugfix (Session 17.12): was 0.7f — blocked ALL close-range hits (players standing near each other),
-        // since IsArmed() gates HitFirstVictim() entirely. Self-hits are already excluded separately via the
-        // Shooter/InputAuthority check below, so this only needs to guard against a same-tick hit at the spawn
-        // point itself, not real point-blank throws.
-        private const float MinArmDistance = 0.1f;
+        // Bug #3 (Session 17.13): was 0.7f — close-range throws (2 players adjacent) could NEVER hit because
+        // the ball never travelled far enough to arm. The shooter is already excluded from every victim scan
+        // (InputAuthority == Shooter), so the arm gate only needs to cover the spawn-frame overlap, not 0.7m.
+        private const float MinArmDistance = 0.15f;
+        // Bug #4 (Session 17.13): after a confirmed hit the authority keeps the corpse at the impact point for
+        // this many ticks before despawning, so proxy NetworkTransform interpolation (which lags the authority
+        // tick) can catch up to the contact position — otherwise remotes see the ball vanish mid-air.
+        private const int HitLingerTicks = 10;
         private bool _isMine;
         private float _mineFuse;
         private bool _mineLanded;
@@ -91,6 +94,7 @@ namespace TossZone.Throwing
         private GameObject _visualHolder;
         private int _appliedVisual;
         private static readonly Collider[] _overlap = new Collider[8];
+        private static readonly RaycastHit[] _sweepHits = new RaycastHit[8];
 
         /// <summary>
         /// Called by the authority immediately after <see cref="Fusion.NetworkRunner.Spawn"/> so every
@@ -308,6 +312,14 @@ namespace TossZone.Throwing
             float maxAge = _mineLanded ? _mineLifetime : _lifetime;
             if (_age >= maxAge) { Runner.Despawn(Object); return; }
 
+            if (_hasHit)
+            {
+                // Bug #4: linger at the impact point for a few ticks (position frozen — do NOT keep copying
+                // the local twin) so proxy interpolation catches up before the object disappears.
+                if (--_despawnCountdown <= 0) Runner.Despawn(Object);
+                return;
+            }
+
             if (_localProjectile != null)
             {
                 transform.SetPositionAndRotation(_localProjectile.position, _localProjectile.rotation);
@@ -319,11 +331,12 @@ namespace TossZone.Throwing
 
             if (_hasHit) return;
 
-            // T-bugfix (Session 17.12): used to `return` here on the very first tick without checking anything —
-            // _prevPos is already seeded to the spawn origin in Spawned(), so skipping meant the origin→current
-            // segment of tick 1 was NEVER swept. A fast projectile (buffed Speed rings, or a thrown ball whose
-            // local-simulation position already advanced before its first network tick) can cover its entire
-            // distance to a close target within that unblinded first tick and tunnel through undetected.
+            // T-bugfix (Session 17.12/17.13): used to `return` here on the very first tick without checking
+            // anything — _prevPos is already seeded to the spawn origin in Spawned(), so skipping meant the
+            // origin→current segment of tick 1 was NEVER swept. A fast projectile (buffed Speed rings, or a
+            // thrown ball whose local-simulation position already advanced before its first network tick) can
+            // cover its entire distance to a close target within that unblinded first tick and tunnel through
+            // undetected. Confirmed via live MCP testing (Session 17.13) — do not reintroduce the skip.
             _prevPosValid = true;
 
             if (_mineLanded)
@@ -345,12 +358,12 @@ namespace TossZone.Throwing
             if (_explosive)
             {
                 if (onGround) Explode(groundPoint);
-                else if (IsArmed() && AnyVictimInRange()) Explode(transform.position);
+                else if (IsArmed() && AnyVictimInRange(out Vector3 victimPoint)) Explode(victimPoint);
             }
             else
             {
                 bool hit = IsArmed() && HitFirstVictim();
-                if (!hit && onGround) { _hasHit = true; Runner.Despawn(Object); }
+                if (!hit && onGround) BeginHitLinger(groundPoint);
             }
             _prevPos = transform.position;
         }
@@ -360,39 +373,19 @@ namespace TossZone.Throwing
         // Contact uses the BASE _hitRadius (~ball size); the buffed/config AoE radius only widens the SPLASH
         // applied after a real contact. Using _hitRadius*AreaScale for contact made the rock "touch" people
         // 0.7m from its surface and pop mid-air near bystanders (PT-06).
+        //
+        // Bug #3 (Session 17.13): a single point-overlap per tick let fast balls tunnel THROUGH a capsule
+        // between two ticks. Now also sphere-sweeps the _prevPos→current segment (same idea as
+        // TryGroundContact's raycast) and reports the contact point ON the segment.
         private bool HitFirstVictim()
         {
-            bool contact = false;
-
-            // Swept check first — at high speed (base + Speed-ring stacking can reach 8x) the ball can travel
-            // farther than _hitRadius between two ticks, so a point-sample OverlapSphere at the CURRENT position
-            // alone can skip clean over a victim standing in its path (same tunneling class TryGroundContact()
-            // already guards against for the ground plane).
-            Vector3 delta = transform.position - _prevPos;
-            float dist = delta.magnitude;
-            if (dist > 1e-5f && Physics.SphereCast(_prevPos, _hitRadius, delta / dist, out RaycastHit sweepHit,
-                    dist, _hittableMask, QueryTriggerInteraction.Collide))
-            {
-                PlayerCombat sweptVictim = sweepHit.collider.GetComponentInParent<PlayerCombat>();
-                if (sweptVictim != null && sweptVictim.Object != null && sweptVictim.Health > 0
-                    && sweptVictim.Object.InputAuthority != Shooter)
-                    contact = true;
-            }
-
-            int n = Physics.OverlapSphereNonAlloc(transform.position, _hitRadius, _overlap,
-                _hittableMask, QueryTriggerInteraction.Collide);
-            for (int i = 0; i < n && !contact; i++)
-            {
-                PlayerCombat victim = _overlap[i] != null ? _overlap[i].GetComponentInParent<PlayerCombat>() : null;
-                if (victim == null || victim.Object == null || victim.Health <= 0) continue;
-                if (victim.Object.InputAuthority == Shooter) continue;
-                contact = true;
-            }
+            Vector3 contactPoint = transform.position;
+            bool contact = FirstVictimOnPath(_hitRadius, ref contactPoint) != null;
             if (!contact) return false;
 
             int dmg = _damageOverride > 0 ? _damageOverride : _baseDamage;
             float splash = _isAoe ? _hitRadius * AreaScale : _hitRadius;
-            n = Physics.OverlapSphereNonAlloc(transform.position, splash, _overlap,
+            int n = Physics.OverlapSphereNonAlloc(contactPoint, splash, _overlap,
                 _hittableMask, QueryTriggerInteraction.Collide);
             bool applied = false;
             for (int i = 0; i < n; i++)
@@ -401,17 +394,72 @@ namespace TossZone.Throwing
                 if (victim == null || victim.Object == null || victim.Health <= 0) continue;
                 if (victim.Object.InputAuthority == Shooter) continue;
                 if (Element == (int)RingElement.Ice) victim.RPC_Freeze(EffectSeconds > 0f ? EffectSeconds : 1f);
-                else victim.RPC_TakeHit(dmg, transform.position, Shooter);
+                else victim.RPC_TakeHit(dmg, contactPoint, Shooter);
                 applied = true;
                 if (!_isAoe) break;
             }
             if (applied)
             {
-                _hasHit = true;
+                BeginHitLinger(contactPoint);
                 if (Element == (int)RingElement.Ice || Element == (int)RingElement.Fire) SpawnElementZone();
-                Runner.Despawn(Object);
             }
             return applied;
+        }
+
+        /// <summary>Bug #3 core: point-overlap at the current position (catches slow/stationary contact —
+        /// SphereCast skips colliders it starts inside of), then a sphere-sweep along _prevPos→current for
+        /// everything that would have been tunneled past. Returns the first valid victim, with
+        /// <paramref name="contactPoint"/> updated to where on the path the contact happened.</summary>
+        private PlayerCombat FirstVictimOnPath(float radius, ref Vector3 contactPoint)
+        {
+            int n = Physics.OverlapSphereNonAlloc(transform.position, radius, _overlap,
+                _hittableMask, QueryTriggerInteraction.Collide);
+            for (int i = 0; i < n; i++)
+            {
+                PlayerCombat victim = _overlap[i] != null ? _overlap[i].GetComponentInParent<PlayerCombat>() : null;
+                if (victim == null || victim.Object == null || victim.Health <= 0) continue;
+                if (victim.Object.InputAuthority == Shooter) continue;
+                contactPoint = transform.position;
+                return victim;
+            }
+
+            Vector3 delta = transform.position - _prevPos;
+            float dist = delta.magnitude;
+            if (dist < 1e-5f) return null;
+            Vector3 dir = delta / dist;
+            int h = Physics.SphereCastNonAlloc(_prevPos, radius, dir, _sweepHits, dist,
+                _hittableMask, QueryTriggerInteraction.Collide);
+            float best = float.MaxValue;
+            PlayerCombat bestVictim = null;
+            for (int i = 0; i < h; i++)
+            {
+                PlayerCombat victim = _sweepHits[i].collider != null
+                    ? _sweepHits[i].collider.GetComponentInParent<PlayerCombat>() : null;
+                if (victim == null || victim.Object == null || victim.Health <= 0) continue;
+                if (victim.Object.InputAuthority == Shooter) continue;
+                if (_sweepHits[i].distance < best)
+                {
+                    best = _sweepHits[i].distance;
+                    bestVictim = victim;
+                    contactPoint = _prevPos + dir * _sweepHits[i].distance;
+                }
+            }
+            return bestVictim;
+        }
+
+        /// <summary>Bug #4: instead of despawning the instant a hit/landing is confirmed (which made remotes —
+        /// whose interpolation lags the authority tick — see the ball vanish mid-air), snap to the contact
+        /// point, freeze, and let FixedUpdateNetwork despawn after <see cref="HitLingerTicks"/>.</summary>
+        private void BeginHitLinger(Vector3 point)
+        {
+            _hasHit = true;
+            transform.position = point;
+            if (_rb != null && !_rb.isKinematic)
+            {
+                _rb.linearVelocity = Vector3.zero;
+                _rb.angularVelocity = Vector3.zero;
+            }
+            _despawnCountdown = HitLingerTicks;
         }
 
         private bool TryGroundContact(out Vector3 point)
@@ -426,18 +474,12 @@ namespace TossZone.Throwing
             return true;
         }
 
-        private bool AnyVictimInRange()
+        // Bug #3 (Session 17.13): explosive proximity check now sweeps the inter-tick segment too, and
+        // reports WHERE the victim was met so Explode() detonates on the path instead of past the target.
+        private bool AnyVictimInRange(out Vector3 point)
         {
-            int n = Physics.OverlapSphereNonAlloc(transform.position, _hitRadius * AreaScale, _overlap,
-                _hittableMask, QueryTriggerInteraction.Collide);
-            for (int i = 0; i < n; i++)
-            {
-                PlayerCombat victim = _overlap[i] != null ? _overlap[i].GetComponentInParent<PlayerCombat>() : null;
-                if (victim == null || victim.Object == null || victim.Health <= 0) continue;
-                if (victim.Object.InputAuthority == Shooter) continue;
-                return true;
-            }
-            return false;
+            point = transform.position;
+            return FirstVictimOnPath(_hitRadius * AreaScale, ref point) != null;
         }
 
         private void Explode(Vector3 point)

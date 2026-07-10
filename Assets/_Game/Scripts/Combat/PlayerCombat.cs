@@ -28,7 +28,9 @@ namespace TossZone.Combat
         public static int LivesForPlayerCount(int realPlayers)
         {
             int perTeam = Mathf.Max(1, (realPlayers + 1) / 2);
-            return perTeam <= 1 ? 7 : perTeam <= 3 ? 5 : 4;
+            // UXH-01 (Session 17.13): 1v1 was 7 lives but HealthUI only has 5 pips — health 6-7 rendered
+            // identically to 5. Capped at 5 to match the UI (and keep 1v1 rounds short for VR sessions).
+            return perTeam <= 3 ? 5 : 4;
         }
 
         [Networked] public int Health { get; set; }

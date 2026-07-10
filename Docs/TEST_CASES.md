@@ -265,3 +265,77 @@
 - **Scale sân theo mode** (GDD §III): blockout 14×12 vs chuẩn 1v1 6×5 — chưa scale, ảnh hưởng RING trôi ngang +
   `crossZoneLength` Bom X (47% sâu sân). Là task riêng, không phải bug.
 - **Bom X `crossZoneLength=5.64m`** tính theo sân sâu 12m — nếu scale sân thì phải tính lại theo mode.
+
+
+---
+
+## Session 17.14 — Bộ test case GAMEPLAY/UX mới (khác T1-T32 & các nhóm cũ; ưu tiên chơi thật 2 người)
+
+> Nguồn: quét code CombatSession / ArenaManager / RingSpawner / BuffRingConfig / PlayerCombat / CatchController / WristWeaponSelector / WeaponHolder / MinigamePortal / RoomCodeConsole / ArenaQuickMenu / TrainingRangeController / HealthUI. Các case đánh dấu ⚠️ = nghi có bug/design-flaw thật từ code, test trước.
+
+### REFF — Vòng buff có THỰC SỰ effective không? (đo lường, không chỉ pass/fail)
+- [ ] REFF-01 ⚠️ **Hit-rate theo tier**: ném 10 quả mỗi tier T1→T5 (đường kính 1.8/1.5/1.2/0.9/0.6m, drift 1/1.5/2/2.5/3.5 m/s). Nếu T4-T5 <10% trúng → T5 (0.6m + 3.5m/s) gần như vô dụng, cần cân bằng lại.
+- [ ] REFF-02 **T5 gần như không tồn tại**: weights 0-30s = {65,25,8,2,0} → T5 = 0%; 31-60s = 5%; 61-90s = 10%. Round 90s → kỳ vọng gặp T5 cực thấp. Chơi 3 match, đếm số lần thấy T5. Nếu ~0 → design hay bug?
+- [ ] REFF-03 ⚠️ **Ice/Fire KHÔNG BAO GIỜ spawn trong arena**: `RingSpawner.AllowedElements = {Multi, Speed, Area}` — 2/5 element chỉ có trong training range. Xác nhận với owner đây là chủ đích GDD §VI hay sót.
+- [ ] REFF-04 **Multi T5 = 15 đạn**: ném xuyên Multi T5 → 15 đạn burst: FPS 2 client, đạn có damage đúng, có catch được từng viên (CatchController poll)?
+- [ ] REFF-05 **Xuyên 2 ring liên tiếp** (Speed rồi Area cùng đường bay): buff stack, ghi đè, hay chỉ nhận ring đầu? Ghi rõ hành vi thực tế.
+- [ ] REFF-06 **Ném lob chậm xuyên ring**: bóng bay cầu vồng chậm qua ring — có nhận buff như ném thẳng mạnh không?
+- [ ] REFF-07 **Ring drift ra mép zone**: quan sát 5 phút — có ring nào lơ lửng vị trí không ai ném tới được từ 2 phía spawn không (zone 8×1×4m)?
+- [ ] REFF-08 **Độ cao ring vs người thấp**: `_minRingBottomY=1.6` + bán kính → tâm ring T1 ≈ 2.5m. Người chơi VR cao 1m5 đứng gần có góc ném xuyên nổi không?
+- [ ] REFF-09 **2 người cùng xuyên 1 ring cùng lúc** (2 hướng ngược nhau): cả 2 được buff? Ring despawn 1 lần, respawn timer đúng 1 slot?
+- [ ] REFF-10 **Ring respawn trong Warmup/RoundEnd**: dùng ring cuối round → 10s sau đang RoundEnd — ring mới có spawn và bị "ăn chùa" trước khi round sau bắt đầu?
+
+### CTCH — Cơ chế bắt bóng
+- [ ] CTCH-01 **Ammo cộng vào slot đang cầm**: bắt bóng thường +1 ammo vào `EquippedIndex` hiện tại — kể cả đang cầm vũ khí KHÁC loại bóng vừa bắt. Đúng design?
+- [ ] CTCH-02 ⚠️ **EXPLOIT tự bắt bóng mình**: ném thẳng lên trời rồi tự bắt — `CatchController` không check shooter → +1 ammo (power +2) miễn phí vô hạn?
+- [ ] CTCH-03 **Power catch 2 client**: bắt bóng element (tím) → +2 ammo, cả 2 máy thấy bóng biến mất êm (không nổ, không ghost).
+- [ ] CTCH-04 **Race bắt đạn burst**: 2 người cùng đưa tay vào 1 viên đạn mưa (`RPC_RequestCatch`) — chỉ 1 người được ammo? Viên đạn chết trên cả 2 máy?
+- [ ] CTCH-05 **Tunneling catch**: bóng 20m/s xuyên qua zone 0.15m trong ~1 frame — bắt được không hay lọt tay? (giống bug #3 collider vừa fix nhưng cho catch)
+- [ ] CTCH-06 **Bắt khi frozen/invuln**: đang đóng băng hoặc vừa mất mạng (invuln 3s) — có được phép bắt bóng không? Hành vi mong muốn là gì?
+
+### SEL — Wrist weapon shop (UX mua đồ giữa trận)
+- [ ] SEL-01 **Mở nhầm panel giữa combat**: cúi nhìn xuống né bóng — cổ tay lọt cone 22°/1m → panel bật che tầm nhìn đúng lúc nguy hiểm?
+- [ ] SEL-02 **Panel nhấp nháy ở mép cone**: giữ cổ tay đúng rìa góc mở/đóng (22°/38°, delay 0.8s) — có flicker không?
+- [ ] SEL-03 ⚠️ **Conflict grip mua vs grip cầm bóng**: tay phải đang GRIP giữ bóng (WeaponHolder force-grab) → với sang SQUEEZE GRIP hologram để mua — có bị nhả bóng / mua nhầm / grab cả hai?
+- [ ] SEL-04 **Không đủ tiền**: hologram denied — status label có nói rõ thiếu bao nhiêu $ không, hay người chơi không hiểu vì sao grab bị từ chối?
+- [ ] SEL-05 **Spam prev/next**: poke 20 lần nhanh — index wrap đúng, hologram model cũ có bị leak/chồng không?
+- [ ] SEL-06 **BuyOnce qua mạng sống & round**: mua weapon → chết → còn own (OwnedMask)? Sang round mới money reset $0 — mất own hay giữ?
+- [ ] SEL-07 **Người thuận tay trái**: panel gắn cứng cổ tay TRÁI, throw tay phải — flow đảo tay có dùng được shop không?
+- [ ] SEL-08 **Đang mở panel thì bị Ice/hit**: panel có kẹt mở / hologram kẹt giữa không?
+
+### PRTL / FLOW — Vào-ra trận & các điểm người chơi dễ KẸT
+- [ ] PRTL-01 **Vào portal do vô ý**: dwell 0.6s là ngắn — đi ngang qua portal có bị hút vào không? Có hiệu ứng/progress báo "đang vào" trong 0.6s đó không? (UX: cần telegraph)
+- [ ] PRTL-02 **2 người cùng dwell 1 portal**: cả 2 vào cùng session arena hay tách phòng?
+- [ ] PRTL-03 **Vào portal khi đang reconnect** (ConnectionFlow busy): kẹt màn đen / hub trống? Có message gì?
+- [ ] FLOW-01 **Late join giữa round**: người thứ 3 vào match 1v1 đang đánh — team gán đúng, `NetMaxLives` đọc từ replicated (không phải RPC đã lỡ), HealthUI đúng số mạng?
+- [ ] FLOW-02 ⚠️ **Master thoát giữa round**: StateAuthority migrate — Phase/PhaseTimer/Score giữ nguyên? RingSpawner còn respawn? (Shared Mode gotcha kinh điển)
+- [ ] FLOW-03 **Cả team địch thoát giữa round**: `WinCheckGrace` 0.5s — round kết thúc THẮNG ngay hay treo? Người còn lại có bị kẹt trong arena một mình vô hạn?
+- [ ] FLOW-04 **MatchEnd rồi sao nữa?**: hết best-of-3 — có auto về hub / rematch không, hay người chơi đứng trong arena chết không biết làm gì? (nghi thiếu flow)
+- [ ] FLOW-05 **AFK suốt Warmup 5s**: đứng im — có rơi map / bị đẩy khỏi spawn point không?
+
+### QMNU / ROOM — Menu thoát & console phòng
+- [ ] QMNU-01 ⚠️ **Thao tác 2 tay bắt buộc**: panel VỀ HUB chỉ hiện KHI ĐANG GIỮ B (tay phải) → phải poke bằng tay TRÁI. Tay trái đang cầm/bắt bóng thì sao? Nhả B là panel biến mất — người chơi có kịp hiểu không?
+- [ ] QMNU-02 **Panel sau lưng**: giữ B, xoay người 180° — panel cố định world-space nằm sau lưng, người chơi tưởng menu không hoạt động?
+- [ ] ROOM-01 **Nhập mã sai**: gõ mã 5 chữ không tồn tại → VÀO PHÒNG — báo lỗi gì? Có bị treo "Đang kết nối..." vô hạn không?
+- [ ] ROOM-02 **Nhập mã thiếu** (<5 ký tự) → VÀO PHÒNG: validate hay gửi luôn?
+- [ ] ROOM-03 **Host chờ mãi không ai vào**: có nút hủy/quay lại quick play? Status "MÃ PHÒNG: XXXXX n/m" cập nhật đúng khi bạn vào/ra?
+- [ ] ROOM-04 **Join phòng khi host đã vào arena**: bạn nhập mã lúc host đang giữa match — vào thẳng arena, chờ ở hub, hay lỗi?
+
+### TRNG — Training range rò rỉ sang match
+- [ ] TRNG-01 ⚠️ **TrainingMode leak**: equip free ở training range → đi thẳng vào portal arena — `TrainingMode` chỉ clear ở `OnDestroy` của hub object. Nếu không clear kịp: MUA ĐỒ 0đ TRONG MATCH. Verify giá trong match ngay sau khi rời training.
+- [ ] TRNG-02 **2 CombatSession**: TrainingRange tự tạo `CombatSession(hub)` DDOL — vào arena (có thể có instance riêng) → 2 singleton đá nhau? Catalog resolve đúng?
+- [ ] TRNG-03 **Ring burst tồn dư**: bấm nút burst 8 rings rồi vào match ngay — rings training có còn sống / đi theo vào session arena không?
+- [ ] TRNG-04 **Client 2 trong hub bấm nút ring**: spawn là master-only — client bấm không có gì xảy ra và KHÔNG có feedback → tưởng game hỏng. Cần message?
+
+### UXH — Hiển thị trạng thái khi chơi
+- [ ] UXH-01 ⚠️ **7 mạng nhưng chỉ 5 pip**: 1v1 → `LivesForPlayerCount` trả 7, HealthUI chỉ có 5 pip sphere — máu 7 và 6 hiển thị y hệt 5? Người chơi không biết mình còn bao nhiêu mạng. (nghi bug hiển thị thật)
+- [ ] UXH-02 **Bắn người đang invuln 3s**: người bắn có thấy hiệu ứng "MIỄN THƯƠNG" không hay tưởng hit không ăn (giống bug collider cũ) → report bug ảo?
+- [ ] UXH-03 **Bị Ice đóng băng**: người bị băng thấy gì (overlay? timer?), có biết còn bao lâu tan không, có cách giãy thoát sớm không?
+- [ ] UXH-04 **Bounty trên đầu**: người kill streak có bounty +2/kill — có hiển thị để người khác biết mà săn không? Nếu không hiển thị thì bounty vô nghĩa về mặt gameplay.
+- [ ] UXH-05 **Money realtime**: income thụ động 2$/s — HUD tiền có nhảy liên tục không, hay chỉ update khi mua/kill khiến người chơi không biết mình đang giàu lên?
+- [ ] UXH-06 **Biết tỉ số bằng cách nào**: giữa round, muốn xem ScoreA/ScoreB + round mấy/best-of — nhìn đâu trong VR? Đo thời gian người mới tìm ra scoreboard.
+
+### ECO — Kinh tế trong round (nối tiếp ECO-01..04)
+- [ ] ECO-05 **Income trong Warmup/RoundEnd**: `FixedUpdateNetwork` cộng 2$/s mọi lúc — xác nhận tiền có tick ngoài Playing không; reset $0 đúng thời điểm nào (mua trong warmup bằng tiền round trước được không)?
+- [ ] ECO-06 **Trúng 1 quả mất 2 mạng** (damage 2): compensation nhận 20$ (10×2) đúng không? Kill reward người bắn tính 1 hay 2 lần?
+- [ ] ECO-07 **Kill reward cộng local**: `RewardShooterLocal` chạy trên mọi client — verify shooter chỉ được +$ MỘT lần (không nhân đôi khi 3+ client cùng fire event).

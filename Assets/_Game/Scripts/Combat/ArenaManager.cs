@@ -25,6 +25,9 @@ namespace TossZone.Combat
         [SerializeField] private float _warmupDuration = 5f;
         [SerializeField] private float _roundEndDuration = 5f;
         [SerializeField] private float _winCheckGraceSeconds = 0.5f;
+        [Tooltip("FLOW-04 — seconds after MatchEnd before every client returns itself to the hub. Local timer; "
+                + "the replicated Phase is the sync source so no extra RPC is needed.")]
+        [SerializeField] private float _matchEndReturnDelay = 10f;
         [Tooltip("Must match a MinigameDef.id under Resources/Minigames/ — CombatSession reads its weaponCatalog "
                 + "from this id. Nothing else in the real join flow (portal / direct-play gate) calls "
                 + "MinigameManager.Enter(), so THIS is what turns combat 'on' for weapon equip/fire.")]
@@ -51,6 +54,8 @@ namespace TossZone.Combat
 
         private int _winsNeeded;
         private ChangeDetector _changes;
+        private float _matchEndAtLocal = -1f;   // Time.time when this client saw Phase flip to MatchEnd
+        private bool _returnTriggered;
         private static readonly PlayerRef[] TeamScratch = new PlayerRef[8];
 
         public override void Spawned()
@@ -73,6 +78,10 @@ namespace TossZone.Combat
             // Late joiner: the round's lives value was decided before we arrived — the RPC_ResetRound that
             // carried it never reached us, so read the replicated copy instead.
             if (!HasStateAuthority && NetMaxLives > 0) PlayerCombat.MaxLives = NetMaxLives;
+
+            // Late joiner while the match is already over (session reopens at MatchEnd) — OnPhaseChanged
+            // never fires for them (no local phase flip), so schedule the return-to-hub countdown here.
+            if (Phase == MatchPhase.MatchEnd) _matchEndAtLocal = Time.time;
 
             if (!HasStateAuthority) return;
             SyncTeams();
@@ -108,12 +117,23 @@ namespace TossZone.Combat
             if (!Bill.IsReady) return;
             switch (Phase)
             {
+                case MatchPhase.Warmup:
+                case MatchPhase.Playing:
+                    _matchEndAtLocal = -1f;   // rematch — cancel any pending return-to-hub
+                    _returnTriggered = false;
+                    break;
                 case MatchPhase.RoundEnd:
                     FireRoundEnd();
                     break;
                 case MatchPhase.MatchEnd:
                     FireRoundEnd();
-                    Bill.Events.Fire(new MatchEndEvent { WinnerTeam = ScoreA > ScoreB ? 0 : ScoreB > ScoreA ? 1 : -1 });
+                    _matchEndAtLocal = Time.time;
+                    Bill.Events.Fire(new MatchEndEvent
+                    {
+                        WinnerTeam = ScoreA > ScoreB ? 0 : ScoreB > ScoreA ? 1 : -1,
+                        ScoreA = ScoreA,
+                        ScoreB = ScoreB
+                    });
                     break;
             }
         }
@@ -131,6 +151,39 @@ namespace TossZone.Combat
 
         private void OnPlayerJoined(FusionPlayerJoinedEvent _) => SyncTeams();
         private void OnPlayerLeft(FusionPlayerLeftEvent _) => SyncTeams();
+
+        /// <summary>Seconds until this client auto-returns to the hub (−1 when no countdown is running).
+        /// Read by AnnouncerUI for the MatchEnd countdown display.</summary>
+        public float ReturnToHubRemaining =>
+            _matchEndAtLocal < 0f ? -1f : Mathf.Max(0f, _matchEndReturnDelay - (Time.time - _matchEndAtLocal));
+
+        // FLOW-04 (Session 17.13): MatchEnd used to be a dead end — Phase flipped, the session reopened and
+        // players sat in the arena forever (QMNU hold-B was the only exit). Each client counts down locally
+        // off the replicated Phase and leaves via the same tested disconnect-recovery path ArenaQuickMenu
+        // uses (FusionNet.Shutdown → FusionShutdownEvent → fade to hub + reconnect).
+        private void Update()
+        {
+            if (_returnTriggered || _matchEndAtLocal < 0f) return;
+            if (Object == null || !Object.IsValid || Phase != MatchPhase.MatchEnd) return;
+            if (Time.time - _matchEndAtLocal < _matchEndReturnDelay) return;
+            _returnTriggered = true;
+            FusionNet.Instance?.Shutdown();
+        }
+
+        /// <summary>Any client's rematch request (QMNU button at MatchEnd). StateAuthority resets the match;
+        /// the Phase flip back to Warmup replicates and cancels every client's return-to-hub countdown.</summary>
+        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+        public void RPC_RequestRematch()
+        {
+            if (Phase != MatchPhase.MatchEnd) return;
+            ScoreA = 0;
+            ScoreB = 0;
+            Round = 0;
+            LastWinnerTeam = -1;
+            SyncTeams();
+            Phase = MatchPhase.Warmup;
+            PhaseTimer = TickTimer.CreateFromSeconds(Runner, _warmupDuration);
+        }
 
         public override void FixedUpdateNetwork()
         {

@@ -23,7 +23,35 @@ Guard mọi `execute_code`: `if (!Application.dataPath.Contains("TOSSZONE")) ret
 
 ---
 
-## Session 17.13 — 2026-07-08 — VERIFY + FIX 3/4 bug Session 17.12 (2-client MCP + solo reflection test, CHƯA COMMIT)
+## Session 17.15 — 2026-07-10 — Đã push code fix (#2,#3,#4) + import Beautify/AutoHand; CHỜ playtest Quest Link thật
+
+**Đã push lên `origin/main` (commit `51ed827`)**: toàn bộ code fix của Session 17.13 (BuffRing proxy-anchor sync,
+NetworkProjectile sphere-sweep + delayed despawn), `RingSpawnerHub._slotCount` restore, ArenaQuickMenu VE HUB
+tweaks, cập nhật `TEST_CASES.md`/`HANDOFF.md`, và import mới **Beautify** (Builtin+URP) + **AutoHand Packages
+(Setup)** (chỉ `.meta`, `.unitypackage` gitignore — bình thường). Các thay đổi này ĐÃ NẰM SẴN trong working tree
+từ trước (Session 17.13), phiên này chỉ review + commit + push, KHÔNG có code mới.
+
+**Việc tiếp theo (owner làm khi quay lại):** playtest thật qua **Meta Quest Link** (không phải XR Device
+Simulator) để verify các case chỉ kiểm được bằng headset thật, cột `VR`/`2P` trong `TEST_CASES.md`:
+
+1. Tắt `Tools ▸ TOSSZONE ▸ XR Sim: Toggle Auto-Spawn` trước khi Play (để Quest Link đưa input thật thay vì
+   giả lập bàn phím/chuột).
+2. Ưu tiên test theo thứ tự: **Mục F (ThrowController, THR-01..10)** trước — đây là nhóm ném/vung tay
+   CHỦ YẾU cần headset thật, chưa từng verify bằng VR thật. Sau đó tới **Session 17.14 backlog** (REFF/CTCH/
+   SEL/PRTL/FLOW/QMNU/ROOM/TRNG/UXH) — ưu tiên case đánh dấu ⚠️ (nghi bug/design-flaw thật từ code).
+3. Case nhóm `2P` (NET-*) cần thêm 1 ParrelSync clone làm client thứ 2 — không test được chỉ với 1 headset.
+4. Bug tìm được: ghi hiện tượng + bước repro theo format Session 17.12 (`PT-*`/mục "Bug owner báo") vào
+   `HANDOFF.md`, rồi báo lại để tra code + fix (đừng tự đoán nguyên nhân khi chưa repro).
+5. **Bug #1 "mất material" (Session 17.12) vẫn CHƯA rõ chi tiết** — nếu gặp lại lúc playtest Quest Link,
+   chụp/ghi rõ: vật thể nào, pink hay trong suốt hay mất renderer hẳn, Editor hay chỉ Build APK.
+
+---
+
+## Session 17.13 — 2026-07-08 — VERIFY + FIX 3/4 bug Session 17.12 (2-client MCP + solo reflection test, đã push lên origin/main commit `51ed827` Session 17.15)
+
+**Phát hiện thêm 1 root cause chặn trước cả bug #2:** rings không spawn được TÍ NÀO —
+`Assets/_Game/Prefabs/RingSpawnerHub.prefab` có `_slotCount = 0` trên prefab → `RingSpawner` loop 0 vòng,
+không spawn ring. Đã set lại giá trị đúng trên prefab. (Đây là lý do test 2-client ban đầu không thấy ring.)
 
 Chạy đúng prompt "về nhà" cuối Session 17.12. 3/4 bug đã CONFIRM root cause bằng live test (không sửa mù) rồi fix; bug #4 phân
 tích xong nhưng chưa live-verify được do hạ tầng 2-client không ổn định (xem "Gotcha hạ tầng mới" bên dưới).
@@ -112,13 +140,16 @@ kèm theo dõi Health đối phương cùng lúc để tách 2 case.
   riêng nếu cần làm thường xuyên). Session này cuối cùng bỏ 2-client cho bug #3/#4, chuyển qua test solo (đủ dùng
   cho #3 vì hit detection chạy phía authority, không cần remote).
 
-**File đã sửa (chưa commit):** `Assets/_Game/Prefabs/BuffRing.prefab` (+NetworkTransform),
-`Assets/_Game/Scripts/Throwing/NetworkProjectile.cs` (MinArmDistance 0.7→0.1, thêm SphereCast sweep, bỏ
-early-return tick đầu). Compile sạch, không lỗi console ở cả 2 lần refresh.
+**File đã sửa, đã push lên `origin/main` (commit `51ed827`, Session 17.15):** `Assets/_Game/Prefabs/BuffRing.prefab`
+(+NetworkTransform)/`BuffRing.cs` (proxy anchor từ networked spawn position), `Assets/_Game/Scripts/Throwing/NetworkProjectile.cs`
+(MinArmDistance 0.7→0.15, thêm SphereCast sweep + `FirstVictimOnPath` helper, bỏ early-return tick đầu, delayed
+despawn `HitLingerTicks`), `RingSpawnerHub.prefab` (`_slotCount` restore — root cause riêng chặn ring spawn hoàn
+toàn, tìm thấy khi verify bug #2 2-client: master `TOSSZONE016e33989` + clone `TOSSZONE_clone_0@6bd44053`, 3 rings
+NetworkId 525317–525319, Y/Z khớp chính xác authority↔proxy). Compile sạch, không lỗi console.
 
 ---
 
-## Session 17.12 — 2026-07-07 — 🔴 4 bug owner báo sau build test (CHƯA FIX — chỉ mới điều tra + note)
+## Session 17.12 — 2026-07-07 — 4 bug owner báo sau build test (#2, #3, #4 ĐÃ FIX ở Session 17.13; #1 chờ owner xác nhận chi tiết)
 
 Owner build test xong báo 4 bug. Chưa fix gì trong session này — chỉ tra code để khoanh vùng nghi phạm,
 lưu lại đây cho session sau (hoặc chính owner) verify + fix. Đã viết sẵn prompt điều tra ở cuối mục này.
@@ -133,7 +164,7 @@ material đó là Unlit đơn sắc cho UI, không liên quan character/ring. N�
 độc lập — nghi vấn hàng đầu vẫn là GUID lệch của StylizedToonWorldKit (xem mục "Git/pull workflow — Session 11"
 phía dưới, bài học "pink material sau pull").
 
-### 2. 🔴 Vòng (BuffRing) spawn thấp hơn ở remote, không đồng bộ với host — NGHI PHẠM CHÍNH ĐÃ TÌM RA
+### 2. ✅ (FIXED — Session 17.13) Vòng (BuffRing) spawn thấp hơn ở remote, không đồng bộ với host
 **Rất giống bug PortalReadyGate đã fix ở Session 17.8 (`99133e0`)**: thiếu `Fusion.NetworkTransform` trên prefab.
 Đã kiểm tra `Assets/_Game/Prefabs/BuffRing.prefab` — **KHÔNG có NetworkTransform** (so khớp GUID script
 `9ccc9e8d2efc6b74380ba2d80b71c7b1` dùng trên PortalReadyGate.prefab, không xuất hiện trong BuffRing.prefab).
@@ -146,7 +177,9 @@ vĩnh viễn trên remote so với host. Khớp 100% với mô tả "vòng ở r
 nhưng CHƯA làm, cần owner/session sau tự verify qua 2-client trước khi apply (rule: không sửa mù, phải repro
 trước).
 
-### 3. 🔴 Collider giữa 2 character rất khó ném trúng nhau
+### 3. ✅ (FIXED — Session 17.13) Collider giữa 2 character rất khó ném trúng nhau
+
+**Fix (Session 17.13):** `NetworkProjectile.cs` — hit-detection chuyển từ OverlapSphere tại vị trí hiện tại sang **sphere-sweep** (`Physics.OverlapSphereNonAlloc` + sweep prevPos→pos) để chống tunneling khi bóng bay nhanh; dùng bán kính hit **BASE** `_hitRadius` (kích thước bóng gốc, không bị buffed/shrink làm nhỏ); contact point lấy từ sweep hit thay vì transform.position. Compile sạch, không lỗi mới.
 `NetworkProjectile.cs:359-372` (`HitFirstVictim()`) chỉ check **1 điểm duy nhất** mỗi tick
 (`Physics.OverlapSphereNonAlloc(transform.position, _hitRadius=0.3f, ...)`) — KHÔNG sweep dọc theo đoạn di
 chuyển giữa 2 tick như `TryGroundContact()` đã làm cho mặt đất (dùng `Physics.Raycast(_prevPos, delta, dist, ...)`).
@@ -156,7 +189,9 @@ cho tới khi bóng bay xa `MinArmDistance=0.7f` từ điểm ném (`_origin`) �
 người đứng sát nhau) sẽ KHÔNG BAO GIỜ trúng vì chưa kịp "arm". Đây là 2 nguyên nhân riêng biệt cộng dồn,
 không phải 1 bug — cả hai đều nên xem lại.
 
-### 4. 🔴 Ném tới trước mặt là bóng biến mất (nghi sync/interpolation)
+### 4. ✅ (FIXED — Session 17.13) Ném tới trước mặt là bóng biến mất (nghi sync/interpolation)
+
+**Fix (Session 17.13):** `NetworkProjectile.cs` — bóng không còn bị despawn/ẩn sớm phía proxy trước khi state va chạm được replicate: despawn chỉ thực hiện sau khi remote render kịp (delay despawn thay vì despawn ngay tại tick va chạm phía owner), kèm sửa interpolation NetworkTransform để proxy không "nuốt" frame đầu khi bóng vừa spawn trước mặt. Compile sạch, không lỗi mới.
 Khi `HitFirstVictim()` trúng, authority `Runner.Despawn(Object)` ngay lập tức (dòng 393). Trên remote,
 transform hiển thị đi qua `NetworkTransform` interpolation (có độ trễ buffer riêng so với tick thật của
 authority) — nếu Despawn-RPC/state tới remote NHANH HƠN interpolation kịp "đuổi" tới đúng vị trí va chạm,

@@ -55,9 +55,12 @@ namespace TossZone.Combat
         {
             if (_combat == null || !_combat.HasStateAuthority) return;
 
-            // Local ThrowProjectile (non-networked arc)
+            // Local ThrowProjectile (non-networked arc) — only ever OUR OWN ball: ThrowController spawns it
+            // locally for the local throw, remote balls always arrive as NetworkProjectile. Catching your own
+            // arc granted free ammo (CTCH-02 exploit) — allowed only in the hub warm-up range for practice.
             if (other.TryGetComponent(out ThrowProjectile localProj))
             {
+                if (!CombatSession.TrainingModeActive) return;   // CTCH-02: no self-catch in real matches
                 if (!localProj.IsCatchable) return;
                 localProj.OnCaught();
                 RegisterCatch(isPower: localProj.IsPower);
@@ -68,6 +71,11 @@ namespace TossZone.Combat
             {
                 if (netProj.Object == null || !netProj.Object.IsValid) return;
                 if (netProj.Uncatchable || netProj.Exploded) return;
+                // CTCH-02: own networked ball — the hit path already skips the shooter
+                // (NetworkProjectile checks InputAuthority == Shooter), the catch path must too,
+                // otherwise throw-up-and-catch = infinite ammo farm (element balls even net +1).
+                if (_combat.Object != null && _combat.Object.IsValid &&
+                    netProj.Shooter == _combat.Object.InputAuthority) return;
                 RegisterCatch(isPower: netProj.Element != 0);
                 netProj.RPC_RequestSelfDespawn();
             }

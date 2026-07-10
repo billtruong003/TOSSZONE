@@ -14,12 +14,27 @@ namespace TossZone.UI
         [SerializeField] private float _distance = 2.2f;
 
         private bool _subscribed;
+        private int _lastCountdownSec = -1;
 
         private void OnEnable() => TrySubscribe();
 
         private void Update()
         {
             if (!_subscribed) TrySubscribe();
+            UpdateMatchEndCountdown();
+        }
+
+        // FLOW-04: last-5s countdown before ArenaManager auto-returns this client to the hub. Re-shows the
+        // banner once per second; a rematch (Phase back to Warmup) drops Remaining below 0 and stops it.
+        private void UpdateMatchEndCountdown()
+        {
+            ArenaManager am = ArenaManager.Instance;
+            float remain = am != null ? am.ReturnToHubRemaining : -1f;
+            if (remain < 0f) { _lastCountdownSec = -1; return; }
+            int sec = Mathf.CeilToInt(remain);
+            if (sec > 5 || sec == _lastCountdownSec) return;
+            _lastCountdownSec = sec;
+            Show("VỀ HUB SAU " + sec + "s", Color.white);
         }
 
         private void TrySubscribe()
@@ -66,9 +81,10 @@ namespace TossZone.UI
 
         private void OnMatchEnd(MatchEndEvent e)
         {
-            if (e.WinnerTeam < 0) { Show("HÒA CHUNG CUỘC", Color.white); return; }
+            string score = "  " + e.ScoreA + " - " + e.ScoreB;
+            if (e.WinnerTeam < 0) { Show("HÒA CHUNG CUỘC" + score, Color.white); return; }
             bool won = e.WinnerTeam == LocalTeam();
-            Show(won ? "THẮNG TRẬN!" : "THUA TRẬN",
+            Show(won ? "THẮNG TRẬN!" + score : "THUA TRẬN" + score,
                 won ? new Color(0.3f, 1f, 0.4f) : new Color(1f, 0.4f, 0.3f));
         }
 
