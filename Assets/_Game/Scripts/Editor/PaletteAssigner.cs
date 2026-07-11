@@ -7,7 +7,7 @@ namespace TossZone.EditorTools
     /// <summary>
     /// Batch palette assigner. Unity's UI can't set a default material across many models at once, so this does it:
     ///  • Right-click model/prefab assets in the Project → <b>TOSSZONE ▸ Assign Palette (M_Pallet)</b>.
-    ///  • Menu <b>TOSSZONE/Palette/Assign M_Pallet to ALL kit models</b> → every MS_ + lightsword prefab.
+    ///  • Menu <b>TOSSZONE/Palette/Assign M_Pallet to ALL kit models</b> → every MS_ + LightSword prefab.
     /// Finds M_Pallet by NAME (survives the .mat being moved). Prefabs → every Mesh/SkinnedMesh renderer slot;
     /// raw FBX/OBJ → remaps its embedded materials + reimports.
     /// </summary>
@@ -54,7 +54,7 @@ namespace TossZone.EditorTools
             {
                 string path = AssetDatabase.GUIDToAssetPath(g);
                 string name = Path.GetFileNameWithoutExtension(path);
-                if (name.StartsWith("MS_") || name == "lightsword") n += AssignPath(path, pal);
+                if (name.StartsWith("MS_") || name == "LightSword") n += AssignPath(path, pal);
             }
             AssetDatabase.SaveAssets();
             Debug.Log($"[Palette] Batch: {n} kit prefab(s) now use M_Pallet.");
