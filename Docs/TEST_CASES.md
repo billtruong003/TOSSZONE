@@ -156,16 +156,19 @@
 
 | ID | Kịch bản | Kỳ vọng | Verify | Pri |
 |---|---|---|---|---|
-| THR-01 | **Đẩy joystick tới lui (locomotion)** | KHÔNG ném (mốc head cancel + min swing 0.25m) | VR | 🔴 |
-| THR-02 | Vung tay ra thật (>25cm) | Ném ra, hướng/lực theo cú vung | VR | 🔴 |
-| THR-03 | **[EDGE] Flick nhẹ (<25cm)** | KHÔNG ném | VR | 🟡 |
+| THR-01 | **Đẩy joystick tới lui (locomotion)** | KHÔNG ném (mốc head cancel + min swing 0.25m) | VR | 🔴 ✅(sim) |
+| THR-02 | Vung tay ra thật (>25cm) | Ném ra, hướng/lực theo cú vung | VR | 🔴 ✅(sim) |
+| THR-03 | **[EDGE] Flick nhẹ (<25cm)** | KHÔNG ném | VR | 🟡 ✅(sim) |
 | THR-04 | Default cầm = Đá (không phải bóng) | `MS_WP_Rock` trong tay | MCP | 🔴 ✅ |
 | THR-05 | **[EDGE] Đổi Đá→Súng/Kiếm** | Không sót bóng generic trong tay | VR | 🔴 ✅(logic) |
-| THR-06 | Vung tay lúc đang di chuyển | Ném đúng hướng vung (đã trừ locomotion) | VR | 🟡 |
-| THR-07 | Player đóng băng | KHÔNG ném được (frozen gate) | MCP/VR | 🟡 |
+| THR-06 | Vung tay lúc đang di chuyển | Ném đúng hướng vung (đã trừ locomotion) | VR | 🟡 ✅(sim)¹ |
+| THR-07 | Player đóng băng | KHÔNG ném được (frozen gate) | MCP/VR | 🟡 ✅(sim) |
 | THR-08 | Grab pose vũ khí | Súng đã có pose tay phải; bazooka/kiếm chờ owner | VR | ⚪ |
-| THR-09 | **[EDGE] Grip nhả liên tục nhanh** | State machine không kẹt (Empty↔Loaded) | VR | 🟡 |
-| THR-10 | Cooldown ném | Refill sau `cooldown`, không spam quá tốc | VR | 🟡 |
+| THR-09 | **[EDGE] Grip nhả liên tục nhanh** | State machine không kẹt (Empty↔Loaded) | VR | 🟡 ✅(sim) |
+| THR-10 | Cooldown ném | Refill sau `cooldown`, không spam quá tốc | VR | 🟡 ✅(sim) |
+
+> ✅(sim) = verify bằng XR Device Simulator + script driver (QR-1xx, 2026-07-11), fire-gate logic đã pass; cảm giác ném thật vẫn cần headset xác nhận cuối.
+> ¹ THR-06: gate dùng body-relative vel nên không double-fire khi loco (PASS), nhưng `_peakArmVel` tại fire = 5.80 m/s world-frame (đứng yên: 1.67) — cần xác nhận launch speed có trừ body vel không (xem report QR-1xx §Open).
 
 ---
 
