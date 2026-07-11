@@ -287,7 +287,7 @@
 
 ### CTCH — Cơ chế bắt bóng
 - [ ] CTCH-01 **Ammo cộng vào slot đang cầm**: bắt bóng thường +1 ammo vào `EquippedIndex` hiện tại — kể cả đang cầm vũ khí KHÁC loại bóng vừa bắt. Đúng design?
-- [ ] CTCH-02 ⚠️ **EXPLOIT tự bắt bóng mình**: ném thẳng lên trời rồi tự bắt — `CatchController` không check shooter → +1 ammo (power +2) miễn phí vô hạn?
+- [ ] CTCH-02 **Tự bắt bóng mình bị chặn** (reconciled QR-001, 2026-07-11): guard ĐÃ CÓ trong source — `CatchController.cs:74-78` skip khi `netProj.Shooter == _combat.Object.InputAuthority`. Note "không check shooter" cũ là stale. Còn nợ runtime verify: ném lên trời tự bắt → KHÔNG +ammo.
 - [ ] CTCH-03 **Power catch 2 client**: bắt bóng element (tím) → +2 ammo, cả 2 máy thấy bóng biến mất êm (không nổ, không ghost).
 - [ ] CTCH-04 **Race bắt đạn burst**: 2 người cùng đưa tay vào 1 viên đạn mưa (`RPC_RequestCatch`) — chỉ 1 người được ammo? Viên đạn chết trên cả 2 máy?
 - [ ] CTCH-05 **Tunneling catch**: bóng 20m/s xuyên qua zone 0.15m trong ~1 frame — bắt được không hay lọt tay? (giống bug #3 collider vừa fix nhưng cho catch)

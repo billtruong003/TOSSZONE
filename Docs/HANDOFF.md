@@ -925,6 +925,44 @@ WristStatusHud trong headset. Song song: build APK test theo `T17_Test_Report.ht
 
 ---
 
+## ✅ QR-001 — Reconciliation task board (2026-07-11, Session 17.16)
+
+Đối chiếu HANDOFF:575-617 · TASKS_WEAPON_UX:180-236 · TEST_CASES:272-345 với source hiện tại:
+
+**Verified đúng như HANDOFF (rock-only pivot, cả 3 đều reversible 1 chỗ):**
+- Ring lửa/băng OFF: `RingSpawner.cs:30` — `AllowedElements = { Multi, Speed, Area }`. ✔
+- Rock-only catalog: `Assets/Resources/Minigames/arena.asset` — `weaponCatalog` chỉ còn WC_Rock
+  (guid `846181d4ad5c8fc40ba94e82e5041e3b`), `bestOf: 3`, `roundDuration: 90`. WC_*.asset giữ nguyên. ✔
+- Wrist panel OFF: `NetworkAvatar.prefab:1557-1560` — override `m_IsActive = 0` trên
+  `WristSelectorPanel` (nested prefab `a2d6b4b46a931824980b87ee43396524`, untick lại là hồi). ✔
+
+**Note stale đã sửa (source proves current behavior):**
+- CTCH-02: `CatchController.cs:74-78` ĐÃ skip shooter (`netProj.Shooter == InputAuthority`) —
+  note "không check shooter" trong TEST_CASES.md là stale, đã sửa. Status: `implemented — needs
+  runtime verification`. Test ID giữ nguyên, chưa tick.
+
+**✅ FINDING — RESOLVED bởi `ff1a79a` (chi tiết: QR-001b ngay dưới):**
+- **Duplicate MinigameDef "arena"**: tồn tại 2 asset cùng `id: arena` đều nằm trong Resources/Minigames:
+  1. `Assets/Resources/Minigames/arena.asset` (guid `1e0cce55390e692449ef83e39bf8a24f`) — bản SỐNG,
+     rock-only, sửa lần cuối `e26b348`.
+  2. `Assets/_Game/Resources/Minigames/ArenaMinigame.asset` (guid `a4ea6a12153a0c742bec23586b0dea98`) —
+     bản MỒ CÔI từ Session 5 (`e472848`): THIẾU `weaponCatalog`/`bestOf`/`roundDuration` (deserialize
+     thành catalog rỗng, bestOf 0, round 0s).
+  `MinigameManager.Awake` dùng `Resources.LoadAll<MinigameDef>("Minigames")` khi `_catalog` rỗng và
+  `Find(id)` trả về match ĐẦU TIÊN — thứ tự LoadAll không đảm bảo → nguy cơ bản mồ côi thắng và
+  phá rock-only pivot + round settings một cách im lặng. Đề xuất: xóa `ArenaMinigame.asset` + `.meta`.
+  → Owner đã duyệt; ĐÃ XÓA trong commit `ff1a79a` (xem QR-001b).
+
+## QR-001b — Xóa duplicate ArenaMinigame.asset (2026-07-11, owner đã duyệt)
+
+- **Việc làm:** Xóa đúng 2 file mồ côi `Assets/_Game/Resources/Minigames/ArenaMinigame.asset` + `.meta` (bản stale, phá rock-only). KHÔNG sửa `MinigameManager` trong task này.
+- **Commit:** `ff1a79a` — `Fix: remove duplicate stale ArenaMinigame definition` (2 files, 29 deletions; commit riêng, không lẫn thay đổi khác).
+- **Verify (editor + play mode):** `Resources.LoadAll<TossZone.Minigame.MinigameDef>("Minigames")` → `count=1`, `ids=[arena]`, path duy nhất `Assets/Resources/Minigames/arena.asset`, `sceneName=02_Arena`, `bestOf=3`, `roundDuration=90`, `weaponCatalog=[WC_Rock]` (rock-only giữ nguyên).
+- **Smoke test:** Enter play mode từ bootstrap → Bill services load sạch (Infrastructure/Core/State Machine/Network/Dev Tools), runtime re-check `runtimeCount=1 | ids=[arena]`. Console không có error mới; chỉ warnings cũ đã biết (URP GlobalSettings missing types, `No Theme Style Sheet set to PanelSettings`, XR audio driver fallback, BillInspector duplicate menu).
+- **Note:** GitNexus `detect_changes` bị auto-mode classifier chặn ở phiên này → thay bằng `git diff --cached --stat` để xác nhận staged scope trước commit (data asset, không đụng code symbol nên không cần impact upstream).
+
+---
+
 ## 🔄 Git / pull workflow (Session 11 — fix "pull về hư material")
 
 Root cause đã tìm ra và fix (2026-07-02): bản **embed local** của StylizedToonWorldKit trong `Packages/` được tạo bằng export/re-import nên **toàn bộ 82 GUID khác** với kit repo — trong khi mọi material đã commit reference GUID của kit repo → máy nào có embed là pink material sau pull. Embed đã bị gỡ; kit giờ resolve qua UPM git dependency trong manifest.json (đúng thiết kế).
@@ -966,3 +1004,11 @@ Quy tắc để pull mượt:
 - **S10** verify toàn bộ + 5 bug fix + player respawn + network pool + burst system.
 - **S11** T1-T17 XONG HẾT (17 task + ~10 bug thật tìm & fix) + dev tooling + map blockout + 2-client verify;
   cuối session owner chốt rework weapon UX → `TASKS_WEAPON_UX.md` (T18-T24) cho session 12.
+
+## QR-001b — Xóa duplicate ArenaMinigame.asset (2026-07-11, owner đã duyệt)
+
+- **Việc làm:** Xóa đúng 2 file mồ côi `Assets/_Game/Resources/Minigames/ArenaMinigame.asset` + `.meta` (bản stale, phá rock-only). KHÔNG sửa `MinigameManager` trong task này.
+- **Commit:** `ff1a79a` — `Fix: remove duplicate stale ArenaMinigame definition` (2 files, 29 deletions; commit riêng, không lẫn thay đổi khác).
+- **Verify (editor + play mode):** `Resources.LoadAll<TossZone.Minigame.MinigameDef>("Minigames")` → `count=1`, `ids=[arena]`, path duy nhất `Assets/Resources/Minigames/arena.asset`, `sceneName=02_Arena`, `bestOf=3`, `roundDuration=90`, `weaponCatalog=[WC_Rock]` (rock-only giữ nguyên).
+- **Smoke test:** Enter play mode từ bootstrap → Bill services load sạch (Infrastructure/Core/State Machine/Network/Dev Tools), runtime re-check `runtimeCount=1 | ids=[arena]`. Console không có error mới; chỉ warnings cũ đã biết (URP GlobalSettings missing types, `No Theme Style Sheet set to PanelSettings`, XR audio driver fallback, BillInspector duplicate menu).
+- **Note:** GitNexus `detect_changes` bị auto-mode classifier chặn ở phiên này → thay bằng `git diff --cached --stat` để xác nhận staged scope trước commit (data asset, không đụng code symbol nên không cần impact upstream).
