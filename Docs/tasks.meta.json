@@ -1,0 +1,108 @@
+{
+  "entries": [
+    {
+      "id": "0.1.1",
+      "verify": "Review roadmap + Gun_System_Architecture; confirm Option A schema, victim validation, catalog-derived damage and victim-authority Health are consistent, with no remaining D1/D2-open wording.",
+      "evidence": "GameDesign/TOSSZONE-Playable-Ready-Roadmap.md; Gun_System_Architecture.md",
+      "verifiedAt": "2026-07-14",
+      "result": "Pass",
+      "notes": "User explicitly selected Option A. Scope is casual/small-room v0.3 Ready, not competitive authority."
+    },
+    {
+      "id": "0.1.2",
+      "verify": "Review written D3 decision and HP→death→respawn state-transition table.",
+      "evidence": "",
+      "verifiedAt": "",
+      "result": "",
+      "notes": "Blocked: user has not yet approved the recommended 100 HP model."
+    },
+    {
+      "id": "0.2.1",
+      "verify": "A second tester follows P0_TWO_CLIENT_RUNBOOK from a clean Play session and completes three damage→death→respawn cycles.",
+      "evidence": "",
+      "verifiedAt": "",
+      "result": "",
+      "notes": ""
+    },
+    {
+      "id": "0.2.2",
+      "verify": "Walk through accepted body hit, duplicate claim and protected victim; each path must produce a correlated, explainable event chain.",
+      "evidence": "",
+      "verifiedAt": "",
+      "result": "",
+      "notes": ""
+    },
+    {
+      "id": "1.1.1",
+      "verify": "Unity Play Mode: fire 20 shots across world/body/head targets; confirm ray results, one ammo per shot and unique shotId.",
+      "evidence": "",
+      "verifiedAt": "",
+      "result": "",
+      "notes": "Run GitNexus impact before symbol edits."
+    },
+    {
+      "id": "1.1.2",
+      "verify": "Play Mode fire-gate matrix: trigger patterns, empty magazine, reload and frozen phase; compare shot timestamps/count/ammo.",
+      "evidence": "",
+      "verifiedAt": "",
+      "result": "",
+      "notes": "Run GitNexus impact before symbol edits."
+    },
+    {
+      "id": "1.1.3",
+      "verify": "Offline Play Mode pool-reuse test; capture evidence that local feedback occurs before network relay and leaves no stale tracer.",
+      "evidence": "",
+      "verifiedAt": "",
+      "result": "",
+      "notes": "Run GitNexus impact before symbol edits."
+    },
+    {
+      "id": "1.2.1",
+      "verify": "Two clients equip, respawn and late join; observe exactly one correct AR proxy on remote wrist with zero console errors.",
+      "evidence": "",
+      "verifiedAt": "",
+      "result": "",
+      "notes": "Run GitNexus impact before symbol edits."
+    },
+    {
+      "id": "1.2.2",
+      "verify": "Two-client shot cosmetic test plus simulated loss if available; cosmetic loss must not reduce accepted gameplay damage count.",
+      "evidence": "",
+      "verifiedAt": "",
+      "result": "",
+      "notes": "Run GitNexus impact before symbol edits."
+    },
+    {
+      "id": "1.3.1",
+      "verify": "Inject valid, duplicate, over-rate, bad-weapon, out-of-range and protected/dead-victim claims; verify exact Health delta and reject reason.",
+      "evidence": "",
+      "verifiedAt": "",
+      "result": "",
+      "notes": "Run GitNexus impact before symbol edits; warn before HIGH/CRITICAL blast radius."
+    },
+    {
+      "id": "1.3.2",
+      "verify": "Two-client body/head damage table, simultaneous lethal claims and delayed pre-respawn claim; verify synchronized state.",
+      "evidence": "",
+      "verifiedAt": "",
+      "result": "",
+      "notes": "Blocked by D3 health model."
+    },
+    {
+      "id": "1.3.3",
+      "verify": "Run 30 alternating kills plus simultaneous-lethal edge case; both clients must converge on one death and one score per cycle.",
+      "evidence": "",
+      "verifiedAt": "",
+      "result": "",
+      "notes": "Run GitNexus impact before symbol edits."
+    },
+    {
+      "id": "1.4.1",
+      "verify": "Execute the complete Roadmap Test Round 1 on one build lineage and archive build/device/network/tester details plus correlated evidence.",
+      "evidence": "",
+      "verifiedAt": "",
+      "result": "",
+      "notes": "Only Pass opens detailed v0.3-P1 tasking."
+    }
+  ]
+}

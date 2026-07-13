@@ -23,7 +23,17 @@
       "Bash(\"C:\\\\Program Files\\\\Unity\\\\Hub\\\\Editor\\\\6000.3.8f1\\\\Editor\\\\Unity.exe\" -projectPath \"D:\\\\Projects\\\\TOSSZONE_clone_0\")",
       "Bash(echo \"launched pid $!\")",
       "mcp__UnityMCP__manage_asset",
-      "Bash(git status *)"
+      "Bash(git status *)",
+      "Bash(where gitnexus *)",
+      "Bash(npm ls *)",
+      "Bash(claude mcp *)",
+      "Bash(mkdir -p .claude/skills)",
+      "Bash(cp -r /tmp/skillcheck/unity-project-setup/unity-project-setup .claude/skills/)",
+      "Bash(cp -r /tmp/skillcheck/unity-mcp-workflow/unity-mcp-workflow .claude/skills/)",
+      "Bash(cp -r /tmp/skillcheck/expert-developer/expert-developer .claude/skills/)",
+      "Bash(git lfs *)",
+      "Bash(find Assets -iname \"*.asmdef\")",
+      "PowerShell(Start-Process \"C:\\\\Program Files\\\\Unity\\\\Hub\\\\Editor\\\\6000.3.8f1\\\\Editor\\\\Unity.exe\" -ArgumentList '-projectPath','D:\\\\Project\\\\TOSSZONE'; \"launched\")"
     ]
   },
   "prefersReducedMotion": false

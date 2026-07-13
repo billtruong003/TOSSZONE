@@ -1,12 +1,13 @@
 {
   "dependencies": {
     "com.billtruong.stylized-toon-world-kit": {
-      "version": "file:com.billtruong.stylized-toon-world-kit",
+      "version": "https://github.com/billtruong003/stylized-toon-world-kit.git?path=/Assets/StylizedToonWorldKit",
       "depth": 0,
-      "source": "embedded",
+      "source": "git",
       "dependencies": {
         "com.unity.render-pipelines.universal": "17.0.0"
-      }
+      },
+      "hash": "7f3b5f4442b8201dc2755b1902290b4726ca53ba"
     },
     "com.coplaydev.unity-mcp": {
       "version": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
@@ -26,9 +27,9 @@
       "hash": "85c101f5329ec1b0c6f70cba44614166dd78f53c"
     },
     "com.meta.xr.sdk.core": {
-      "version": "203.0.0",
+      "version": "file:com.meta.xr.sdk.core",
       "depth": 0,
-      "source": "registry",
+      "source": "embedded",
       "dependencies": {
         "com.unity.modules.audio": "1.0.0",
         "com.unity.modules.imageconversion": "1.0.0",
@@ -37,8 +38,7 @@
         "com.unity.modules.unitywebrequest": "1.0.0",
         "com.unity.modules.unitywebrequestaudio": "1.0.0",
         "com.unity.xr.hands": "1.7.2"
-      },
-      "url": "https://npm.developer.oculus.com"
+      }
     },
     "com.unity.ai.navigation": {
       "version": "2.0.10",

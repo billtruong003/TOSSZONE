@@ -1,0 +1,172 @@
+# TOSSZONE — Active Task Breakdown
+
+> Source of truth cho active backlog. Trạng thái: `[ ]` Todo · `[/]` In Progress · `[x]` Done · `[!]` Blocked.  
+> Baseline: `GameDesign/TOSSZONE-Playable-Ready-Roadmap.md` · `Gun_System_Architecture.md` v1.1.  
+> Rule: không reorder checkbox task sau khi đã có metadata; mỗi code task phải chạy GitNexus impact trước edit.
+
+## PHASE 0 — Decision & Test Harness
+
+### 0.1 — Lock combat decisions
+
+- [x] Lock Option A as the v0.3-P0 hit-authority and cheat-scope contract
+  - Outcome: D1/D2 có một contract đủ rõ để implementation không tự chọn lại authority.
+  - Scope: shooter local raycast; immediate local feedback; reliable targeted `ShotClaim`; victim validation, catalog-derived damage và victim-authority Health; unreliable remote cosmetic.
+  - Out of scope: server rewind, dedicated authority, kick/ban, competitive guarantee.
+  - Dependencies: user chọn Option A ngày 2026-07-14.
+  - Risk: client-trusted hit vẫn có thể bị aim/raycast spoof; chấp nhận cho phòng 2–4 người.
+  - Acceptance criteria: roadmap và gun architecture thống nhất schema, authority, validation, damage source và upgrade trigger.
+  - Verify recipe: review hai docs; không còn chỗ nào mô tả shooter gửi final damage hoặc D1/D2 chưa chốt.
+  - Evidence: `GameDesign/TOSSZONE-Playable-Ready-Roadmap.md`, `Gun_System_Architecture.md`.
+  - Decision/Assumption: Option A chỉ áp dụng cho v0.3 Ready casual/small-room.
+
+- [!] Lock D3 health model for v0.3-P0
+  - Outcome: xác định rõ `Health` là 100 HP hay tiếp tục mang nghĩa lives trước khi nối damage.
+  - Scope: max HP, damage semantics, death threshold, respawn reset và ranh giới round/lives.
+  - Out of scope: armor, healing, economy lives, revive.
+  - Dependencies: user xác nhận product decision D3.
+  - Risk: triển khai trên model lives hiện tại sẽ làm TTK, UI và death lifecycle sai nghĩa.
+  - Acceptance criteria: một quyết định bằng văn bản; mapping state cũ→mới; regression scope cho PlayerCombat/ArenaManager.
+  - Verify recipe: review decision record và một state-transition table HP→death→respawn.
+  - Evidence: để trống tới khi D3 được chốt.
+  - Decision/Assumption: recommendation hiện tại là 100 HP, chưa tự coi là user approval.
+
+### 0.2 — Establish repeatable proof harness
+
+- [ ] Define the repeatable two-client AR test runbook
+  - Outcome: một tester có thể mở hai client, vào cùng arena và lặp combat cycle mà không cần sửa state bằng cheat.
+  - Scope: scene/build path, room/session steps, AR placeholder, body/head target, respawn loop và cách reset test.
+  - Out of scope: Quest performance pass, four-player session, final onboarding.
+  - Dependencies: existing Fusion Shared Mode path; inspect current scene flow; GitNexus impact trước mọi code/scene binding edit.
+  - Risk: ParrelSync/editor path có thể khác device build; ghi limitation nếu chỉ test editor.
+  - Acceptance criteria: runbook có preconditions, exact steps, expected result và failure capture cho hai client.
+  - Verify recipe: một người khác chạy runbook từ clean Play session và hoàn thành ba damage→death→respawn cycles.
+  - Evidence: `Verification/P0_TWO_CLIENT_RUNBOOK.md` + log/screenshot khi chạy thật.
+  - Decision/Assumption: P0 dùng một greybox arena và một AR placeholder.
+
+- [ ] Define the combat telemetry and reject-reason contract
+  - Outcome: log phân biệt được lỗi fire, cosmetic, claim validation, damage, death và respawn.
+  - Scope: events `shot_local`, `shot_remote`, `claim_sent`, `claim_accept/reject`, `damage`, `death`, `respawn`; correlation bằng shooter + shotId; reject enum.
+  - Out of scope: production analytics backend, dashboards, PII, anti-cheat enforcement.
+  - Dependencies: Option A contract locked.
+  - Risk: log tự do không có correlation sẽ không giải thích được Round 1 failure.
+  - Acceptance criteria: schema ghi rõ field bắt buộc, owner phát event, severity và reject reasons; không log final damage do shooter khai.
+  - Verify recipe: walkthrough một accepted body hit, một duplicate claim và một protected victim; mỗi path có chuỗi event truy được end-to-end.
+  - Evidence: `GameDesign/P0_Combat_Telemetry_Contract.md`.
+  - Decision/Assumption: logging chi tiết chỉ bật trong Editor/Development Build.
+
+## PHASE 1 — v0.3-P0 Network Gun Proof
+
+### 1.1 — Prove the local AR loop
+
+- [ ] Build one data-driven placeholder AR runtime
+  - Outcome: một AR hitscan có config độc lập và phát `ShotInfo` local ổn định.
+  - Scope: minimum GunConfig/GunCatalog entry, hitscan ray, body/head/world result, deterministic shotId generation.
+  - Out of scope: SMG/pistol/melee, skins, spin-up, bolt, two-hand grip.
+  - Dependencies: PHASE 0 test runbook; GitNexus query/context và impact trước edit các symbol liên quan.
+  - Risk: dựng full 14-file blueprint quá sớm; chỉ tạo boundary cần cho P0.
+  - Acceptance criteria: AR bắn được world/body/head; mỗi accepted local fire tiêu đúng một ammo và phát đúng một unique shotId.
+  - Verify recipe: Unity Play Mode bắn 20 phát vào ba target type; kiểm log/raycast result, ammo delta và unique shotId.
+  - Evidence: Play Mode log + screenshot/video ngắn.
+  - Decision/Assumption: một tay, súng parent vào wrist, không NetworkObject riêng.
+
+- [ ] Implement AR fire gate, magazine and simplified reload
+  - Outcome: trigger/RPM/ammo/reload tạo fire loop dự đoán được và không double-fire.
+  - Scope: semi hoặc auto theo config, fire interval, one magazine, reload input, empty-mag safety reload, swap/round fire block nếu path đã có.
+  - Out of scope: physical magazine, tactical reload variants, per-shell reload.
+  - Dependencies: placeholder AR runtime; GitNexus impact trước edit.
+  - Risk: Update/Input callback cùng gọi fire gây duplicate shot.
+  - Acceptance criteria: RPM trong tolerance đã ghi; ammo không âm; reload không tạo shot; round freeze chặn fire.
+  - Verify recipe: Play Mode giữ/bóp cò theo test matrix, empty mag, reload và fire lúc frozen; đối chiếu shot count/timestamp/ammo.
+  - Evidence: test matrix log.
+  - Decision/Assumption: simplified reload = animation/timer; config là nguồn stat.
+
+- [ ] Deliver immediate local AR feedback
+  - Outcome: người bắn thấy/nghe/cảm nhận phát bắn trong frame fire local được accept.
+  - Scope: muzzle, tracer, fire audio, recoil visual và haptic; pooled cosmetic reset an toàn.
+  - Out of scope: final art, skin FX, remote haptic, damage confirmation styling.
+  - Dependencies: local `ShotInfo`; BillGameCore pool/audio/events rules; GitNexus impact trước edit.
+  - Risk: feedback chờ RPC hoặc pooled tracer giữ stale state.
+  - Acceptance criteria: feedback không phụ thuộc network callback; miss vẫn có tracer/impact phù hợp; pool reuse không để stale visual.
+  - Verify recipe: offline/solo Play Mode bắn liên tục và reuse pool; capture frame/log chứng minh local event precedes network relay.
+  - Evidence: Game View capture + ordered event log.
+  - Decision/Assumption: local responsiveness ưu tiên hơn remote cosmetic exactness.
+
+### 1.2 — Replicate weapon cause and shot cosmetics
+
+- [ ] Render the equipped AR proxy on the remote wrist
+  - Outcome: client khác luôn thấy đúng proxy gun gắn với wrist của shooter.
+  - Scope: minimal `EquippedSlot`, proxy lookup/parenting, late-join render và respawn cleanup.
+  - Out of scope: gun NetworkObject, ownership transfer, remote reload animation, skins.
+  - Dependencies: current NetworkAvatar wrist replication; GitNexus context/impact trước edit.
+  - Risk: stale proxy sau respawn hoặc Spawned ordering.
+  - Acceptance criteria: equip/respawn/late join không tạo duplicate hoặc stale gun; proxy không cần transform sync riêng.
+  - Verify recipe: hai client equip, respawn và reconnect/late join; quan sát đúng một AR proxy tại wrist.
+  - Evidence: two-client screenshots/video + zero-error console.
+  - Decision/Assumption: sync cause (`EquippedSlot`), không sync mesh transform.
+
+- [ ] Relay remote shot cosmetics over an unreliable channel
+  - Outcome: remote client thấy muzzle/tracer/impact hợp lý mà packet loss không ảnh hưởng gameplay damage.
+  - Scope: unreliable `RPC_ShotFired`, proxy muzzle resolution, local event re-fire trên receiving process.
+  - Out of scope: reliable cosmetic replay, historical tracer cho late joiner.
+  - Dependencies: AR proxy + local ShotInfo; GitNexus impact trước edit.
+  - Risk: dùng local event bus như global bus hoặc double-render trên shooter.
+  - Acceptance criteria: remote cosmetic xuất hiện đúng shooter/weapon; shooter không double feedback; mất cosmetic packet không mất accepted ShotClaim.
+  - Verify recipe: two-client fire test, sau đó simulated packet loss nếu tooling cho phép; so sánh cosmetic count và accepted damage count.
+  - Evidence: correlated log + capture.
+  - Decision/Assumption: cosmetic loss được chấp nhận.
+
+### 1.3 — Implement Option A gameplay truth
+
+- [ ] Implement reliable ShotClaim submission and victim-side validation
+  - Outcome: player hit đi qua một contract reliable, dedupe được và chỉ victim State Authority có quyền accept/reject.
+  - Scope: claim schema; targeted RPC; dedupe; shooter/round/equipped/fire-rate/range/origin/hit-part/spawn-protection checks; reject reason telemetry.
+  - Out of scope: rewind, server ray reconstruction, kick/ban, client punishment.
+  - Dependencies: AR runtime, telemetry contract, existing Fusion ownership model; GitNexus query/context + impact trước edit.
+  - Risk: HIGH nếu gắn nhầm authority hoặc trust final damage; phải báo user nếu GitNexus impact trả HIGH/CRITICAL.
+  - Acceptance criteria: duplicate/invalid claims không đổi Health; valid claim accept đúng một lần; claim không có trusted finalDamage.
+  - Verify recipe: inject matrix valid, duplicate, over-rate, bad weapon, out-of-range, protected/dead victim; kiểm Health delta và exact reject reason.
+  - Evidence: validation matrix log.
+  - Decision/Assumption: victim không rewind/re-raycast lịch sử trong v0.3 Ready.
+
+- [!] Integrate catalog-derived damage with HP, death and respawn
+  - Outcome: accepted ShotClaim tạo damage→death→respawn nhất quán trên hai client.
+  - Scope: victim tra damage/falloff/headshot từ GunCatalog; Health write; death transition; respawn reset/protection.
+  - Out of scope: armor/heal/revive/economy lives.
+  - Dependencies: D3 health model chưa chốt; ShotClaim validator; GitNexus impact trước edit.
+  - Risk: PlayerCombat hiện dùng Health theo nghĩa lives, có blast radius sang ArenaManager/UI.
+  - Acceptance criteria: damage không do shooter cung cấp; Health không âm; death/respawn đúng một lần; protection reject late claim.
+  - Verify recipe: two-client body/head damage table + lethal simultaneous claims + delayed pre-respawn claim.
+  - Evidence: synchronized state log/video.
+  - Decision/Assumption: blocked tới khi user chốt D3.
+
+- [ ] Award kill and score exactly once from confirmed victim death
+  - Outcome: score chỉ tăng từ death đã được victim xác nhận, không từ shooter hit prediction.
+  - Scope: killer attribution, duplicate-death guard, ArenaManager score handoff và two-client convergence.
+  - Out of scope: assists, economy rewards, ranked persistence.
+  - Dependencies: HP/death/respawn integration; GitNexus context/impact trước edit.
+  - Risk: hai lethal claim cùng tick có thể double event hoặc sai attribution.
+  - Acceptance criteria: mỗi death tăng đúng một score; hai client thống nhất alive/dead/killer/score sau respawn.
+  - Verify recipe: 30 alternating kills + simultaneous lethal edge case; compare both clients after each cycle.
+  - Evidence: score/death correlation log.
+  - Decision/Assumption: claim được victim accept đầu tiên gây lethal nhận kill credit.
+
+### 1.4 — Test Round 1 gate
+
+- [ ] Pass Test Round 1 and tag v0.3-P0 Network Gun Proof
+  - Outcome: chứng minh core network gun loop đủ ổn định để mở task cho v0.3-P1.
+  - Scope: 30 complete damage→death→respawn cycles; good-network run; latency/loss run nếu tooling hỗ trợ; blocker review và evidence bundle.
+  - Out of scope: weapon balance, ability, four-player final performance, polished onboarding.
+  - Dependencies: mọi task P0 phía trên Done và có evidence.
+  - Risk: một pass ngẫu nhiên hoặc evidence trộn từ nhiều build không chứng minh được milestone.
+  - Acceptance criteria: đạt toàn bộ bảy tiêu chí Round 1 trong roadmap trên cùng build lineage; zero unresolved blocker/high-risk issue.
+  - Verify recipe: chạy nguyên Test Round 1 theo roadmap, ghi build id/device/network/tester và archive correlated logs/captures.
+  - Evidence: `Verification/P0_ROUND1_<date>.md` + artifacts.
+  - Decision/Assumption: chỉ task này Pass mới mở detailed backlog cho M2/v0.3-P1.
+
+## PHASE 2 — v0.3-P1 Combat Playable (GATED)
+
+Chưa task hóa. Mở sau khi task Test Round 1 đạt `[x]` và evidence còn hiệu lực trên build lineage hiện hành.
+
+## PHASE 3 — v0.3-RC1 Ready Candidate (GATED)
+
+Chưa task hóa. Mở sau khi Test Round 2 Pass; nội dung bám roadmap, không phục hồi backlog deprecated.

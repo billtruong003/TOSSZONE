@@ -25,6 +25,11 @@ namespace TossZone.Network
         // it spans the Main->Arena transition, where a fresh PlayerSpawnManager instance takes over spawning.
         private static bool _spawnInFlight;
 
+        // Session-13 gotcha: the runner the pending spawn was issued on. If the session dies mid-spawn
+        // (disconnect/reconnect), Spawned() never runs and the STATIC flag stays latched, silently blocking
+        // avatar spawning on the NEW session forever. Remember the issuing runner so a stale latch can be detected.
+        private static NetworkRunner _spawnInFlightRunner;
+
         private void OnEnable() => TryInit();
 
         // Bootstrap may not be finished when this scene's objects enable (e.g. Play from any scene),
@@ -89,7 +94,15 @@ namespace TossZone.Network
             // A spawn is already pending (net.Spawn returned but Spawned() hasn't set Local yet). TrySpawn is driven
             // from BOTH OnConnected and OnSceneLoaded, which fire together on scene entry — without this guard both
             // calls spawn before Local is set, producing two overlapping avatars.
-            if (_spawnInFlight) return;
+            if (_spawnInFlight)
+            {
+                if (_spawnInFlightRunner == net.Runner && net.Runner != null && net.Runner.IsRunning)
+                    return; // genuinely pending on the live session
+                // The pending spawn belonged to a dead/replaced runner — it can never complete. Clear the
+                // latch so this (reconnected) session can spawn its avatar.
+                _spawnInFlight = false;
+                _spawnInFlightRunner = null;
+            }
 
             if (net.TryGetPlayerObject(net.LocalPlayer, out _)) return; // already have a player
 
