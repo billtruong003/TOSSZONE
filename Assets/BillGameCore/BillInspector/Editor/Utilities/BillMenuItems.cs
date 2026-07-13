@@ -22,12 +22,6 @@ namespace BillInspector.Editor
             BillValidator.LogResults(results);
         }
 
-        [MenuItem("Tools/BillInspector/Validation Window")]
-        private static void OpenValidationWindow()
-        {
-            BillValidationWindow.Open();
-        }
-
         [MenuItem("Tools/BillInspector/Clear Caches")]
         private static void ClearCaches()
         {
