@@ -176,17 +176,29 @@
 
 | ID | Kịch bản | Kỳ vọng | Verify | Pri |
 |---|---|---|---|---|
-| NET-01 | 2 player thấy nhau | Avatar sync, IK tay đúng | 2P | 🔴 |
-| NET-02 | Bắn trúng nhau | Máu đồng bộ 2 phía | 2P | 🔴 |
+| NET-01 | 2 player thấy nhau | Avatar sync, IK tay đúng | 2P | ✅(sim)² |
+| NET-02 | Bắn trúng nhau | Máu đồng bộ 2 phía | 2P | 🟡 PARTIAL — RPC/Health replication PASS; physical projectile E2E pending³ |
 | NET-03 | Đạn visual sync | VisualIndex → đúng model mọi client | 2P | 🟡 |
 | NET-04 | **[EDGE] Non-master ném xuyên ring** | Buff áp qua RPC về authority đạn (cross-authority) | 2P | 🔴 |
-| NET-05 | Đổi bên nhìn từ 2 phía | Cả 2 thấy mình đổi bên đúng | 2P | 🟡 |
+| NET-05 | Arena load sync (portal → 02_Arena) | Cả 2 client cùng vào arena | 2P | 🟡 MASTER PATH PASS / CLEAN ARENA 2P LEG PENDING⁴ |
 | NET-06 | Round-end/respawn 2 máy | Đúng sân, đồng bộ | 2P | 🔴 |
 | NET-07 | Freeze sync | Người bị băng khóa move ở cả 2 máy | 2P | 🟡 |
 | NET-08 | PPU cross-client | Mua/nạp/catch đạn đúng phía mình | 2P | 🟡 |
 | NET-09 | Hòa Chung Cuộc 1-1-1 thật | 2 máy đều thấy kết quả hòa | 2P | 🟡 |
 | NET-10 | **[EDGE] Photon rate-limit** | Chạy 1 phiên dài thay vì connect/disconnect nhiều | 2P | ⚪ |
 | NET-11 | **[EDGE] Dummy passive khi ≥2 người thật** | Bot tự tắt tấn công | 2P | 🟡 |
+
+> ² NET-01: verify 2 chiều bằng harness 2-client (main Editor P1 + TOSSZONE_clone_0 P2, QR-201, Session 17.16→17.17, 2026-07-11). Phạm vi đủ: **Root + Head + WristL/R (pos+rot) + arm stretch**, mỗi chiều một tay stretch khác nhau. P1→P2 (MAIN→clone, drive qua simulated input events + workaround BUG-XRI-TPD-001): khớp ≤1mm & ≤0.06° (quantization Fusion), head yaw compound rig 35°+HMD 20°=55° đúng, armLenR stretch 0.8979 = 0.8979 hai phía. P2→P1 (clone→MAIN): clone chạy nền unfocused nên Input System không pump queued events kể cả khi force `InputSystem.Update()` (simulator overwrite) — drive bằng cách tắt tạm 3 TrackedPoseDriver + set transform nguồn (`LocalPlayer/TrackerOffsets/*`) trực tiếp, vẫn đi qua đường replication Fusion đầy đủ; khớp ≤0.4mm & 0°, armLenL stretch 0.8750 = 0.8750, armLenR 0.4912 = 0.4912 hai phía. TPD đã bật lại sau test. Ghi chú cũ về nhãn "NET-02" trong session plan: đã reconcile — số liệu trên là của NET-01 (avatar sync); NET-02 canonical (projectile hit → Health sync 2 chiều) vẫn CHƯA test. Lưu ý phụ (không thuộc NET-01): locomotion position trên clone không nhận teleport root `LocalPlayer` (yaw nhận, XZ không) — nghi KCC cần Teleport() tường minh, cần case riêng nếu test locomotion sync.
+
+> ³ NET-02: verify 2 chiều bằng harness 2-client (main Editor P1 + TOSSZONE_clone_0 P2, QR-201, Session 17.17, 2026-07-11), spawn avatar qua workaround BUG-NET-SPAWN-001. Đường test: gọi `RPC_TakeHit` (đúng RPC mà projectile hit dùng) mỗi chiều 1 hit — P1→P2 và P2→P1. Kết quả: Health networked 5→4 trên StateAuthority của mỗi avatar, replicate đúng qua Fusion — **cả hai client cùng đọc Local=4 & Remote=4**, DummyAvatar không liên quan giữ nguyên 5. Phạm vi: tầng network (RPC → `Health` [Networked] → replication); chưa bắn projectile vật lý end-to-end qua mạng (phần visual/quỹ đạo đạn thuộc NET-03). (Session 17.16, 2026-07-11)
+
+> ⁴ NET-05: **CODE AUDIT PASS / LIVE 2P PENDING** (code audit 2026-07-12, QR-201). Evidence audit: đường load arena production **duy nhất** là `PortalMatchmaker → FusionNet.LoadScene`; `FusionNet.LoadScene` có host-only guard (non-host bị ignore + warn); Fusion NetworkSceneManager replicate scene sang mọi peer; `ArenaNetworkLoadGate` chỉ là dev fallback (sentinel NetworkObject + settle window) — no-op trên portal path bình thường; `MinigamePortal` không có instance trong bất kỳ scene/prefab nào (GUID `a1b768944d0d2dd44bd904e988793bf8`, 0 reference toàn Assets); `MinigameManager` local Enter path không tham gia production flow; return-to-hub qua `ArenaQuickMenu` đi đường `FusionNet.Shutdown()` → disconnect-recovery, không local load. (Duplicate MinigameDef không tính finding: đã RESOLVED bởi ff1a79a, runtime LoadAll count=1, id=arena.) **Live 2P checklist — bắt buộc đủ trước khi đổi PASS:** (1) bắt đầu tại 01_TOSSZONE_Main; (2) ghi scene, session, Runner.IsRunning và player refs của cả hai client; (3) ready/portal qua production path, không gọi LoadScene bằng reflection; (4) capture log: host request **đúng một** `FusionNet.LoadScene`; (5) xác nhận `ArenaNetworkLoadGate` không phát request thứ hai; (6) cả hai client vào 02_Arena; (7) cùng Fusion session/runner scene; (8) scene NetworkObjects valid trên cả hai; (9) ArenaManager/required scene objects tồn tại đúng một instance; (10) không disconnect/reconnect ngoài ý muốn; (11) không duplicate avatar; (12) không local client vào arena trước peer còn lại ngoài network settle hợp lý; (13) return-to-hub qua ArenaQuickMenu production path, cả hai peer có kết quả đúng theo design hiện tại. Chỉ sau live evidence mới đổi NET-05 thành PASS.
+> ⁴ᵃ Live attempt 2026-07-12 (QR-201, 2 editor: master=TOSSZONE@5fb7c2b5 P1, client=TOSSZONE_clone_0@5638c5d7 P2). **Master-side production path CONFIRMED live**: invoke `PortalMatchmaker.OnTriggerEnter` với collider thật của `PlayerRig.Local` (parent-chain verified) → `gate.AllReady=true` → `FusionNet.LoadScene` pass `IsHost` guard (Main = `IsSharedModeMasterClient`) → `_runner.LoadScene(Single)` → master active scene = `02_Arena`, ArenaManager=1, 9/9 NetworkObjects valid, no dup avatar. **Client-side sync FAIL**: clone (dataPath-verified `D:/Project/TOSSZONE_clone_0/Assets`) vẫn ở `01_TOSSZONE_Main`, `IsConnectedToServer=True` cùng session `2f0f1809-…` `ActivePlayers=2` nhưng KHÔNG load `02_Arena`; console clone có Fusion `DisconnectMessage Code:104 "ServerLogic"` quanh thời điểm load. Vi phạm checklist (6) cả 2 vào arena + (10) không disconnect. **Chưa phân biệt được** bug Shared-Mode scene-sync thật vs harness session instability (session này reconnect churn nặng) — cần clean stable 2P repro. **Methodology caveat**: MCP command routing giữa 2 editor khi `set_active_instance` switch nhanh KHÔNG tin cậy — 1 reading trước tưởng clone=`02_Arena` thực ra chạy trên main (chứng minh bằng `Application.dataPath` tag). Mọi cross-instance reading từ nay phải in dataPath. Entry dùng reflection-invoke `OnTriggerEnter` (deterministic substitute cho physical dwell); `LoadScene` KHÔNG gọi bằng reflection — do production matchmaker gọi. Status: master path lên PASS, client sync xuống FAIL → cần điều tra scene-sync trước khi đổi NET-05 PASS.
+
+| ID | Mô tả | Trạng thái |
+|---|---|---|
+| BUG-NET-SPAWN-001 | `PlayerSpawnManager._spawnInFlight` (static bool) bị latch `true` sau networked scene load, trên **cả hai client** (main P1 + clone P2) → `PlayerSpawnManager` bỏ qua spawn, client không có avatar sau load. Phát hiện khi chạy NET-01 2-client (main Editor + TOSSZONE_clone_0). **Root cause xác nhận runtime (Session 17.18, 2026-07-12, session `d3960ae9`)**: latch set `true` trong `TrySpawn()` nhưng **không bao giờ clear trong spawn-done path** — verify: sau khi avatar spawn thành công, `_spawnInFlight` vẫn `true`. Vì là static, latch sống qua runner shutdown + auto-reconnect (không domain reload) → client rejoin session mới bị chặn spawn im lặng (repro: MAIN restart session, CLONE reconnect P3→P2, scene sync OK nhưng avatar không spawn cho tới khi reset latch). **Workaround chỉ-để-test** (đã verify 3 lần: P3 runner cũ + P2 session `d3960ae9` + cả 2 client session `d99c8a57`): reflection set `_spawnInFlight=false` (nếu còn latch) + gọi lại `TrySpawn()` trên từng client — CHƯA sửa code. **Bằng chứng bổ sung (Session 17.19, 2026-07-12, session `d99c8a57`, sau cloud kick → auto-reconnect cả 2 client)**: lần này `_spawnInFlight=False` trên cả hai client nhưng spawn vẫn KHÔNG tự chạy lại → root cause không chỉ là stale latch mà còn **thiếu re-trigger path khi rejoin** (OnPlayerJoined/OnSceneLoaded của lần join đầu đã trôi, không ai gọi lại `TrySpawn()` cho session mới); gọi tay `TrySpawn()` là đủ để cả 2 client spawn `Avatar (Local)` + thấy remote (avatars=2 đối xứng, MAIN P2 `[Id:1049600]`/CLONE P1). **Fix candidates (chưa chốt implementation)**: KHÔNG clear trong `OnBeforeSpawned` (callback chạy TRƯỚC spawn completion); KHÔNG đổi static→instance hay reset `OnDisable` khi chưa phân tích cross-scene duplicate-spawn guard. Candidate ưu tiên khảo sát: thay bool latch bằng **pending `NetworkObject`** validate theo current Runner/session → clear khi Local avatar settle hoặc pending object/runner invalid. (Task #11) | 🐞 CONFIRMED |
+| BUG-XRI-TPD-001 | `TrackedPoseDriver` (Input System) trên rig head/wrist không nhận pose khi HMD/controller device được add **sau** khi action đã enable (thứ tự xảy ra khi XR Device Simulator auto-spawn muộn sau scene load): binding re-resolve OK (`act.controls` có `/XRSimulatedHMD/centerEyePosition`, device state đúng) nhưng action kẹt `phase=Waiting`, không chạy lại initial-state-check → `m_CurrentPosition` giữ zero, camera/wrist đứng im tại origin. Toggle `tpd.enabled` KHÔNG đủ. **Workaround chỉ-để-test**: `InputSystem.QueueDeltaStateEvent` đẩy một state event mới (giá trị khác hiện tại) cho `centerEyePosition/Rotation`, `devicePosition/Rotation`, `trackingState` → monitor fire, TPD chạy bình thường từ đó. Ảnh hưởng cả main + clone. CHƯA sửa code (hướng fix: force initial state check sau device add, hoặc nâng cấp Input System nếu đã vá). | 🐞 OPEN |
 
 ---
 
@@ -342,3 +354,52 @@
 - [ ] ECO-05 **Income trong Warmup/RoundEnd**: `FixedUpdateNetwork` cộng 2$/s mọi lúc — xác nhận tiền có tick ngoài Playing không; reset $0 đúng thời điểm nào (mua trong warmup bằng tiền round trước được không)?
 - [ ] ECO-06 **Trúng 1 quả mất 2 mạng** (damage 2): compensation nhận 20$ (10×2) đúng không? Kill reward người bắn tính 1 hay 2 lần?
 - [ ] ECO-07 **Kill reward cộng local**: `RewardShooterLocal` chạy trên mọi client — verify shooter chỉ được +$ MỘT lần (không nhân đôi khi 3+ client cùng fire event).
+
+
+#### Addendum — NET-04 rerun trong harness (2026-07-11, QR-201)
+- Rerun hợp lệ (production-style spawn, stamp `Element=Multi`/`Tier=2` trong `onBeforeSpawned`): `_config` resolve OK, trigger + consume gate OK → **authority-side logic PASS**.
+- Lần spawn raw (`Element=None`) trước đó: **INVALID TEST SETUP** — không ghi PASS/FAIL, không mở bug.
+- Harness `01_TOSSZONE_Main` thiếu `BillBootstrap` → `TweenService` không đăng ký (`BillTween.cs:163`), hệ quả:
+  - `PlayBounceIn` (`BuffRing.cs:178`) zero scale rồi tween inflate không chạy → ring kẹt scale (0,0,0) từ lúc spawn (vô hình, collider zero-size).
+  - `PlayConsumeAnim` (`BuffRing.cs:270-277`) tween null → `OnComplete` không đăng ký → `RingConsumedEvent` + `Runner.Despawn` không chạy → ring consumed leak (đã cleanup thủ công `[Id:1049602]`, scene sạch).
+  - Thiếu `ProjectileBurstSystem` (chỉ tồn tại trong `02_Arena`) → burst spawn không thể test trong harness.
+- Kết luận: visual/burst/despawn của NET-04 **không adjudicate được trong harness** — environment gap, KHÔNG phải product bug mới. `BUG-RING-MULTI-001` giữ OPEN; re-verify bắt buộc trong `02_Arena` trước khi fix (task #10).
+
+---
+
+## QR-201 Checkpoint — 2026-07-12 (session sạch `108a0f62`)
+
+**Stop session (2-editor live regression):** Main `TOSSZONE @ 5fb7c2b5` (P1) + ParrelSync Clone `TOSSZONE_clone_0 @ 5638c5d7` (P2). Cả hai đã Stop Play; play-mode changes **discarded**, KHÔNG save runtime transform/state vào scene/prefab, KHÔNG sửa/recompile code.
+
+**Bằng chứng session sạch `108a0f62-85e6-4aec-ad48-ac40a0828043`:**
+- Main & Clone cùng hub `01_TOSSZONE_Main`, cùng `session_key` global `108a0f62`.
+- `ActivePlayers = 2` (đối chiếu 2 phía khớp): P1 = Main / `IsSharedModeMasterClient = True`; P2 = Clone / `IsSharedModeMasterClient = False`.
+- `DisconnectMessage` Code 104 (ServerLogic) = 0; console cả 2 phía sạch, không orphan avatar.
+
+**Task #13 — client-side arena scene-sync FAIL, verdict:**
+- Nguyên nhân **khả năng cao**: lifecycle churn — stale session `2f0f1809` từ editor cũ không cleanup → clone kẹt hub cũ + Code 104. Sau khi kill editor cũ + relaunch sạch: **non-reproduction hoàn toàn**.
+- ⚠️ Portal → `02_Arena` **CHƯA rerun** trong session sạch → **ARENA LEG PENDING**. Không mark NET-05 full PASS chỉ dựa trên hub-join.
+
+**NET-02 làm rõ (chống overclaim — giữ nguyên footnote ³):**
+- `RPC_TakeHit` → networked Health replication đã PASS **hai chiều**.
+- Projectile vật lý bắn/trúng **end-to-end CHƯA test**.
+- KHÔNG dùng RPC-only evidence để kết luận toàn bộ "bắn trúng nhau" PASS → status hạ về 🟡 PARTIAL.
+
+**Bug/status checkpoint (authoritative tại mốc này):**
+| Mục | Trạng thái |
+|---|---|
+| BUG-NET-SPAWN-001 | CONFIRMED / OPEN (stale spawn latch) |
+| BUG-XRI-TPD-001 | OPEN |
+| BUG-RING-MULTI-001 | OPEN — requires valid `02_Arena` live rerun trước khi fix |
+| NET-02 | 🟡 PARTIAL (RPC/Health PASS; projectile E2E pending) |
+| NET-04 | 🟡 PARTIAL (environment-limited) |
+| NET-05 | 🟡 MASTER PATH PASS / CLEAN ARENA 2P LEG PENDING |
+
+**Resume steps (owner làm tiếp tại công ty):**
+1. Fresh Main + fresh ParrelSync Clone (không tái dùng editor cũ đang treo).
+2. Verify `dataPath` (đúng project) ở **mỗi** MCP call trước khi thao tác.
+3. Dùng lại session sạch (một hub chung, đối chiếu 2 phía).
+4. Chạy đúng production-ready / portal path (13 bước NET-05).
+5. Confirm **cả hai** client thật sự load vào `02_Arena` (arena scene-sync + ActivePlayers=2).
+6. Tiếp tục NET-06 → NET-11 + FLOW + match.
+7. Chỉ sửa bug (BUG-RING-MULTI-001 / BUG-NET-SPAWN-001) **sau** khi live regression 2-client hoàn tất.
