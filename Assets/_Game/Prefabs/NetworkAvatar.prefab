@@ -926,6 +926,7 @@ GameObject:
   - component: {fileID: 5029712955536213259}
   - component: {fileID: 8176461611797126089}
   - component: {fileID: 2037327525173968736}
+  - component: {fileID: 2693324673987721026}
   m_Layer: 0
   m_Name: NetworkAvatar
   m_TagString: Untagged
@@ -979,6 +980,7 @@ MonoBehaviour:
   - {fileID: 1372590995041968222}
   - {fileID: 2355378341532234341}
   - {fileID: 5029712955536213259}
+  - {fileID: 2693324673987721026}
   - {fileID: 3915520981554320660}
   - {fileID: 8213307284825834251}
   - {fileID: 865725772801836624}
@@ -1088,6 +1090,20 @@ MonoBehaviour:
   _editorTriggerKey: 20
   _deflectRadius: 0.15
   _deflectSpeed: 10
+--- !u!114 &2693324673987721026
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5683549520839284970}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1fd2d8d1def8f2e4ea1fe671cb96decf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TossZone.Guns.AvatarWeaponSync
+  _proxyAnchor: {fileID: 0}
+  _EquippedSlot: 0
 --- !u!1 &6763242888330656289
 GameObject:
   m_ObjectHideFlags: 0

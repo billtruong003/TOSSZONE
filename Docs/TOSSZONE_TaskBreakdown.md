@@ -101,7 +101,7 @@
   - Risk: stale proxy sau respawn hoặc Spawned ordering.
   - Acceptance criteria: equip/respawn/late join không tạo duplicate hoặc stale gun; proxy không cần transform sync riêng.
   - Verify recipe: hai client equip, respawn và reconnect/late join; quan sát đúng một AR proxy tại wrist.
-  - Evidence: two-client screenshots/video + zero-error console.
+  - Evidence: `Verification/P0_1_2_REMOTE_PROXY_2026-07-14.md` — code-complete (AvatarWeaponSync: `[Networked] EquippedSlot` + owner mirror + proxy instantiate/StripToVisual). Solo audit pass: proxy strip window không có side effect (AK74_P0 chỉ có HitscanGun + mesh; auto-fire gated `_triggerHeld=false`); static `LocalEquippedWeaponId` không stale trong P0 (domain reload bật, `m_EnterPlayModeOptions: 0`; chưa có unequip/death path — latent: phải clear static khi 1.3.2 land). CHƯA verify two-client (equip/respawn/late join) — giữ mở; two-client screenshots/video + zero-error console còn nợ.
   - Decision/Assumption: sync cause (`EquippedSlot`), không sync mesh transform.
 
 - [ ] Relay remote shot cosmetics over an unreliable channel

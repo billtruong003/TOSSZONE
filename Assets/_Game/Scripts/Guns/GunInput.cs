@@ -47,6 +47,10 @@ namespace TossZone.Guns
                 Debug.LogError("[GunInput] modelPrefab is missing a HitscanGun component: " + _config.modelPrefab.name);
                 return;
             }
+
+            // Publish local truth for the network mirror (task 1.2.1): AvatarWeaponSync copies this onto its
+            // [Networked] EquippedSlot so remotes render the proxy gun. P0 never unequips, so set-once is fine.
+            AvatarWeaponSync.LocalEquippedWeaponId = _config.weaponId;
         }
 
         private void Update()
