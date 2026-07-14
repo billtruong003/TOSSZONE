@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8721a371ad6888541b3363469f51c333, type: 3}
+  m_Name: AK74_GunConfig
+  m_EditorClassIdentifier: Assembly-CSharp::TossZone.Guns.GunConfig
+  id: ak74
+  weaponId: 0
+  displayName: AK74
+  fireMode: 1
+  roundsPerMinute: 600
+  magazineSize: 30
+  reloadSeconds: 1.8
+  spreadDegrees: 1.5
+  bodyDamage: 16
+  headshotMultiplier: 2
+  range: 40
+  falloffAtMaxRange: 1
+  modelPrefab: {fileID: 5169450860602874287, guid: 5bb558b084e9747419dedfe2ba79ebd2, type: 3}
+  tracerPoolKey: gun_ak74_tracer
+  muzzleFlashPoolKey: gun_ak74_muzzle
+  impactPoolKey: impactburst
+  fireSoundKey: gun_ak74_fire
+  dryFireSoundKey: gun_dryfire
+  reloadSoundKey: gun_ak74_reload

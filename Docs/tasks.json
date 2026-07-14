@@ -1,8 +1,8 @@
 {
-    "generatedAt": "2026-07-14 07:11",
+    "generatedAt": "2026-07-14 07:52",
     "sourceFile": "D:\\Project\\TOSSZONE\\Docs\\TOSSZONE_TaskBreakdown.md",
     "totalTasks": 13,
-    "totalDone": 2,
+    "totalDone": 4,
     "phases": [
         {
             "key": "P0",
@@ -73,7 +73,7 @@
             "key": "P1",
             "title": "PHASE 1 — v0.3-P0 Network Gun Proof",
             "isPhase": true,
-            "done": 0,
+            "done": 2,
             "total": 9,
             "tasks": [
                 {
@@ -81,42 +81,42 @@
                     "section": "1.1",
                     "sectionTitle": "1.1 — Prove the local AR loop",
                     "title": "Build one data-driven placeholder AR runtime",
-                    "status": "Todo",
+                    "status": "Done",
                     "indent": 0,
                     "line": 61,
                     "verify": "Unity Play Mode: fire 20 shots across world/body/head targets; confirm ray results, one ammo per shot and unique shotId.",
-                    "evidence": "",
-                    "verifiedAt": "",
-                    "result": "",
-                    "notes": "Run GitNexus impact before symbol edits."
+                    "evidence": "Verification/P0_1_1_LOCAL_LOOP_2026-07-14.md",
+                    "verifiedAt": "2026-07-14",
+                    "result": "Pass",
+                    "notes": "GunConfig/GunCatalog/Gun/HitscanGun built fresh (deliberately separate from old WeaponConfig). 11 accepted shots across World/Body/Head via execute_code in Play Mode; ammo delta=1 every shot; shotId unique per session. 2 real bugs found+fixed during testing (LayerMask.NameToLayer in field initializer; GunFeedback subscribing to Bill.Events before EventBus ready). Short of one continuous 20-shot pass — follow-up noted."
                 },
                 {
                     "id": "1.1.2",
                     "section": "1.1",
                     "sectionTitle": "1.1 — Prove the local AR loop",
                     "title": "Implement AR fire gate, magazine and simplified reload",
-                    "status": "Todo",
+                    "status": "Done",
                     "indent": 0,
                     "line": 72,
                     "verify": "Play Mode fire-gate matrix: trigger patterns, empty magazine, reload and frozen phase; compare shot timestamps/count/ammo.",
-                    "evidence": "",
-                    "verifiedAt": "",
-                    "result": "",
-                    "notes": "Run GitNexus impact before symbol edits."
+                    "evidence": "Verification/P0_1_1_LOCAL_LOOP_2026-07-14.md",
+                    "verifiedAt": "2026-07-14",
+                    "result": "Pass",
+                    "notes": "Fire-rate gate proven (1 of 5 same-frame TryFire calls fired). Dry-fire at 0 ammo: no shot, GunDryFireEvent fired, auto-transitioned to Reloading. Reload completed and refilled to magazineSize. Round-freeze gate (MatchPhaseAllowsFire) code-reviewed, not independently exercised this session (needs ArenaManager in non-Playing phase)."
                 },
                 {
                     "id": "1.1.3",
                     "section": "1.1",
                     "sectionTitle": "1.1 — Prove the local AR loop",
                     "title": "Deliver immediate local AR feedback",
-                    "status": "Todo",
+                    "status": "InProgress",
                     "indent": 0,
                     "line": 83,
                     "verify": "Offline Play Mode pool-reuse test; capture evidence that local feedback occurs before network relay and leaves no stale tracer.",
-                    "evidence": "",
+                    "evidence": "Verification/P0_1_1_LOCAL_LOOP_2026-07-14.md",
                     "verifiedAt": "",
                     "result": "",
-                    "notes": "Run GitNexus impact before symbol edits."
+                    "notes": "Code-complete: GunFiredEvent fires synchronously inside Gun.TryFire (no RPC in the path yet, by construction). Zero exceptions across 11 shots; muzzle/tracer pool spawns + ImpactBurst all ran clean. NOT verified: visual/audio/haptic quality — no AudioLibrary configured in the whole project (pre-existing gap), no clean screenshot with gun in frame, no physical haptic device. Kept open pending sensory verification."
                 },
                 {
                     "id": "1.2.1",

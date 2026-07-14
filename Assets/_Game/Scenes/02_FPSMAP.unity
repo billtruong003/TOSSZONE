@@ -753,7 +753,7 @@ MonoBehaviour:
   m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
-  SortKey: 2331374711
+  SortKey: 2803400382
   ObjectInterest: 1
   Flags: 262145
   NestedObjects: []
@@ -1079,7 +1079,7 @@ MonoBehaviour:
   m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
-  SortKey: 2155852987
+  SortKey: 2627878658
   ObjectInterest: 1
   Flags: 262145
   NestedObjects: []
@@ -1139,6 +1139,7 @@ MonoBehaviour:
   _warmupDuration: 5
   _roundEndDuration: 5
   _winCheckGraceSeconds: 0.5
+  _matchEndReturnDelay: 10
   _minigameId: arena
   _spawnPointsA:
   - {fileID: 379173921}
@@ -1166,7 +1167,7 @@ MonoBehaviour:
   m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
-  SortKey: 1498981528
+  SortKey: 1971007199
   ObjectInterest: 1
   Flags: 131073
   NestedObjects: []
@@ -1560,7 +1561,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6867071015060229716, guid: 9090876a05f2bda469b62ef46b902207, type: 3}
       propertyPath: SortKey
-      value: 10387750
+      value: 482413421
       objectReference: {fileID: 0}
     - target: {fileID: 8016643276908417007, guid: 9090876a05f2bda469b62ef46b902207, type: 3}
       propertyPath: m_Name
@@ -1568,7 +1569,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8016643276908417007, guid: 9090876a05f2bda469b62ef46b902207, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -2040,9 +2041,6 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 0}
     - targetCorrespondingSourceObject: {fileID: 3321782824949809972, guid: 66784c6c9ee84e5498d05379306ea0fe, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 0}
-    - targetCorrespondingSourceObject: {fileID: 1170769325468694508, guid: 66784c6c9ee84e5498d05379306ea0fe, type: 3}
       insertIndex: -1
       addedObject: {fileID: 0}
   m_SourcePrefab: {fileID: 100100000, guid: 66784c6c9ee84e5498d05379306ea0fe, type: 3}

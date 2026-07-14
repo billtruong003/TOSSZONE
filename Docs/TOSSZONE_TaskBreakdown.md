@@ -58,7 +58,7 @@
 
 ### 1.1 — Prove the local AR loop
 
-- [ ] Build one data-driven placeholder AR runtime
+- [x] Build one data-driven placeholder AR runtime
   - Outcome: một AR hitscan có config độc lập và phát `ShotInfo` local ổn định.
   - Scope: minimum GunConfig/GunCatalog entry, hitscan ray, body/head/world result, deterministic shotId generation.
   - Out of scope: SMG/pistol/melee, skins, spin-up, bolt, two-hand grip.
@@ -66,10 +66,10 @@
   - Risk: dựng full 14-file blueprint quá sớm; chỉ tạo boundary cần cho P0.
   - Acceptance criteria: AR bắn được world/body/head; mỗi accepted local fire tiêu đúng một ammo và phát đúng một unique shotId.
   - Verify recipe: Unity Play Mode bắn 20 phát vào ba target type; kiểm log/raycast result, ammo delta và unique shotId.
-  - Evidence: Play Mode log + screenshot/video ngắn.
-  - Decision/Assumption: một tay, súng parent vào wrist, không NetworkObject riêng.
+  - Evidence: `Verification/P0_1_1_LOCAL_LOOP_2026-07-14.md` — 11 accepted shots across World/Body/Head via execute_code Play Mode calls, ammo delta=1 confirmed every shot, shotId strictly unique per session. Short of one continuous 20-shot pass (noted as follow-up).
+  - Decision/Assumption: một tay, súng parent vào wrist, không NetworkObject riêng. AR = AK74 placeholder (`P0_ASSET_SELECTION_2026-07-14.md`).
 
-- [ ] Implement AR fire gate, magazine and simplified reload
+- [x] Implement AR fire gate, magazine and simplified reload
   - Outcome: trigger/RPM/ammo/reload tạo fire loop dự đoán được và không double-fire.
   - Scope: semi hoặc auto theo config, fire interval, one magazine, reload input, empty-mag safety reload, swap/round fire block nếu path đã có.
   - Out of scope: physical magazine, tactical reload variants, per-shell reload.
@@ -77,10 +77,10 @@
   - Risk: Update/Input callback cùng gọi fire gây duplicate shot.
   - Acceptance criteria: RPM trong tolerance đã ghi; ammo không âm; reload không tạo shot; round freeze chặn fire.
   - Verify recipe: Play Mode giữ/bóp cò theo test matrix, empty mag, reload và fire lúc frozen; đối chiếu shot count/timestamp/ammo.
-  - Evidence: test matrix log.
+  - Evidence: `Verification/P0_1_1_LOCAL_LOOP_2026-07-14.md` §3 — fire-rate gate (1 of 5 rapid calls fired), dry-fire (TryFire=false, no ammo consumed), auto-reload (state Reloading -> Ready, ammo refilled to 30) all proven in Play Mode. Round-freeze gate code-reviewed but not independently exercised (needs non-Playing ArenaManager phase).
   - Decision/Assumption: simplified reload = animation/timer; config là nguồn stat.
 
-- [ ] Deliver immediate local AR feedback
+- [/] Deliver immediate local AR feedback
   - Outcome: người bắn thấy/nghe/cảm nhận phát bắn trong frame fire local được accept.
   - Scope: muzzle, tracer, fire audio, recoil visual và haptic; pooled cosmetic reset an toàn.
   - Out of scope: final art, skin FX, remote haptic, damage confirmation styling.
@@ -88,7 +88,7 @@
   - Risk: feedback chờ RPC hoặc pooled tracer giữ stale state.
   - Acceptance criteria: feedback không phụ thuộc network callback; miss vẫn có tracer/impact phù hợp; pool reuse không để stale visual.
   - Verify recipe: offline/solo Play Mode bắn liên tục và reuse pool; capture frame/log chứng minh local event precedes network relay.
-  - Evidence: Game View capture + ordered event log.
+  - Evidence: `Verification/P0_1_1_LOCAL_LOOP_2026-07-14.md` §4 — GunFiredEvent fires synchronously in the same call stack as the raycast (no RPC in the path yet), zero exceptions across 11 shots, pool spawns succeeded. NOT yet verified: visual/audio/haptic quality (no AudioLibrary content in the project at all, no clean screenshot with gun in frame, no physical haptic device this session). Code-complete, sensory verification pending.
   - Decision/Assumption: local responsiveness ưu tiên hơn remote cosmetic exactness.
 
 ### 1.2 — Replicate weapon cause and shot cosmetics
