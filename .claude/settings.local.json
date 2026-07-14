@@ -33,7 +33,10 @@
       "Bash(cp -r /tmp/skillcheck/expert-developer/expert-developer .claude/skills/)",
       "Bash(git lfs *)",
       "Bash(find Assets -iname \"*.asmdef\")",
-      "PowerShell(Start-Process \"C:\\\\Program Files\\\\Unity\\\\Hub\\\\Editor\\\\6000.3.8f1\\\\Editor\\\\Unity.exe\" -ArgumentList '-projectPath','D:\\\\Project\\\\TOSSZONE'; \"launched\")"
+      "PowerShell(Start-Process \"C:\\\\Program Files\\\\Unity\\\\Hub\\\\Editor\\\\6000.3.8f1\\\\Editor\\\\Unity.exe\" -ArgumentList '-projectPath','D:\\\\Project\\\\TOSSZONE'; \"launched\")",
+      "Bash(awk '{print $1}')",
+      "Bash(git merge *)",
+      "Bash(echo \"---EXIT:$?\")"
     ]
   },
   "prefersReducedMotion": false
