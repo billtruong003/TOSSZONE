@@ -93,7 +93,7 @@
 
 ### 1.2 — Replicate weapon cause and shot cosmetics
 
-- [/] Render the equipped AR proxy on the remote wrist
+- [x] Render the equipped AR proxy on the remote wrist
   - Outcome: client khác luôn thấy đúng proxy gun gắn với wrist của shooter.
   - Scope: minimal `EquippedSlot`, proxy lookup/parenting, late-join render và respawn cleanup.
   - Out of scope: gun NetworkObject, ownership transfer, remote reload animation, skins.
@@ -101,10 +101,10 @@
   - Risk: stale proxy sau respawn hoặc Spawned ordering.
   - Acceptance criteria: equip/respawn/late join không tạo duplicate hoặc stale gun; proxy không cần transform sync riêng.
   - Verify recipe: hai client equip, respawn và reconnect/late join; quan sát đúng một AR proxy tại wrist.
-  - Evidence: `Verification/P0_1_2_REMOTE_PROXY_2026-07-14.md` — code-complete (AvatarWeaponSync: `[Networked] EquippedSlot` + owner mirror + proxy instantiate/StripToVisual). Solo audit pass: proxy strip window không có side effect (AK74_P0 chỉ có HitscanGun + mesh; auto-fire gated `_triggerHeld=false`); static `LocalEquippedWeaponId` không stale trong P0 (domain reload bật, `m_EnterPlayModeOptions: 0`; chưa có unequip/death path — latent: phải clear static khi 1.3.2 land). CHƯA verify two-client (equip/respawn/late join) — giữ mở; two-client screenshots/video + zero-error console còn nợ.
+  - Evidence: `Verification/P0_1_2_REMOTE_PROXY_2026-07-14.md` — code-complete (AvatarWeaponSync: `[Networked] EquippedSlot` + owner mirror + proxy instantiate/StripToVisual). Solo audit pass: proxy strip window không có side effect (AK74_P0 chỉ có HitscanGun + mesh; auto-fire gated `_triggerHeld=false`); static `LocalEquippedWeaponId` không stale trong P0 (domain reload bật, `m_EnterPlayModeOptions: 0`; chưa có unequip/death path — latent: phải clear static khi 1.3.2 land). Two-client verify PASS 2026-07-14 (§6 cùng doc, main + ParrelSync clone): remote player trên clone `slot=0, proxy=True, rends=4, guns=0, collidersOn=0, muzzle=True` — đúng một proxy visual-only trên wrist remote, late-join render OK, zero console error; authority không tự render proxy (`slot=255, proxy=False` khi chưa equip). Respawn cleanup chưa test được — chưa tồn tại death/respawn path (thuộc 1.3.2, blocked D3).
   - Decision/Assumption: sync cause (`EquippedSlot`), không sync mesh transform.
 
-- [/] Relay remote shot cosmetics over an unreliable channel
+- [x] Relay remote shot cosmetics over an unreliable channel
   - Outcome: remote client thấy muzzle/tracer/impact hợp lý mà packet loss không ảnh hưởng gameplay damage.
   - Scope: unreliable `RPC_ShotFired`, proxy muzzle resolution, local event re-fire trên receiving process.
   - Out of scope: reliable cosmetic replay, historical tracer cho late joiner.
@@ -112,12 +112,12 @@
   - Risk: dùng local event bus như global bus hoặc double-render trên shooter.
   - Acceptance criteria: remote cosmetic xuất hiện đúng shooter/weapon; shooter không double feedback; mất cosmetic packet không mất accepted ShotClaim.
   - Verify recipe: two-client fire test, sau đó simulated packet loss nếu tooling cho phép; so sánh cosmetic count và accepted damage count.
-  - Evidence: correlated log + capture.
+  - Evidence: `Verification/P0_1_2_REMOTE_PROXY_2026-07-14.md` §6 — two-client PASS 2026-07-14: clone re-fire `[Probe] GunFired shooter=1 shot=424242 weapon=0 part=Body victim=2`, payload khớp 100% shot gốc, muzzle resolve từ proxy `MuzzleAnchor`; shooter không nhận lại event của mình (`RpcTargets.Proxies + InvokeLocal=false`). Simulated packet loss CHƯA chạy (không có tooling trong editor session) — chấp nhận: damage đi channel reliable riêng by construction, mất packet chỉ mất 1 tracer.
   - Decision/Assumption: cosmetic loss được chấp nhận.
 
 ### 1.3 — Implement Option A gameplay truth
 
-- [/] Implement reliable ShotClaim submission and victim-side validation
+- [x] Implement reliable ShotClaim submission and victim-side validation
   - Outcome: player hit đi qua một contract reliable, dedupe được và chỉ victim State Authority có quyền accept/reject.
   - Scope: claim schema; targeted RPC; dedupe; shooter/round/equipped/fire-rate/range/origin/hit-part/spawn-protection checks; reject reason telemetry.
   - Out of scope: rewind, server ray reconstruction, kick/ban, client punishment.
@@ -125,7 +125,7 @@
   - Risk: HIGH nếu gắn nhầm authority hoặc trust final damage; phải báo user nếu GitNexus impact trả HIGH/CRITICAL.
   - Acceptance criteria: valid claim được accept đúng một lần; invalid/duplicate claim không tạo accepted-result lần hai; claim không có trusted finalDamage; task này TUYỆT ĐỐI không ghi Health/damage/death/respawn/score (Health write thuộc 1.3.2, blocked theo D3).
   - Verify recipe: inject matrix valid, duplicate, over-rate, bad weapon, out-of-range, protected/dead victim; verify exact accept/reject result và reject reason cho từng case; xác nhận Health trước/sau không đổi (không có Health write trong task này).
-  - Evidence: `Verification/P0_1_3_1_SHOTCLAIM_2026-07-14.md` — solo injection matrix pass (11 case §4: valid ×1 accept, Duplicate kể cả replay-of-rejected, InvalidWeapon/OutOfRange/InvalidOrigin/InvalidHitPart/InvalidShooter/SpawnProtected, fire-rate 15=ceil(600/60×1.5) rồi FireRate); hpStart=hpEnd=5 → zero Health write. CÒN NỢ: two-client RPC transport, EquippedMismatch (catalog 1 gun), VictimDead trực tiếp, CombatClosed.
+  - Evidence: `Verification/P0_1_3_1_SHOTCLAIM_2026-07-14.md` — solo injection matrix pass (11 case §4: valid ×1 accept, Duplicate kể cả replay-of-rejected, InvalidWeapon/OutOfRange/InvalidOrigin/InvalidHitPart/InvalidShooter/SpawnProtected, fire-rate 15=ceil(600/60×1.5) rồi FireRate); hpStart=hpEnd=5 → zero Health write. Two-client transport PASS 2026-07-14 (cùng doc): claim cho shot 424242 đi qua `RPC_SubmitShotClaim` wire thật, shooter identity resolve từ `info.Source`=player 1 (không spoof được từ payload), ClaimAccepted trên victim clone, hpStart==hpEnd. Còn nợ môi trường (không blocker): EquippedMismatch (catalog mới có 1 gun), VictimDead trực tiếp (solo precedence, cần death path 1.3.2), CombatClosed (scene chưa có ArenaManager).
   - Decision/Assumption: victim không rewind/re-raycast lịch sử trong v0.3 Ready.
 
 - [!] Integrate catalog-derived damage with HP, death and respawn

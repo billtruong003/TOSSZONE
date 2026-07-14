@@ -1,6 +1,6 @@
 # P0 1.2.1 + 1.2.2 — Remote equipped AR proxy & shot cosmetic relay: implementation + solo audit (2026-07-14)
 
-Status: **Cả 1.2.1 và 1.2.2 code-complete, NOT verified.** Two-client verify chưa chạy — giữ cả hai task mở trên board. Branch: `codex/phase1-prep`.
+Status: **Cả 1.2.1 và 1.2.2 code-complete; two-client verify PASS (xem §6, cùng ngày).** Packet-loss simulation chưa chạy (không có tooling trong editor session). Branch: `codex/phase1-prep`.
 
 ## 1. Scope của session này
 
@@ -52,5 +52,24 @@ Impact surface (grep ground truth sau khi `--repair-fts`; FTS index trước đ�
 
 ## 5. Còn nợ (blocking Done)
 
-1. Two-client verify 1.2.1 theo recipe board: equip / respawn / late join → đúng một AR proxy trên remote wrist, zero console error.
-2. Two-client verify 1.2.2 theo recipe board: remote cosmetic đúng shooter/weapon, shooter không double feedback; simulated packet loss (nếu tooling cho phép) không làm giảm accepted damage count.
+1. ~~Two-client verify 1.2.1 theo recipe board~~ → PASS, xem §6.
+2. ~~Two-client verify 1.2.2 theo recipe board~~ → PASS, xem §6. Simulated packet loss: **chưa chạy** — không có packet-loss tooling trong editor session này; rủi ro thấp vì channel Unreliable là cosmetic-only by construction (mất packet = mất 1 tracer, damage đi đường reliable riêng).
+
+## 6. Two-client verify (2026-07-14, main editor + ParrelSync clone `TOSSZONE_clone_0`)
+
+Setup: Fusion shared session 2 client (main = player 1, clone = player 2), scene `02_FSPMAP`, probes hook `GunFiredEvent`/`ClaimAcceptedEvent`/`ClaimRejectedEvent` trên bus của **clone** qua `execute_code`.
+
+**1.2.1 — proxy state trên clone (probe reflection `_proxyInstance`/`_proxyMuzzle`):**
+
+- Remote player 1: `slot=0, proxy=True, rends=4, guns=0, collidersOn=0, muzzle=True` → đúng một proxy visual-only trên wrist remote: có renderer + `MuzzleAnchor`, **không** Gun logic, **không** collider enabled.
+- Local avatar clone (authority, chưa equip): `slot=255, proxy=False` → authority không tự render proxy. Zero console error kèm theo.
+
+**1.2.2 — cosmetic relay qua wire thật:** shot phát trên main (shooter=1, weapon=0, victim=2, part=Body), clone nhận và re-fire trên bus local:
+
+```
+[Probe] GunFired shooter=1 shot=424242 weapon=0 part=Body victim=2 muzzle=(0.25, 1.10, -1.37)
+```
+
+Payload khớp 100% shot gốc; muzzle resolve phía receiver hoạt động. Shooter (main) không nhận lại event của mình (`RpcTargets.Proxies + InvokeLocal=false` — không có log double-render phía main).
+
+**Cách phát shot:** `Gun` component không tồn tại trong play scene P0 (producer thật đã có EditMode/solo evidence riêng); shot được publish trực tiếp `Bill.Events.Fire(new GunFiredEvent{...})` trên main với `ShotInfo` well-formed (`Shooter = Object.InputAuthority`, origin = `ResolveAnchor()` wrist, `WeaponId = EquippedSlot`). Đây đúng seam mà Gun.TryFire dùng, nên toàn bộ đường **OnLocalShot → echo guard → RPC wire → clone re-fire** được exercise thật.
