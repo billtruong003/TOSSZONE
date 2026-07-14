@@ -40,7 +40,8 @@
       "Bash(git check-ignore *)",
       "Bash(node .gitnexus/run.cjs analyze)",
       "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('.claude/settings.local.json','utf8'\\)\\); console.log\\('JSON OK'\\)\")",
-      "Bash(python -c \"import json;json.load\\(open\\('.claude/settings.local.json'\\)\\)\")"
+      "Bash(python -c \"import json;json.load\\(open\\('.claude/settings.local.json'\\)\\)\")",
+      "Bash(echo \"EXIT:$?\")"
     ]
   },
   "prefersReducedMotion": false

@@ -93,7 +93,7 @@
 
 ### 1.2 — Replicate weapon cause and shot cosmetics
 
-- [ ] Render the equipped AR proxy on the remote wrist
+- [/] Render the equipped AR proxy on the remote wrist
   - Outcome: client khác luôn thấy đúng proxy gun gắn với wrist của shooter.
   - Scope: minimal `EquippedSlot`, proxy lookup/parenting, late-join render và respawn cleanup.
   - Out of scope: gun NetworkObject, ownership transfer, remote reload animation, skins.
