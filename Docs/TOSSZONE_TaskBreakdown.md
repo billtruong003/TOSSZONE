@@ -117,15 +117,15 @@
 
 ### 1.3 — Implement Option A gameplay truth
 
-- [ ] Implement reliable ShotClaim submission and victim-side validation
+- [/] Implement reliable ShotClaim submission and victim-side validation
   - Outcome: player hit đi qua một contract reliable, dedupe được và chỉ victim State Authority có quyền accept/reject.
   - Scope: claim schema; targeted RPC; dedupe; shooter/round/equipped/fire-rate/range/origin/hit-part/spawn-protection checks; reject reason telemetry.
   - Out of scope: rewind, server ray reconstruction, kick/ban, client punishment.
   - Dependencies: AR runtime, telemetry contract, existing Fusion ownership model; GitNexus query/context + impact trước edit.
   - Risk: HIGH nếu gắn nhầm authority hoặc trust final damage; phải báo user nếu GitNexus impact trả HIGH/CRITICAL.
-  - Acceptance criteria: duplicate/invalid claims không đổi Health; valid claim accept đúng một lần; claim không có trusted finalDamage.
-  - Verify recipe: inject matrix valid, duplicate, over-rate, bad weapon, out-of-range, protected/dead victim; kiểm Health delta và exact reject reason.
-  - Evidence: validation matrix log.
+  - Acceptance criteria: valid claim được accept đúng một lần; invalid/duplicate claim không tạo accepted-result lần hai; claim không có trusted finalDamage; task này TUYỆT ĐỐI không ghi Health/damage/death/respawn/score (Health write thuộc 1.3.2, blocked theo D3).
+  - Verify recipe: inject matrix valid, duplicate, over-rate, bad weapon, out-of-range, protected/dead victim; verify exact accept/reject result và reject reason cho từng case; xác nhận Health trước/sau không đổi (không có Health write trong task này).
+  - Evidence: `Verification/P0_1_3_1_SHOTCLAIM_2026-07-14.md` — solo injection matrix pass (11 case §4: valid ×1 accept, Duplicate kể cả replay-of-rejected, InvalidWeapon/OutOfRange/InvalidOrigin/InvalidHitPart/InvalidShooter/SpawnProtected, fire-rate 15=ceil(600/60×1.5) rồi FireRate); hpStart=hpEnd=5 → zero Health write. CÒN NỢ: two-client RPC transport, EquippedMismatch (catalog 1 gun), VictimDead trực tiếp, CombatClosed.
   - Decision/Assumption: victim không rewind/re-raycast lịch sử trong v0.3 Ready.
 
 - [!] Integrate catalog-derived damage with HP, death and respawn

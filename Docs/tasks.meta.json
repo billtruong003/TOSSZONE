@@ -1,108 +1,108 @@
 {
-  "entries": [
-    {
-      "id": "0.1.1",
-      "verify": "Review roadmap + Gun_System_Architecture; confirm Option A schema, victim validation, catalog-derived damage and victim-authority Health are consistent, with no remaining D1/D2-open wording.",
-      "evidence": "GameDesign/TOSSZONE-Playable-Ready-Roadmap.md; Gun_System_Architecture.md",
-      "verifiedAt": "2026-07-14",
-      "result": "Pass",
-      "notes": "User explicitly selected Option A. Scope is casual/small-room v0.3 Ready, not competitive authority."
-    },
-    {
-      "id": "0.1.2",
-      "verify": "Review written D3 decision and HP→death→respawn state-transition table.",
-      "evidence": "",
-      "verifiedAt": "",
-      "result": "",
-      "notes": "Blocked: user has not yet approved the recommended 100 HP model."
-    },
-    {
-      "id": "0.2.1",
-      "verify": "A second tester follows P0_TWO_CLIENT_RUNBOOK from a clean Play session and completes three damage→death→respawn cycles.",
-      "evidence": "Verification/P0_TWO_CLIENT_RUNBOOK.md",
-      "verifiedAt": "",
-      "result": "",
-      "notes": "Document complete: execution flow traced via GitNexus context + direct source reads (ConnectionFlowController, PlayerSpawnManager, ArenaManager, PlayerCombat, NetworkAvatar), not guessed. Prerequisites done this session: 02_FPSMAP.unity added to Build Settings (index 3), ParrelSync clone confirmed present (TOSSZONE_clone_0). Execution pending — requires a human running two live Editor/headset sessions simultaneously; not runnable unattended."
-    },
-    {
-      "id": "0.2.2",
-      "verify": "Walk through accepted body hit, duplicate claim and protected victim; each path must produce a correlated, explainable event chain.",
-      "evidence": "GameDesign/P0_Combat_Telemetry_Contract.md",
-      "verifiedAt": "2026-07-14",
-      "result": "Pass",
-      "notes": "Schema (shot_local/shot_remote/claim_sent/claim_accept/claim_reject/damage/death/respawn), correlation keys, and 11-value reject enum written and cross-checked against Gun_System_Architecture.md §7 validator table. Three required walkthroughs (accepted body hit, duplicate claim, protected victim) traced end-to-end in doc §5. No trusted shooter-supplied final damage anywhere in the schema, per Option A."
-    },
-    {
-      "id": "1.1.1",
-      "verify": "Unity Play Mode: fire 20 shots across world/body/head targets; confirm ray results, one ammo per shot and unique shotId.",
-      "evidence": "Verification/P0_1_1_LOCAL_LOOP_2026-07-14.md",
-      "verifiedAt": "2026-07-14",
-      "result": "Pass",
-      "notes": "GunConfig/GunCatalog/Gun/HitscanGun built fresh (deliberately separate from old WeaponConfig). 11 accepted shots across World/Body/Head via execute_code in Play Mode; ammo delta=1 every shot; shotId unique per session. 2 real bugs found+fixed during testing (LayerMask.NameToLayer in field initializer; GunFeedback subscribing to Bill.Events before EventBus ready). Short of one continuous 20-shot pass — follow-up noted."
-    },
-    {
-      "id": "1.1.2",
-      "verify": "Play Mode fire-gate matrix: trigger patterns, empty magazine, reload and frozen phase; compare shot timestamps/count/ammo.",
-      "evidence": "Verification/P0_1_1_LOCAL_LOOP_2026-07-14.md",
-      "verifiedAt": "2026-07-14",
-      "result": "Pass",
-      "notes": "Fire-rate gate proven (1 of 5 same-frame TryFire calls fired). Dry-fire at 0 ammo: no shot, GunDryFireEvent fired, auto-transitioned to Reloading. Reload completed and refilled to magazineSize. Round-freeze gate (MatchPhaseAllowsFire) code-reviewed, not independently exercised this session (needs ArenaManager in non-Playing phase)."
-    },
-    {
-      "id": "1.1.3",
-      "verify": "Offline Play Mode pool-reuse test; capture evidence that local feedback occurs before network relay and leaves no stale tracer.",
-      "evidence": "Verification/P0_1_1_LOCAL_LOOP_2026-07-14.md",
-      "verifiedAt": "",
-      "result": "",
-      "notes": "Code-complete: GunFiredEvent fires synchronously inside Gun.TryFire (no RPC in the path yet, by construction). Zero exceptions across 11 shots; muzzle/tracer pool spawns + ImpactBurst all ran clean. NOT verified: visual/audio/haptic quality — no AudioLibrary configured in the whole project (pre-existing gap), no clean screenshot with gun in frame, no physical haptic device. Kept open pending sensory verification."
-    },
-    {
-      "id": "1.2.1",
-      "verify": "Two clients equip, respawn and late join; observe exactly one correct AR proxy on remote wrist with zero console errors.",
-      "evidence": "Verification/P0_1_2_REMOTE_PROXY_2026-07-14.md",
-      "verifiedAt": "",
-      "result": "",
-      "notes": "Code-complete: AvatarWeaponSync ([Networked] EquippedSlot, owner mirror, proxy instantiate + StripToVisual) on NetworkAvatar. Solo audits pass: (A) AK74_P0 carries only HitscanGun + mesh visuals — deferred-Destroy window has no side effects (auto-fire gated by _triggerHeld=false, no events/statics/colliders/audio); (B) LocalEquippedWeaponId static cannot go stale in P0 (domain reload enabled — m_EnterPlayModeOptions: 0; no unequip/death path yet). Latent: must clear static on despawn/unequip when 1.3.2 lands. NOT verified: two-client equip/respawn/late-join — kept open."
-    },
-    {
-      "id": "1.2.2",
-      "verify": "Two-client shot cosmetic test plus simulated loss if available; cosmetic loss must not reduce accepted gameplay damage count.",
-      "evidence": "Verification/P0_1_2_REMOTE_PROXY_2026-07-14.md",
-      "verifiedAt": "",
-      "result": "",
-      "notes": "Code-complete: RPC_ShotFired (unreliable channel, StateAuthority->Proxies, InvokeLocal=false) on AvatarWeaponSync. Owner lazily subscribes GunFiredEvent (same Bill.IsReady poll as GunFeedback) and relays only shots its own gun produced - echo guard Shot.Shooter == Object.InputAuthority blocks re-broadcast of remote cosmetic re-fires. Receiver resolves muzzle from proxy 'MuzzleAnchor' child (GunConfig contract; wire MuzzlePos only as pre-proxy fallback) then re-fires GunFiredEvent on the local bus so GunFeedback stays the ONE render path; shooter never double-renders (Proxies + InvokeLocal=false); no damage on this path. Impact surface (grep ground truth after FTS repair): sole publisher Gun.cs:89, sole consumer GunFeedback. Unity compile clean; validate_script 0 errors. NOT verified: two-client cosmetic test + simulated packet loss - kept open."
-    },
-    {
-      "id": "1.3.1",
-      "verify": "Inject valid, duplicate, over-rate, bad-weapon, out-of-range and protected/dead-victim claims; verify exact Health delta and reject reason.",
-      "evidence": "",
-      "verifiedAt": "",
-      "result": "",
-      "notes": "Run GitNexus impact before symbol edits; warn before HIGH/CRITICAL blast radius."
-    },
-    {
-      "id": "1.3.2",
-      "verify": "Two-client body/head damage table, simultaneous lethal claims and delayed pre-respawn claim; verify synchronized state.",
-      "evidence": "",
-      "verifiedAt": "",
-      "result": "",
-      "notes": "Blocked by D3 health model."
-    },
-    {
-      "id": "1.3.3",
-      "verify": "Run 30 alternating kills plus simultaneous-lethal edge case; both clients must converge on one death and one score per cycle.",
-      "evidence": "",
-      "verifiedAt": "",
-      "result": "",
-      "notes": "Run GitNexus impact before symbol edits."
-    },
-    {
-      "id": "1.4.1",
-      "verify": "Execute the complete Roadmap Test Round 1 on one build lineage and archive build/device/network/tester details plus correlated evidence.",
-      "evidence": "",
-      "verifiedAt": "",
-      "result": "",
-      "notes": "Only Pass opens detailed v0.3-P1 tasking."
-    }
-  ]
+ "entries": [
+  {
+   "id": "0.1.1",
+   "verify": "Review roadmap + Gun_System_Architecture; confirm Option A schema, victim validation, catalog-derived damage and victim-authority Health are consistent, with no remaining D1/D2-open wording.",
+   "evidence": "GameDesign/TOSSZONE-Playable-Ready-Roadmap.md; Gun_System_Architecture.md",
+   "verifiedAt": "2026-07-14",
+   "result": "Pass",
+   "notes": "User explicitly selected Option A. Scope is casual/small-room v0.3 Ready, not competitive authority."
+  },
+  {
+   "id": "0.1.2",
+   "verify": "Review written D3 decision and HP→death→respawn state-transition table.",
+   "evidence": "",
+   "verifiedAt": "",
+   "result": "",
+   "notes": "Blocked: user has not yet approved the recommended 100 HP model."
+  },
+  {
+   "id": "0.2.1",
+   "verify": "A second tester follows P0_TWO_CLIENT_RUNBOOK from a clean Play session and completes three damage→death→respawn cycles.",
+   "evidence": "Verification/P0_TWO_CLIENT_RUNBOOK.md",
+   "verifiedAt": "",
+   "result": "",
+   "notes": "Document complete: execution flow traced via GitNexus context + direct source reads (ConnectionFlowController, PlayerSpawnManager, ArenaManager, PlayerCombat, NetworkAvatar), not guessed. Prerequisites done this session: 02_FPSMAP.unity added to Build Settings (index 3), ParrelSync clone confirmed present (TOSSZONE_clone_0). Execution pending — requires a human running two live Editor/headset sessions simultaneously; not runnable unattended."
+  },
+  {
+   "id": "0.2.2",
+   "verify": "Walk through accepted body hit, duplicate claim and protected victim; each path must produce a correlated, explainable event chain.",
+   "evidence": "GameDesign/P0_Combat_Telemetry_Contract.md",
+   "verifiedAt": "2026-07-14",
+   "result": "Pass",
+   "notes": "Schema (shot_local/shot_remote/claim_sent/claim_accept/claim_reject/damage/death/respawn), correlation keys, and 11-value reject enum written and cross-checked against Gun_System_Architecture.md §7 validator table. Three required walkthroughs (accepted body hit, duplicate claim, protected victim) traced end-to-end in doc §5. No trusted shooter-supplied final damage anywhere in the schema, per Option A."
+  },
+  {
+   "id": "1.1.1",
+   "verify": "Unity Play Mode: fire 20 shots across world/body/head targets; confirm ray results, one ammo per shot and unique shotId.",
+   "evidence": "Verification/P0_1_1_LOCAL_LOOP_2026-07-14.md",
+   "verifiedAt": "2026-07-14",
+   "result": "Pass",
+   "notes": "GunConfig/GunCatalog/Gun/HitscanGun built fresh (deliberately separate from old WeaponConfig). 11 accepted shots across World/Body/Head via execute_code in Play Mode; ammo delta=1 every shot; shotId unique per session. 2 real bugs found+fixed during testing (LayerMask.NameToLayer in field initializer; GunFeedback subscribing to Bill.Events before EventBus ready). Short of one continuous 20-shot pass — follow-up noted."
+  },
+  {
+   "id": "1.1.2",
+   "verify": "Play Mode fire-gate matrix: trigger patterns, empty magazine, reload and frozen phase; compare shot timestamps/count/ammo.",
+   "evidence": "Verification/P0_1_1_LOCAL_LOOP_2026-07-14.md",
+   "verifiedAt": "2026-07-14",
+   "result": "Pass",
+   "notes": "Fire-rate gate proven (1 of 5 same-frame TryFire calls fired). Dry-fire at 0 ammo: no shot, GunDryFireEvent fired, auto-transitioned to Reloading. Reload completed and refilled to magazineSize. Round-freeze gate (MatchPhaseAllowsFire) code-reviewed, not independently exercised this session (needs ArenaManager in non-Playing phase)."
+  },
+  {
+   "id": "1.1.3",
+   "verify": "Offline Play Mode pool-reuse test; capture evidence that local feedback occurs before network relay and leaves no stale tracer.",
+   "evidence": "Verification/P0_1_1_LOCAL_LOOP_2026-07-14.md",
+   "verifiedAt": "",
+   "result": "",
+   "notes": "Code-complete: GunFiredEvent fires synchronously inside Gun.TryFire (no RPC in the path yet, by construction). Zero exceptions across 11 shots; muzzle/tracer pool spawns + ImpactBurst all ran clean. NOT verified: visual/audio/haptic quality — no AudioLibrary configured in the whole project (pre-existing gap), no clean screenshot with gun in frame, no physical haptic device. Kept open pending sensory verification."
+  },
+  {
+   "id": "1.2.1",
+   "verify": "Two clients equip, respawn and late join; observe exactly one correct AR proxy on remote wrist with zero console errors.",
+   "evidence": "Verification/P0_1_2_REMOTE_PROXY_2026-07-14.md",
+   "verifiedAt": "",
+   "result": "",
+   "notes": "Code-complete: AvatarWeaponSync ([Networked] EquippedSlot, owner mirror, proxy instantiate + StripToVisual) on NetworkAvatar. Solo audits pass: (A) AK74_P0 carries only HitscanGun + mesh visuals — deferred-Destroy window has no side effects (auto-fire gated by _triggerHeld=false, no events/statics/colliders/audio); (B) LocalEquippedWeaponId static cannot go stale in P0 (domain reload enabled — m_EnterPlayModeOptions: 0; no unequip/death path yet). Latent: must clear static on despawn/unequip when 1.3.2 lands. NOT verified: two-client equip/respawn/late-join — kept open."
+  },
+  {
+   "id": "1.2.2",
+   "verify": "Two-client shot cosmetic test plus simulated loss if available; cosmetic loss must not reduce accepted gameplay damage count.",
+   "evidence": "Verification/P0_1_2_REMOTE_PROXY_2026-07-14.md",
+   "verifiedAt": "",
+   "result": "",
+   "notes": "Code-complete: RPC_ShotFired (unreliable channel, StateAuthority->Proxies, InvokeLocal=false) on AvatarWeaponSync. Owner lazily subscribes GunFiredEvent (same Bill.IsReady poll as GunFeedback) and relays only shots its own gun produced - echo guard Shot.Shooter == Object.InputAuthority blocks re-broadcast of remote cosmetic re-fires. Receiver resolves muzzle from proxy 'MuzzleAnchor' child (GunConfig contract; wire MuzzlePos only as pre-proxy fallback) then re-fires GunFiredEvent on the local bus so GunFeedback stays the ONE render path; shooter never double-renders (Proxies + InvokeLocal=false); no damage on this path. Impact surface (grep ground truth after FTS repair): sole publisher Gun.cs:89, sole consumer GunFeedback. Unity compile clean; validate_script 0 errors. NOT verified: two-client cosmetic test + simulated packet loss - kept open."
+  },
+  {
+   "id": "1.3.1",
+   "verify": "Inject valid, duplicate, over-rate, bad-weapon, out-of-range and protected/dead-victim claims; verify exact accept/reject result and reject reason per case; valid claim accepted exactly once; invalid/duplicate claims produce no second accepted-result; confirm zero Health writes in this task (Health/damage/death/respawn/score belong to 1.3.2, blocked by D3).",
+   "evidence": "Verification/P0_1_3_1_SHOTCLAIM_2026-07-14.md — solo injection matrix qua test seam ProcessShotClaim (02_FSPMAP Play Mode, EquippedSlot=0/AK74 range=40 rpm=600): valid accept dung 1 lan (dmg=16 body 5m, hb=ha=5); replay->Duplicate; replay-of-rejected->Duplicate; weapon 250->InvalidWeapon; 60m>44m->OutOfRange; origin lech 10m>3m->InvalidOrigin; hitPart 7->InvalidHitPart; PlayerRef.None->InvalidShooter; invuln->SpawnProtected; dead self->InvalidShooter (precedence truoc VictimDead, dung first-failing-check-wins); 21 claims/frame->15 accept = ceil(600/60*1.5) + 7 FireRate. hpStart=hpEnd=5 -> zero Health writes. NOT covered solo: RPC transport 2-client, EquippedMismatch (catalog chi co id 0), VictimDead truc tiep, CombatClosed.",
+   "verifiedAt": "2026-07-14",
+   "result": "Pass (solo editor); two-client verify con no",
+   "notes": "Run GitNexus impact before symbol edits; warn before HIGH/CRITICAL blast radius."
+  },
+  {
+   "id": "1.3.2",
+   "verify": "Two-client body/head damage table, simultaneous lethal claims and delayed pre-respawn claim; verify synchronized state.",
+   "evidence": "",
+   "verifiedAt": "",
+   "result": "",
+   "notes": "Blocked by D3 health model."
+  },
+  {
+   "id": "1.3.3",
+   "verify": "Run 30 alternating kills plus simultaneous-lethal edge case; both clients must converge on one death and one score per cycle.",
+   "evidence": "",
+   "verifiedAt": "",
+   "result": "",
+   "notes": "Run GitNexus impact before symbol edits."
+  },
+  {
+   "id": "1.4.1",
+   "verify": "Execute the complete Roadmap Test Round 1 on one build lineage and archive build/device/network/tester details plus correlated evidence.",
+   "evidence": "",
+   "verifiedAt": "",
+   "result": "",
+   "notes": "Only Pass opens detailed v0.3-P1 tasking."
+  }
+ ]
 }
