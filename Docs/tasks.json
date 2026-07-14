@@ -1,14 +1,14 @@
 {
-    "generatedAt": "2026-07-14 01:09",
+    "generatedAt": "2026-07-14 07:11",
     "sourceFile": "D:\\Project\\TOSSZONE\\Docs\\TOSSZONE_TaskBreakdown.md",
     "totalTasks": 13,
-    "totalDone": 1,
+    "totalDone": 2,
     "phases": [
         {
             "key": "P0",
             "title": "PHASE 0 — Decision & Test Harness",
             "isPhase": true,
-            "done": 1,
+            "done": 2,
             "total": 4,
             "tasks": [
                 {
@@ -44,28 +44,28 @@
                     "section": "0.2",
                     "sectionTitle": "0.2 — Establish repeatable proof harness",
                     "title": "Define the repeatable two-client AR test runbook",
-                    "status": "Todo",
+                    "status": "InProgress",
                     "indent": 0,
                     "line": 35,
                     "verify": "A second tester follows P0_TWO_CLIENT_RUNBOOK from a clean Play session and completes three damage→death→respawn cycles.",
-                    "evidence": "",
+                    "evidence": "Verification/P0_TWO_CLIENT_RUNBOOK.md",
                     "verifiedAt": "",
                     "result": "",
-                    "notes": ""
+                    "notes": "Document complete: execution flow traced via GitNexus context + direct source reads (ConnectionFlowController, PlayerSpawnManager, ArenaManager, PlayerCombat, NetworkAvatar), not guessed. Prerequisites done this session: 02_FPSMAP.unity added to Build Settings (index 3), ParrelSync clone confirmed present (TOSSZONE_clone_0). Execution pending — requires a human running two live Editor/headset sessions simultaneously; not runnable unattended."
                 },
                 {
                     "id": "0.2.2",
                     "section": "0.2",
                     "sectionTitle": "0.2 — Establish repeatable proof harness",
                     "title": "Define the combat telemetry and reject-reason contract",
-                    "status": "Todo",
+                    "status": "Done",
                     "indent": 0,
                     "line": 46,
                     "verify": "Walk through accepted body hit, duplicate claim and protected victim; each path must produce a correlated, explainable event chain.",
-                    "evidence": "",
-                    "verifiedAt": "",
-                    "result": "",
-                    "notes": ""
+                    "evidence": "GameDesign/P0_Combat_Telemetry_Contract.md",
+                    "verifiedAt": "2026-07-14",
+                    "result": "Pass",
+                    "notes": "Schema (shot_local/shot_remote/claim_sent/claim_accept/claim_reject/damage/death/respawn), correlation keys, and 11-value reject enum written and cross-checked against Gun_System_Architecture.md §7 validator table. Three required walkthroughs (accepted body hit, duplicate claim, protected victim) traced end-to-end in doc §5. No trusted shooter-supplied final damage anywhere in the schema, per Option A."
                 }
             ]
         },

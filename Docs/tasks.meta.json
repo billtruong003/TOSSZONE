@@ -19,18 +19,18 @@
     {
       "id": "0.2.1",
       "verify": "A second tester follows P0_TWO_CLIENT_RUNBOOK from a clean Play session and completes three damage→death→respawn cycles.",
-      "evidence": "",
+      "evidence": "Verification/P0_TWO_CLIENT_RUNBOOK.md",
       "verifiedAt": "",
       "result": "",
-      "notes": ""
+      "notes": "Document complete: execution flow traced via GitNexus context + direct source reads (ConnectionFlowController, PlayerSpawnManager, ArenaManager, PlayerCombat, NetworkAvatar), not guessed. Prerequisites done this session: 02_FPSMAP.unity added to Build Settings (index 3), ParrelSync clone confirmed present (TOSSZONE_clone_0). Execution pending — requires a human running two live Editor/headset sessions simultaneously; not runnable unattended."
     },
     {
       "id": "0.2.2",
       "verify": "Walk through accepted body hit, duplicate claim and protected victim; each path must produce a correlated, explainable event chain.",
-      "evidence": "",
-      "verifiedAt": "",
-      "result": "",
-      "notes": ""
+      "evidence": "GameDesign/P0_Combat_Telemetry_Contract.md",
+      "verifiedAt": "2026-07-14",
+      "result": "Pass",
+      "notes": "Schema (shot_local/shot_remote/claim_sent/claim_accept/claim_reject/damage/death/respawn), correlation keys, and 11-value reject enum written and cross-checked against Gun_System_Architecture.md §7 validator table. Three required walkthroughs (accepted body hit, duplicate claim, protected victim) traced end-to-end in doc §5. No trusted shooter-supplied final damage anywhere in the schema, per Option A."
     },
     {
       "id": "1.1.1",

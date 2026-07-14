@@ -32,7 +32,7 @@
 
 ### 0.2 — Establish repeatable proof harness
 
-- [ ] Define the repeatable two-client AR test runbook
+- [/] Define the repeatable two-client AR test runbook
   - Outcome: một tester có thể mở hai client, vào cùng arena và lặp combat cycle mà không cần sửa state bằng cheat.
   - Scope: scene/build path, room/session steps, AR placeholder, body/head target, respawn loop và cách reset test.
   - Out of scope: Quest performance pass, four-player session, final onboarding.
@@ -40,10 +40,10 @@
   - Risk: ParrelSync/editor path có thể khác device build; ghi limitation nếu chỉ test editor.
   - Acceptance criteria: runbook có preconditions, exact steps, expected result và failure capture cho hai client.
   - Verify recipe: một người khác chạy runbook từ clean Play session và hoàn thành ba damage→death→respawn cycles.
-  - Evidence: `Verification/P0_TWO_CLIENT_RUNBOOK.md` + log/screenshot khi chạy thật.
-  - Decision/Assumption: P0 dùng một greybox arena và một AR placeholder.
+  - Evidence: `Verification/P0_TWO_CLIENT_RUNBOOK.md` — document complete (traced via GitNexus context + source reads, not guessed); execution pending a human running two live Editor/headset sessions.
+  - Decision/Assumption: P0 dùng một greybox arena (`02_FPSMAP.unity`, added to Build Settings index 3 this session) và một AR placeholder (AK74, see `Verification/P0_ASSET_SELECTION_2026-07-14.md`).
 
-- [ ] Define the combat telemetry and reject-reason contract
+- [x] Define the combat telemetry and reject-reason contract
   - Outcome: log phân biệt được lỗi fire, cosmetic, claim validation, damage, death và respawn.
   - Scope: events `shot_local`, `shot_remote`, `claim_sent`, `claim_accept/reject`, `damage`, `death`, `respawn`; correlation bằng shooter + shotId; reject enum.
   - Out of scope: production analytics backend, dashboards, PII, anti-cheat enforcement.
@@ -51,8 +51,8 @@
   - Risk: log tự do không có correlation sẽ không giải thích được Round 1 failure.
   - Acceptance criteria: schema ghi rõ field bắt buộc, owner phát event, severity và reject reasons; không log final damage do shooter khai.
   - Verify recipe: walkthrough một accepted body hit, một duplicate claim và một protected victim; mỗi path có chuỗi event truy được end-to-end.
-  - Evidence: `GameDesign/P0_Combat_Telemetry_Contract.md`.
-  - Decision/Assumption: logging chi tiết chỉ bật trong Editor/Development Build.
+  - Evidence: `GameDesign/P0_Combat_Telemetry_Contract.md` — schema + reject enum + three traced walkthroughs (§5) written and cross-checked against `Gun_System_Architecture.md` §7.
+  - Decision/Assumption: logging chi tiết chỉ bật trong Editor/Development Build. Actual `Bill.Events` struct definitions ship with the Phase 1 task that owns each event's call site (noted in contract §7), not as a standalone code task.
 
 ## PHASE 1 — v0.3-P0 Network Gun Proof
 
