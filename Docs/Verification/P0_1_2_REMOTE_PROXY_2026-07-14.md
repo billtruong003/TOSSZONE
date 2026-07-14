@@ -1,6 +1,6 @@
-# P0 1.2.1 — Remote equipped AR proxy: implementation + solo audit (2026-07-14)
+# P0 1.2.1 + 1.2.2 — Remote equipped AR proxy & shot cosmetic relay: implementation + solo audit (2026-07-14)
 
-Status: **Code-complete, NOT verified.** Two-client verify (equip / respawn / late join, zero-error console) chưa chạy — giữ task mở trên board. Branch: `codex/phase1-prep`.
+Status: **Cả 1.2.1 và 1.2.2 code-complete, NOT verified.** Two-client verify chưa chạy — giữ cả hai task mở trên board. Branch: `codex/phase1-prep`.
 
 ## 1. Scope của session này
 
@@ -33,7 +33,24 @@ Kết luận: cửa sổ deferred-Destroy **không có side effect**; collider-d
 - In-session: P0 chưa có unequip/death/despawn path (1.3.2 chưa implement), local rig sống suốt session, single weapon luôn equip lại ở `Start` → không tồn tại trace ra stale thực. **Không đổi code** (đúng rule: chỉ sửa khi trace ra staleness thật).
 - ⚠️ Latent risk ghi nhận cho tương lai: khi 1.3.2 (death/respawn) hoặc weapon switching land, **phải** clear/update static này trên unequip/despawn, nếu không owner mirror sẽ đẩy weaponId chết vào `EquippedSlot`.
 
-## 4. Còn nợ (blocking Done)
+## 4. Task 1.2.2 — Unreliable shot cosmetic relay (code-complete, cùng session)
 
-1. Two-client verify theo recipe board: equip / respawn / late join → đúng một AR proxy trên remote wrist, zero console error.
-2. 1.2.2 (unreliable shot cosmetic RPC) chưa bắt đầu — vẫn Todo.
+Thêm vào chính `AvatarWeaponSync` (đúng "single network seam" §3/§4.4 của Gun_System_Architecture.md):
+
+- **Owner relay**: lazy-subscribe `GunFiredEvent` từ `FixedUpdateNetwork` (owner-only; cùng pattern poll `Bill.IsReady` như `GunFeedback` — Spawned có thể chạy trước khi Bill ready). Unhook trong `Despawned`.
+- **Echo guard**: chỉ relay khi `e.Shot.Shooter == Object.InputAuthority`. Bắt buộc vì receiver re-fire **cùng event type** trên bus per-process; thiếu guard này thì mỗi cosmetic re-fire từ remote lại bị broadcast tiếp (echo storm) — đúng risk đã ghi trên board ("dùng local event bus như global bus").
+- **Wire**: `[Rpc(RpcSources.StateAuthority, RpcTargets.Proxies, InvokeLocal = false, Channel = RpcChannel.Unreliable)] RPC_ShotFired(shotId, weaponId, muzzlePos, direction, hitPoint, hitNormal, victim, hitPart)`. Cosmetic-only, fire-and-forget (§4.2, edge case #11: mất packet = mất một tracer, không mất gì khác). **Không mang damage** — 1.3.1 ShotClaim là đường reliable riêng.
+- **No double-render trên shooter**: `RpcTargets.Proxies` + `InvokeLocal = false` — shooter không bao giờ nhận lại shot của mình. Haptic phía remote cũng tự loại: `GunFeedback` gate haptic bằng `shot.Shooter == LocalShooterRef()`.
+- **Proxy muzzle resolution (§4.2)**: receiver ưu tiên `_proxyMuzzle` — child tên đúng `"MuzzleAnchor"` của proxy model (contract ghi trong `GunConfig`), cache lúc `RebuildProxy`, clear khi rebuild/despawn. Wire `MuzzlePos` chỉ là fallback cho "shot đến trước khi Render() build proxy".
+- **One render path**: receiver re-fire `GunFiredEvent` trên bus local → `GunFeedback` vẫn là the ONE consumer, local và remote shot đi chung một đường render.
+
+Impact surface (grep ground truth sau khi `--repair-fts`; FTS index trước đó degraded):
+
+- Publisher duy nhất của `GunFiredEvent`: `Gun.cs:89`.
+- Consumer duy nhất: `GunFeedback` (subscribe dòng 39, unsubscribe 47).
+- Kiểm chứng build: Unity compile sạch (chỉ 2 warning CS0414 pre-existing ở `NetworkProjectile`/`DummyBotDriver`), `validate_script` = 0 errors, 0 warnings.
+
+## 5. Còn nợ (blocking Done)
+
+1. Two-client verify 1.2.1 theo recipe board: equip / respawn / late join → đúng một AR proxy trên remote wrist, zero console error.
+2. Two-client verify 1.2.2 theo recipe board: remote cosmetic đúng shooter/weapon, shooter không double feedback; simulated packet loss (nếu tooling cho phép) không làm giảm accepted damage count.

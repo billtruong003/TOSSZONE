@@ -104,7 +104,7 @@
   - Evidence: `Verification/P0_1_2_REMOTE_PROXY_2026-07-14.md` — code-complete (AvatarWeaponSync: `[Networked] EquippedSlot` + owner mirror + proxy instantiate/StripToVisual). Solo audit pass: proxy strip window không có side effect (AK74_P0 chỉ có HitscanGun + mesh; auto-fire gated `_triggerHeld=false`); static `LocalEquippedWeaponId` không stale trong P0 (domain reload bật, `m_EnterPlayModeOptions: 0`; chưa có unequip/death path — latent: phải clear static khi 1.3.2 land). CHƯA verify two-client (equip/respawn/late join) — giữ mở; two-client screenshots/video + zero-error console còn nợ.
   - Decision/Assumption: sync cause (`EquippedSlot`), không sync mesh transform.
 
-- [ ] Relay remote shot cosmetics over an unreliable channel
+- [/] Relay remote shot cosmetics over an unreliable channel
   - Outcome: remote client thấy muzzle/tracer/impact hợp lý mà packet loss không ảnh hưởng gameplay damage.
   - Scope: unreliable `RPC_ShotFired`, proxy muzzle resolution, local event re-fire trên receiving process.
   - Out of scope: reliable cosmetic replay, historical tracer cho late joiner.
