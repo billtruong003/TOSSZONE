@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TOSSZONE — Chơi thử 2 người, làm theo từng bước</title>
+<style>
+  :root{
+    --bg:#0f1220; --card:#181c30; --card2:#1f2440;
+    --ink:#e8eaf6; --muted:#9aa3c7;
+    --ok:#3ddc84; --bad:#ff5d73; --accent:#ffb347; --line:#2b3155;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  body{
+    font-family:"Segoe UI", system-ui, sans-serif;
+    background:var(--bg); color:var(--ink);
+    line-height:1.55; padding-bottom:80px;
+  }
+  .wrap{max-width:860px; margin:0 auto; padding:0 20px}
+
+  header{
+    text-align:center; padding:48px 20px 36px;
+    background:linear-gradient(180deg,#1a1f38 0%,var(--bg) 100%);
+    border-bottom:1px solid var(--line);
+  }
+  header h1{font-size:2rem; letter-spacing:1px}
+  header h1 span{color:var(--accent)}
+  header p{color:var(--muted); margin-top:10px; max-width:560px; margin-left:auto; margin-right:auto}
+
+  .rules{
+    background:var(--card2); border:1px solid var(--line); border-radius:14px;
+    padding:20px 24px; margin:28px 0;
+  }
+  .rules h2{font-size:1.05rem; color:var(--accent); margin-bottom:10px}
+  .rules ul{list-style:none}
+  .rules li{padding:5px 0 5px 26px; position:relative; color:var(--ink)}
+  .rules li::before{content:"•"; position:absolute; left:8px; color:var(--accent)}
+
+  .phase{
+    margin:40px 0 14px; font-size:.8rem; font-weight:700; letter-spacing:2px;
+    text-transform:uppercase; color:var(--muted);
+    display:flex; align-items:center; gap:12px;
+  }
+  .phase::after{content:""; flex:1; height:1px; background:var(--line)}
+
+  .step{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    margin:0 0 8px; overflow:hidden;
+  }
+  .step-head{
+    display:flex; align-items:center; gap:14px; padding:16px 20px;
+    border-bottom:1px solid var(--line);
+  }
+  .num{
+    flex:0 0 auto; width:38px; height:38px; border-radius:50%;
+    background:var(--accent); color:#1a1400; font-weight:800; font-size:1.1rem;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .step-head h3{font-size:1.08rem}
+  .step-body{padding:16px 20px 18px}
+  .do{margin-bottom:12px}
+  .do p{margin-top:4px}
+  .label{font-size:.72rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted)}
+
+  .check{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  @media(max-width:640px){.check{grid-template-columns:1fr}}
+  .ok-box,.bad-box{border-radius:10px; padding:12px 14px; font-size:.93rem}
+  .ok-box{background:rgba(61,220,132,.08); border:1px solid rgba(61,220,132,.35)}
+  .bad-box{background:rgba(255,93,115,.07); border:1px solid rgba(255,93,115,.35)}
+  .ok-box .label{color:var(--ok)}
+  .bad-box .label{color:var(--bad)}
+  .ok-box p,.bad-box p{margin-top:5px}
+
+  .arrow{
+    text-align:center; color:var(--muted); font-size:1.3rem;
+    padding:2px 0 10px; user-select:none;
+  }
+
+  .tip{
+    background:rgba(255,179,71,.07); border:1px solid rgba(255,179,71,.3);
+    border-radius:10px; padding:12px 16px; margin:10px 0 0; font-size:.93rem;
+  }
+  .tip b{color:var(--accent)}
+
+  .final{
+    background:var(--card2); border:1px solid var(--line); border-radius:14px;
+    padding:22px 24px; margin-top:44px;
+  }
+  .final h2{color:var(--accent); font-size:1.1rem; margin-bottom:12px}
+  .final label{
+    display:flex; gap:10px; align-items:flex-start; padding:7px 0;
+    cursor:pointer; color:var(--ink); font-size:.95rem;
+  }
+  .final input{margin-top:4px; accent-color:var(--ok); width:16px; height:16px}
+
+  footer{
+    text-align:center; color:var(--muted); font-size:.8rem; margin-top:48px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>TOSS<span>ZONE</span> — chơi thử 2 người</h1>
+  <p>Trang này dành cho người chưa chơi bao giờ. Làm đúng thứ tự từ trên xuống.
+  Mỗi bước có hai ô: ô xanh là điều bạn <b>phải thấy</b>, ô đỏ là dấu hiệu game bị lỗi.
+  Thấy ô đỏ thì chụp lại màn hình và báo cho người làm game, rồi chơi tiếp.</p>
+</header>
+
+<div class="wrap">
+
+  <div class="rules">
+    <h2>Luật chơi trong 30 giây</h2>
+    <ul>
+      <li>Hai người đứng hai bên sân, giữa sân có khoảng trống ngăn cách. Không chạy sang bên kia được.</li>
+      <li>Mỗi người có <b>5 mạng</b>. Trúng đòn của đối thủ thì mất mạng.</li>
+      <li>Ném đồ bằng tay thật: bóp nút ở tay cầm để giữ, vung tay về trước là đồ bay ra. Giống ném bóng ngoài đời.</li>
+      <li>Tiền tự tăng dần theo thời gian. Có tiền thì đổi được vũ khí mạnh hơn. Cục đá thì miễn phí.</li>
+      <li>Giữa sân có <b>vòng tròn phát sáng bay lơ lửng</b>. Ném đồ chui qua vòng thì đồ mạnh lên (ví dụ 1 viên hóa thành nhiều viên).</li>
+      <li>Hết giờ hoặc một bên hết sạch mạng thì xong một hiệp. Thắng 2 hiệp là thắng trận.</li>
+    </ul>
+  </div>
+
+  <div class="phase">Chuẩn bị — trước khi đeo kính</div>
+
+  <div class="step">
+    <div class="step-head"><div class="num">1</div><h3>Kiểm tra đồ nghề</h3></div>
+    <div class="step-body">
+      <div class="do">
+        <div class="label">Làm gì</div>
+        <p>Cần 2 bộ kính VR (hoặc 1 kính + 1 máy tính của người làm game). Cả hai máy phải cài <b>cùng một bản game</b> và cùng nối mạng. Hỏi người đưa game cho bạn: "hai máy cùng bản chưa?" — nhìn số phiên bản ở góc màn hình, hai máy phải giống hệt nhau.</p>
+      </div>
+      <div class="check">
+        <div class="ok-box"><div class="label">Đúng</div><p>Hai máy hiện cùng một số phiên bản.</p></div>
+        <div class="bad-box"><div class="label">Sai — báo lỗi</div><p>Hai số khác nhau, hoặc không thấy số phiên bản đâu cả.</p></div>
+      </div>
+      <div class="tip"><b>Vì sao quan trọng:</b> hai bản khác nhau chơi với nhau sẽ sinh lỗi lạ, và lỗi đó không phải lỗi thật của game.</div>
+    </div>
+  </div>
+  <div class="arrow">↓</div>
+
+  <div class="step">
+    <div class="step-head"><div class="num">2</div><h3>Dọn chỗ đứng</h3></div>
+    <div class="step-body">
+      <div class="do">
+        <div class="label">Làm gì</div>
+        <p>Đứng ở chỗ trống, xung quanh không có bàn ghế, thú cưng, hay em bé. Bạn sẽ vung tay mạnh như ném bóng thật, nên cần khoảng trống ít nhất bằng một chiếc giường đôi. Đeo dây tay cầm vào cổ tay.</p>
+      </div>
+      <div class="check">
+        <div class="ok-box"><div class="label">Đúng</div><p>Vung thẳng tay hết cỡ về mọi phía mà không đụng gì.</p></div>
+        <div class="bad-box"><div class="label">Sai</div><p>Đứng cạnh tủ kính mà vẫn cố chơi. Đây là lỗi của bạn, không phải của game.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow">↓</div>
+
+  <div class="phase">Vào game — hai người cùng làm</div>
+
+  <div class="step">
+    <div class="step-head"><div class="num">3</div><h3>Mở game và vào sân</h3></div>
+    <div class="step-body">
+      <div class="do">
+        <div class="label">Làm gì</div>
+        <p>Cả hai người mở game. Game tự đưa bạn vào sân đấu, không cần bấm gì nhiều. Đứng yên chờ khoảng 10 giây.</p>
+      </div>
+      <div class="check">
+        <div class="ok-box"><div class="label">Đúng</div><p>Bạn thấy sân đấu, thấy hai bàn tay của mình trong game, tay cử động theo tay thật.</p></div>
+        <div class="bad-box"><div class="label">Sai — báo lỗi</div><p>Màn hình đen quá 30 giây, đứng lơ lửng ngoài sân, hoặc không thấy tay mình đâu.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow">↓</div>
+
+  <div class="step">
+    <div class="step-head"><div class="num">4</div><h3>Tìm nhau trong game</h3></div>
+    <div class="step-body">
+      <div class="do">
+        <div class="label">Làm gì</div>
+        <p>Nhìn sang phía bên kia sân. Người kia phải hiện ra ở đó. Cả hai cùng vẫy tay và nói to "thấy chưa?". Người kia vẫy tay ngoài đời thì nhân vật trong game cũng phải vẫy theo.</p>
+      </div>
+      <div class="check">
+        <div class="ok-box"><div class="label">Đúng</div><p>Thấy người kia đứng bên kia sân, đầu và tay họ nhúc nhích theo thời gian thật, mỗi người một bên.</p></div>
+        <div class="bad-box"><div class="label">Sai — báo lỗi</div><p>Không thấy nhau sau 1 phút. Hai người hiện ra chồng lên nhau cùng một chỗ. Người kia đứng im như tượng dù ngoài đời đang múa. Có tới hai bản sao của cùng một người.</p></div>
+      </div>
+      <div class="tip"><b>Đây là bước hay hỏng nhất.</b> Nếu ô đỏ xảy ra: cả hai thoát game, mở lại, thử lần nữa. Hỏng lần thứ hai thì dừng và báo ngay, kèm câu "hỏng ở bước 4".</div>
+    </div>
+  </div>
+  <div class="arrow">↓</div>
+
+  <div class="phase">Học ném — làm một mình trước</div>
+
+  <div class="step">
+    <div class="step-head"><div class="num">5</div><h3>Ném thử cục đá đầu tiên</h3></div>
+    <div class="step-body">
+      <div class="do">
+        <div class="label">Làm gì</div>
+        <p>Trong tay bạn có sẵn một quả bóng. <b>Bóp và giữ nút ở tay cầm</b> (nút nằm chỗ ngón giữa), rồi vung tay về phía trước như ném bóng chày. Không cần bấm nút thả — cứ vung mạnh, đồ tự bay ra đúng lúc tay bạn nhanh nhất. Ném thử 5 lần.</p>
+      </div>
+      <div class="check">
+        <div class="ok-box"><div class="label">Đúng</div><p>Đồ bay về hướng bạn vung tay. Vung mạnh bay xa, vung nhẹ bay gần. Quả bóng trong tay vẫn còn đó để ném tiếp.</p></div>
+        <div class="bad-box"><div class="label">Sai — báo lỗi</div><p>Vung mãi không có gì bay ra. Đồ nổ ngay trong tay mình. Đồ bay ngược ra sau lưng hoặc lệch hẳn hướng vung.</p></div>
+      </div>
+      <div class="tip"><b>Mẹo:</b> đi bằng cần gạt trên tay cầm trong lúc vung không làm cú ném mạnh thêm — game chỉ tính lực cổ tay thật của bạn.</div>
+    </div>
+  </div>
+  <div class="arrow">↓</div>
+
+  <div class="step">
+    <div class="step-head"><div class="num">6</div><h3>Ném xuyên vòng phát sáng</h3></div>
+    <div class="step-body">
+      <div class="do">
+        <div class="label">Làm gì</div>
+        <p>Nhìn ra giữa sân, tìm vòng tròn phát sáng đang trôi chầm chậm. Nhắm và ném đồ chui qua tâm vòng. Khó đấy, cứ ném chừng 10 lần cho quen.</p>
+      </div>
+      <div class="check">
+        <div class="ok-box"><div class="label">Đúng</div><p>Đồ chui qua vòng thì đổi khác hẳn: một viên tách thành nhiều viên, hoặc bay nhanh hơn, hoặc đổi màu. Nhìn là biết ngay "vừa được buff".</p></div>
+        <div class="bad-box"><div class="label">Sai — báo lỗi</div><p>Chui qua vòng mà không có gì thay đổi. Vòng đứng im một chỗ mãi không trôi. Vòng biến mất giữa chừng không lý do.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow">↓</div>
+
+  <div class="step">
+    <div class="step-head"><div class="num">7</div><h3>Đổi vũ khí</h3></div>
+    <div class="step-body">
+      <div class="do">
+        <div class="label">Làm gì</div>
+        <p>Chơi được một lúc thì tiền của bạn tự tăng (nhìn số tiền trên màn hình). Mở chỗ chọn vũ khí, đổi cục đá lấy món khác — ví dụ khẩu súng bắn nhanh hoặc quả bom nổ lan. Món càng mạnh càng đắt.</p>
+      </div>
+      <div class="check">
+        <div class="ok-box"><div class="label">Đúng</div><p>Số tiền tăng dần theo thời gian. Mua xong tiền bị trừ đúng giá, tay cầm món mới, và món mới bắn/ném khác hẳn cục đá.</p></div>
+        <div class="bad-box"><div class="label">Sai — báo lỗi</div><p>Tiền đứng im không tăng. Mua được món đắt hơn số tiền đang có. Mua xong tay vẫn cầm đồ cũ.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow">↓</div>
+
+  <div class="phase">Đánh nhau thật — hai người cùng làm</div>
+
+  <div class="step">
+    <div class="step-head"><div class="num">8</div><h3>Ném trúng nhau</h3></div>
+    <div class="step-body">
+      <div class="do">
+        <div class="label">Làm gì</div>
+        <p>Thay phiên nhau: một người đứng yên làm bia, người kia ném cho tới khi trúng. Người bị trúng nói to "trúng rồi, còn mấy mạng". Rồi đổi vai. Sau đó ném bom loại nổ lan xuống <b>chân mình</b> một lần — đúng ra bom của mình không được làm mình đau.</p>
+      </div>
+      <div class="check">
+        <div class="ok-box"><div class="label">Đúng</div><p>Trúng thì người bị trúng mất mạng, cả hai màn hình đều thấy số mạng giảm giống nhau. Bom nổ dưới chân mình thì mình không mất mạng. Người ném trúng được cộng tiền.</p></div>
+        <div class="bad-box"><div class="label">Sai — báo lỗi</div><p>Trúng rành rành mà không mất mạng. Máy này thấy còn 3 mạng, máy kia thấy còn 4 (hai máy lệch nhau). Bom của mình làm chính mình chết. Đạn nổ xong vẫn nằm lại lơ lửng trên sân mãi không biến mất.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow">↓</div>
+
+  <div class="step">
+    <div class="step-head"><div class="num">9</div><h3>Chơi hết một trận</h3></div>
+    <div class="step-body">
+      <div class="do">
+        <div class="label">Làm gì</div>
+        <p>Giờ đánh thật, không nhường nữa. Chơi tới khi một người hết sạch mạng, hoặc hết giờ đếm ngược. Xong hiệp thì chơi tiếp hiệp sau, tới khi có người thắng trận.</p>
+      </div>
+      <div class="check">
+        <div class="ok-box"><div class="label">Đúng</div><p>Hết mạng hoặc hết giờ thì game báo ai thắng hiệp, cả hai máy báo cùng một người thắng. Sang hiệp mới, tiền về 0 và mạng đầy lại.</p></div>
+        <div class="bad-box"><div class="label">Sai — báo lỗi</div><p>Hết giờ mà game im lặng, không báo gì. Hai máy báo hai người thắng khác nhau. Sang hiệp mới mà tiền và mạng không được làm mới.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow">↓</div>
+
+  <div class="step">
+    <div class="step-head"><div class="num">10</div><h3>Thoát ra, vào lại — thử 3 lần</h3></div>
+    <div class="step-body">
+      <div class="do">
+        <div class="label">Làm gì</div>
+        <p>Bước cuối và quan trọng nhất với người làm game: <b>một người thoát hẳn game rồi mở vào lại</b>, người kia vẫn ở trong sân chờ. Vào lại xong, vẫy tay xác nhận thấy nhau như bước 4. Làm đủ 3 lần.</p>
+      </div>
+      <div class="check">
+        <div class="ok-box"><div class="label">Đúng</div><p>Cả 3 lần vào lại đều hiện ra giữa sân đàng hoàng, hai người vẫn thấy nhau, chơi tiếp bình thường.</p></div>
+        <div class="bad-box"><div class="label">Sai — báo lỗi</div><p>Vào lại thì đứng lơ lửng ngoài sân hoặc không có thân người. Người ở lại thấy "xác" cũ của người vừa thoát vẫn đứng đó. Lần 1 lần 2 ổn nhưng lần 3 hỏng — vẫn tính là lỗi, báo rõ "hỏng ở lần thứ mấy".</p></div>
+      </div>
+      <div class="tip"><b>Vì sao thử tận 3 lần:</b> lỗi vào-lại từng chỉ xuất hiện từ lần thứ hai trở đi. Một lần suôn sẻ chưa nói lên điều gì.</div>
+    </div>
+  </div>
+
+  <div class="final">
+    <h2>Xong buổi chơi — tích vào những gì bạn đã thấy ổn</h2>
+    <label><input type="checkbox"> Hai máy cùng phiên bản, vào sân được cả hai</label>
+    <label><input type="checkbox"> Thấy nhau, cử động khớp thời gian thật</label>
+    <label><input type="checkbox"> Ném được, đồ bay đúng hướng và đúng lực</label>
+    <label><input type="checkbox"> Vòng phát sáng làm đồ mạnh lên rõ ràng</label>
+    <label><input type="checkbox"> Tiền tăng, mua vũ khí được, trừ tiền đúng</label>
+    <label><input type="checkbox"> Trúng đòn trừ mạng, hai máy khớp số, bom mình không hại mình</label>
+    <label><input type="checkbox"> Kết thúc hiệp/trận rõ ràng, hai máy cùng kết quả</label>
+    <label><input type="checkbox"> Thoát vào lại 3 lần đều ổn</label>
+    <p style="margin-top:14px; color:var(--muted); font-size:.9rem">
+      Ô nào không tích được thì ghi lại số bước kèm một câu mô tả bạn thấy gì.
+      Chụp màn hình càng tốt. Chỉ cần vậy, phần còn lại người làm game lo.</p>
+  </div>
+
+  <footer>TOSSZONE — hướng dẫn chơi thử cho người mới · viết cho bản chơi 2 người</footer>
+</div>
+
+</body>
+</html>

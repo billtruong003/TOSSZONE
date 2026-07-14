@@ -23,12 +23,15 @@ namespace TossZone.Network
 
         // Guards the async gap between net.Spawn() returning and NetworkAvatar.Spawned() setting Local. Static so
         // it spans the Main->Arena transition, where a fresh PlayerSpawnManager instance takes over spawning.
-        private static bool _spawnInFlight;
+        // BUG-NET-SPAWN-001: this used to be a plain static bool that (a) was never cleared when a spawn settled
+        // without a follow-up TrySpawn event, and (b) survived runner shutdown + auto-reconnect, silently blocking
+        // every spawn in the new session. Track the pending spawn result AND the runner it belongs to instead, so
+        // a pending entry from a dead runner/session is detected as stale and ignored.
+        private static NetworkObject _pendingAvatar;
+        private static NetworkRunner _pendingRunner;
 
-        // Session-13 gotcha: the runner the pending spawn was issued on. If the session dies mid-spawn
-        // (disconnect/reconnect), Spawned() never runs and the STATIC flag stays latched, silently blocking
-        // avatar spawning on the NEW session forever. Remember the issuing runner so a stale latch can be detected.
-        private static NetworkRunner _spawnInFlightRunner;
+        private float _nextRetryTime;
+
 
         private void OnEnable() => TryInit();
 
@@ -36,7 +39,19 @@ namespace TossZone.Network
         // so poll until Bill is ready before touching Bill.Events.
         private void Update()
         {
-            if (!_initialized) TryInit();
+            if (!_initialized)
+            {
+                TryInit();
+                return;
+            }
+            // BUG-NET-SPAWN-001 (missing re-trigger): after a cloud kick + auto-reconnect, the first join's
+            // OnConnected/OnSceneLoaded events are long gone and nothing calls TrySpawn() for the new session.
+            // Throttled idempotent poll as a safety net — every early-out in TrySpawn is cheap.
+            if (Time.unscaledTime >= _nextRetryTime)
+            {
+                _nextRetryTime = Time.unscaledTime + 0.5f;
+                TrySpawn();
+            }
         }
 
         private void OnDisable()
@@ -85,7 +100,7 @@ namespace TossZone.Network
             NetworkAvatar local = NetworkAvatar.Local;
             if (local != null && local.Object != null && local.Object.IsValid)
             {
-                _spawnInFlight = false; // the avatar is settled; clear any pending flag
+                ClearPending(); // the avatar is settled; clear any pending record
                 if (!net.TryGetPlayerObject(net.LocalPlayer, out _))
                     net.SetPlayerObject(net.LocalPlayer, local.Object);
                 return;
@@ -93,16 +108,9 @@ namespace TossZone.Network
 
             // A spawn is already pending (net.Spawn returned but Spawned() hasn't set Local yet). TrySpawn is driven
             // from BOTH OnConnected and OnSceneLoaded, which fire together on scene entry — without this guard both
-            // calls spawn before Local is set, producing two overlapping avatars.
-            if (_spawnInFlight)
-            {
-                if (_spawnInFlightRunner == net.Runner && net.Runner != null && net.Runner.IsRunning)
-                    return; // genuinely pending on the live session
-                // The pending spawn belonged to a dead/replaced runner — it can never complete. Clear the
-                // latch so this (reconnected) session can spawn its avatar.
-                _spawnInFlight = false;
-                _spawnInFlightRunner = null;
-            }
+            // calls spawn before Local is set, producing two overlapping avatars. A pending record from another
+            // runner (old session after kick/reconnect) or a despawned result is stale and must NOT block.
+            if (IsSpawnPending(net)) return;
 
             if (net.TryGetPlayerObject(net.LocalPlayer, out _)) return; // already have a player
 
@@ -110,7 +118,8 @@ namespace TossZone.Network
                 Debug.LogWarning("[PlayerSpawn] No local PlayerRig found — the avatar will spawn but won't follow you. " +
                                  "Add an AutoHand rig with a PlayerRig component to the scene.");
 
-            _spawnInFlight = true;
+            _pendingRunner = net.Runner; // mark pending for THIS session before the (synchronous) Spawn call
+            _pendingAvatar = null;
             NetworkObject obj;
             try
             {
@@ -120,16 +129,41 @@ namespace TossZone.Network
             catch (System.Exception e)
             {
                 // Session-12 gotcha: IsRunning flips true before the simulation can assign ids, and Spawn in
-                // that window throws. Leaving the STATIC flag latched here would block avatar spawning for the
-                // rest of the session — clear it so the next OnConnected/OnSceneLoaded retries.
-                _spawnInFlight = false;
+                // that window throws. Leaving the STATIC record latched here would block avatar spawning for the
+                // rest of the session — clear it so the next OnConnected/OnSceneLoaded/retry-poll retries.
+                ClearPending();
                 Debug.LogError("[PlayerSpawn] Spawn threw (will retry on next connect/scene event): " + e.Message);
                 return;
             }
-            if (obj == null) { _spawnInFlight = false; return; }
+            if (obj == null) { ClearPending(); return; }
 
+            _pendingAvatar = obj;
             net.SetPlayerObject(net.LocalPlayer, obj);
             Debug.Log("[PlayerSpawn] Spawned local avatar at " + transform.position);
+        }
+
+        // BUG-NET-SPAWN-001: a pending spawn only counts while it belongs to the CURRENT runner and its spawn
+        // result is still alive (Spawn mid-call, or spawned object waiting for NetworkAvatar.Spawned() to set
+        // Local). Anything else — old runner after shutdown/reconnect, despawned result — is stale: clear it so
+        // the caller may spawn again.
+        private static bool IsSpawnPending(FusionNet net)
+        {
+            if (_pendingRunner == null) return false;
+            if (_pendingRunner != net.Runner)
+            {
+                ClearPending(); // record from a previous session/runner — never block the new one
+                return false;
+            }
+            if (_pendingAvatar == null) return true;            // net.Spawn is mid-call this frame
+            if (_pendingAvatar.IsValid) return true;             // result alive, waiting to settle as Local
+            ClearPending();                                      // result was despawned — allow respawn
+            return false;
+        }
+
+        private static void ClearPending()
+        {
+            _pendingRunner = null;
+            _pendingAvatar = null;
         }
 
         private static void OnBeforeSpawned(NetworkRunner runner, NetworkObject obj)

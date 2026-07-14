@@ -36,7 +36,11 @@
       "PowerShell(Start-Process \"C:\\\\Program Files\\\\Unity\\\\Hub\\\\Editor\\\\6000.3.8f1\\\\Editor\\\\Unity.exe\" -ArgumentList '-projectPath','D:\\\\Project\\\\TOSSZONE'; \"launched\")",
       "Bash(awk '{print $1}')",
       "Bash(git merge *)",
-      "Bash(echo \"---EXIT:$?\")"
+      "Bash(echo \"---EXIT:$?\")",
+      "Bash(git check-ignore *)",
+      "Bash(node .gitnexus/run.cjs analyze)",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('.claude/settings.local.json','utf8'\\)\\); console.log\\('JSON OK'\\)\")",
+      "Bash(python -c \"import json;json.load\\(open\\('.claude/settings.local.json'\\)\\)\")"
     ]
   },
   "prefersReducedMotion": false
