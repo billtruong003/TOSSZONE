@@ -23,7 +23,10 @@
       "Bash(\"C:\\\\Program Files\\\\Unity\\\\Hub\\\\Editor\\\\6000.3.8f1\\\\Editor\\\\Unity.exe\" -projectPath \"D:\\\\Projects\\\\TOSSZONE_clone_0\")",
       "Bash(echo \"launched pid $!\")",
       "mcp__UnityMCP__manage_asset",
-      "Bash(git status *)"
+      "Bash(git status *)",
+      "Bash(git check-ignore *)",
+      "Bash(node .gitnexus/run.cjs analyze)",
+      "Bash(npm ls *)"
     ]
   },
   "prefersReducedMotion": false
