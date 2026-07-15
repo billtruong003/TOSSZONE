@@ -1,8 +1,8 @@
 {
-    "generatedAt": "2026-07-15 14:31",
+    "generatedAt": "2026-07-15 14:45",
     "sourceFile": "D:\\Projects\\TOSSZONE\\Docs\\TOSSZONE_TaskBreakdown.md",
-    "totalTasks": 13,
-    "totalDone": 9,
+    "totalTasks": 15,
+    "totalDone": 10,
     "phases": [
         {
             "key": "P0",
@@ -73,8 +73,8 @@
             "key": "P1",
             "title": "PHASE 1 — v0.3-P0 Network Gun Proof",
             "isPhase": true,
-            "done": 6,
-            "total": 9,
+            "done": 7,
+            "total": 11,
             "tasks": [
                 {
                     "id": "1.1.1",
@@ -179,14 +179,42 @@
                     "section": "1.3",
                     "sectionTitle": "1.3 — Implement Option A gameplay truth",
                     "title": "Award kill and score exactly once from confirmed victim death",
-                    "status": "Todo",
+                    "status": "Blocked",
                     "indent": 0,
                     "line": 142,
                     "verify": "Run 30 alternating kills plus simultaneous-lethal edge case; both clients must converge on one death and one score per cycle.",
                     "evidence": "",
                     "verifiedAt": "",
                     "result": "",
-                    "notes": "Run GitNexus impact before symbol edits."
+                    "notes": "Blocked: legacy player-interaction cleanup (1.3.5) must Pass before score integration so old RPC_TakeHit/projectile deaths cannot pollute kill attribution."
+                },
+                {
+                    "id": "1.3.4",
+                    "section": "1.3",
+                    "sectionTitle": "1.3 — Implement Option A gameplay truth",
+                    "title": "Confirm the complete legacy player-interaction blast radius before cleanup",
+                    "status": "Done",
+                    "indent": 0,
+                    "line": 153,
+                    "verify": "Cross-check GitNexus impact with source calls and serialized bindings in Main/Arena/FPSMAP/NetworkAvatar prefab.",
+                    "evidence": "Verification/P0_LEGACY_PLAYER_INTERACTION_IMPACT_AUDIT_2026-07-15.md",
+                    "verifiedAt": "2026-07-15",
+                    "result": "Pass (legacy grab/throw/projectile/ring/buff/damage/UI paths inventoried; AR proven independent of rings; keep/remove boundary and six-case verification matrix recorded)",
+                    "notes": "CRITICAL blast radius: PlayerCombat 12 direct/215 upstream/86 flows; RingSpawner 3 direct/189 upstream/85 flows; ProjectileBurstSystem 2 direct/257 upstream/85 flows. No gameplay code or scene changed during audit."
+                },
+                {
+                    "id": "1.3.5",
+                    "section": "1.3",
+                    "sectionTitle": "1.3 — Implement Option A gameplay truth",
+                    "title": "Remove legacy player interactions from the P0 gun loop",
+                    "status": "Todo",
+                    "indent": 0,
+                    "line": 164,
+                    "verify": "Run the six-case two-client cleanup matrix in P0_LEGACY_PLAYER_INTERACTION_IMPACT_AUDIT_2026-07-15.md on Main plus P0 arena/FPS map.",
+                    "evidence": "",
+                    "verifiedAt": "",
+                    "result": "",
+                    "notes": "Todo. Disable/unbind first; preserve AutoHand/PlayerRig/locomotion and reusable legacy assets. Run symbol-level impact before every edit and warn on HIGH/CRITICAL."
                 },
                 {
                     "id": "1.4.1",
@@ -195,7 +223,7 @@
                     "title": "Pass Test Round 1 and tag v0.3-P0 Network Gun Proof",
                     "status": "Todo",
                     "indent": 0,
-                    "line": 155,
+                    "line": 177,
                     "verify": "Execute the complete Roadmap Test Round 1 on one build lineage and archive build/device/network/tester details plus correlated evidence.",
                     "evidence": "",
                     "verifiedAt": "",

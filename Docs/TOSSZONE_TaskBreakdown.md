@@ -139,7 +139,7 @@
   - Evidence: `Verification/P0_1_3_2_DAMAGE_RESPAWN_2026-07-15.md` — two-client PASS: body 16, head 32, HP clamped at 0, simultaneous second lethal claim rejected `VictimDead`, clean marker observed exactly one death and one respawn, respawn restored 100 HP, late claim rejected `SpawnProtected`.
   - Decision/Assumption: D3 locked (100 HP / death ≤ 0 / respawn 100, owner 2026-07-15); killer/score attribution KHÔNG thuộc task này (1.3.3).
 
-- [ ] Award kill and score exactly once from confirmed victim death
+- [!] Award kill and score exactly once from confirmed victim death
   - Outcome: score chỉ tăng từ death đã được victim xác nhận, không từ shooter hit prediction.
   - Scope: killer attribution, duplicate-death guard, ArenaManager score handoff và two-client convergence.
   - Out of scope: assists, economy rewards, ranked persistence.
@@ -149,6 +149,28 @@
   - Verify recipe: 30 alternating kills + simultaneous lethal edge case; compare both clients after each cycle.
   - Evidence: score/death correlation log.
   - Decision/Assumption: claim được victim accept đầu tiên gây lethal nhận kill credit.
+
+- [x] Confirm the complete legacy player-interaction blast radius before cleanup
+  - Outcome: team knows every live old-system path that can grab, fire, damage, buff, freeze or render held props beside the AR loop.
+  - Scope: scene/prefab bindings, AutoHand grab owner, throwing/projectile/ring/buff producers, legacy damage seam, player/round/UI dependencies and keep/remove boundary.
+  - Out of scope: changing gameplay code, scenes or prefabs.
+  - Dependencies: 1.3.2 Done; fresh GitNexus index plus direct source/YAML inspection.
+  - Risk: CRITICAL — PlayerCombat/RingSpawner/ProjectileBurstSystem have wide upstream flow impact; class-only graph counts miss Unity YAML/runtime bindings.
+  - Acceptance criteria: inventory names concrete producers/consumers, proves whether AR requires buffs, and defines a two-client cleanup verification matrix.
+  - Verify recipe: cross-check GitNexus impact with source calls and serialized bindings in Main/Arena/FPSMAP/NetworkAvatar prefab.
+  - Evidence: `Verification/P0_LEGACY_PLAYER_INTERACTION_IMPACT_AUDIT_2026-07-15.md`.
+  - Decision/Assumption: P0 target is gun-only combat; preserve generic VR hand/locomotion infrastructure.
+
+- [ ] Remove legacy player interactions from the P0 gun loop
+  - Outcome: grip no longer grabs a rock/old weapon, no ring/buff is required or spawned, and only validated AR ShotClaims can damage players.
+  - Scope: disable legacy ThrowController/WeaponHolder/HandWeapon and legacy selector bindings in P0 scenes/prefab; disable RingSpawner/BuffRing/ProjectileBurst/BuffZone producers; retire held-ball proxy state; isolate legacy `RPC_TakeHit` callers from P0 player input.
+  - Out of scope: deleting AutoHand, removing locomotion, deleting reusable legacy assets, score/killer attribution, P1 content.
+  - Dependencies: impact audit above Done; run symbol-level GitNexus impact before every code edit and warn on HIGH/CRITICAL; preserve new AR phase gate and reload input.
+  - Risk: CRITICAL — incorrect removal can break PlayerRig hands, respawn, arena phase, gun feedback pools or scene loading.
+  - Acceptance criteria: no automatic rock/legacy grab; AR fires without rings; no legacy projectile/ring/hazard spawn; no legacy damage from player input; locomotion, AR reload, proxy, death/respawn and late join remain working.
+  - Verify recipe: execute the six-case two-client matrix in the audit doc on Main plus P0 arena/FPS map; inspect hierarchy and correlated telemetry/console.
+  - Evidence: `Verification/P0_LEGACY_PLAYER_INTERACTION_CLEANUP_<date>.md` plus hierarchy/log captures.
+  - Decision/Assumption: disable/unbind first; preserve reusable code/assets until the gun proof passes and deletion safety is separately proven.
 
 ### 1.4 — Test Round 1 gate
 

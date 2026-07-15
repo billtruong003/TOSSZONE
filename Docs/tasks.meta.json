@@ -94,7 +94,23 @@
    "evidence": "",
    "verifiedAt": "",
    "result": "",
-   "notes": "Run GitNexus impact before symbol edits."
+   "notes": "Blocked: legacy player-interaction cleanup (1.3.5) must Pass before score integration so old RPC_TakeHit/projectile deaths cannot pollute kill attribution."
+  },
+  {
+   "id": "1.3.4",
+   "verify": "Cross-check GitNexus impact with source calls and serialized bindings in Main/Arena/FPSMAP/NetworkAvatar prefab.",
+   "evidence": "Verification/P0_LEGACY_PLAYER_INTERACTION_IMPACT_AUDIT_2026-07-15.md",
+   "verifiedAt": "2026-07-15",
+   "result": "Pass (legacy grab/throw/projectile/ring/buff/damage/UI paths inventoried; AR proven independent of rings; keep/remove boundary and six-case verification matrix recorded)",
+   "notes": "CRITICAL blast radius: PlayerCombat 12 direct/215 upstream/86 flows; RingSpawner 3 direct/189 upstream/85 flows; ProjectileBurstSystem 2 direct/257 upstream/85 flows. No gameplay code or scene changed during audit."
+  },
+  {
+   "id": "1.3.5",
+   "verify": "Run the six-case two-client cleanup matrix in P0_LEGACY_PLAYER_INTERACTION_IMPACT_AUDIT_2026-07-15.md on Main plus P0 arena/FPS map.",
+   "evidence": "",
+   "verifiedAt": "",
+   "result": "",
+   "notes": "Todo. Disable/unbind first; preserve AutoHand/PlayerRig/locomotion and reusable legacy assets. Run symbol-level impact before every edit and warn on HIGH/CRITICAL."
   },
   {
    "id": "1.4.1",
