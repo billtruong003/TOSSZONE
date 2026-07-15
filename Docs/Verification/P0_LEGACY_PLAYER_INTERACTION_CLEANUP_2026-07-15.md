@@ -69,3 +69,23 @@ After restarting/reconnecting both Unity MCP bridges, run a fresh Main → FPSMA
 6. Console has no new cleanup-related error.
 
 Only then mark 1.3.5 Done, unblock 1.3.3, and regenerate `Docs/tasks.json` with `Tools/TOSSZONE/Export tasks.json`.
+
+## AK74 visual asset repair
+
+During the hold-point review, the local gun was confirmed to fire while its model remained invisible. The live owner instance had one active `HitscanGun` and four enabled renderers, but every `MeshFilter.sharedMesh` was null and every renderer bound was zero.
+
+Root cause: commit `1607089` regenerated `Models/AK74.fbx.meta`, changing the model GUID from `6f966b9a7c817ed49973b4a8762cbbdf` to `0a14d0a47da69274b93708f050bffc82` and changing imported mesh local IDs. The nested `Prefabs/AK74.prefab` still referenced the old GUID and legacy `430000x` IDs.
+
+Unity's `AssetDatabase` was used to bind each source-prefab `MeshFilter` to the current imported mesh subasset by name (`AK74`, `Bolt`, `Mag`, `Trigger`), allowing Unity to serialize the current GUID/local IDs instead of applying a blind text replacement.
+
+Post-repair Play Mode probe on the owner:
+
+- `AK74`: 6,182 vertices, non-zero bounds `(0.04, 0.28, 0.77)`.
+- `Bolt`: 136 vertices, non-zero bounds.
+- `Mag`: 1,909 vertices, non-zero bounds.
+- `Trigger`: 102 vertices, non-zero bounds.
+- All four `sharedMesh` references were non-null.
+- `TryFire=True`, ammunition `30 -> 29`, meshes `4/4`.
+- No new AK74/mesh-related console error was produced; existing XR/theme/package errors remain unrelated.
+
+The simulator's right controller was below the HMD viewport during the capture, so physical headset pose/visual framing and the remote proxy screenshot remain part of the required closing run. The previous renderer-count-only proxy evidence is insufficient by itself; the closing run must assert non-null proxy meshes and non-zero renderer bounds.
