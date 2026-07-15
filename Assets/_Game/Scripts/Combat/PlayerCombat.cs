@@ -23,6 +23,11 @@ namespace TossZone.Combat
         public const float InvulnSeconds = 3f;
         public const int BountyPerKill = 2;
 
+        /// <summary>D3 (owner-locked 2026-07-15): v0.3-P0 health is 100 HP — death at HP ≤ 0, respawn resets
+        /// to full (task 1.3.2). <see cref="MaxLives"/> below stays as the legacy party-mode lives knob
+        /// (ArenaManager.NetMaxLives economy/round sizing) but no longer seeds <see cref="Health"/>.</summary>
+        public const int MaxHealth = 100;
+
         public static int MaxLives { get; set; } = 5;
 
         public static int LivesForPlayerCount(int realPlayers)
@@ -76,7 +81,7 @@ namespace TossZone.Combat
             if (HasStateAuthority && Object.InputAuthority != PlayerRef.None)
             {
                 Local = this;
-                if (Health <= 0) Health = MaxLives;
+                if (Health <= 0) Health = MaxHealth;
             }
         }
 
@@ -137,6 +142,33 @@ namespace TossZone.Combat
                 Bill.Events.Fire(new PlayerDiedEvent { IsLocal = true });
         }
 
+        /// <summary>Task 1.3.2 — the ONE validated gun-damage entry point (D3: 100 HP). Called ONLY by the
+        /// victim's own <c>AvatarWeaponSync</c> AFTER a ShotClaim passed the §7 validator, so it runs on the
+        /// victim's State Authority (Shared Mode: we write our own Health). Deliberately NOT an RPC — the wire
+        /// seam is the validated RPC_SubmitShotClaim; a raw damage RPC would reopen the trust hole 1.3.1
+        /// closed. No money/bounty/score here: kill attribution is task 1.3.3. Death fires exactly once (the
+        /// previous&gt;0 → 0 transition); NetworkAvatar.HandleRespawn picks up Health ≤ 0 unchanged.</summary>
+        public bool ApplyValidatedDamage(int damage, PlayerRef shooter, Vector3 point)
+        {
+            if (!HasStateAuthority || damage <= 0 || Health <= 0 || IsInvulnerable) return false;
+
+            int previous = Health;
+            int remaining = Mathf.Max(0, previous - damage);   // acceptance: Health never negative
+            Health = remaining;
+
+            if (!Bill.IsReady) return true;
+            Bill.Events.Fire(new PlayerHitEvent
+            {
+                Damage = damage,
+                RemainingHealth = remaining,
+                Point = point,
+                IsLocalVictim = true,
+            });
+            if (remaining <= 0 && previous > 0)
+                Bill.Events.Fire(new PlayerDiedEvent { IsLocal = true });
+            return true;
+        }
+
         private void RewardShooterLocal(PlayerRef shooter, int livesLost, int victimBounty)
         {
             if (shooter == PlayerRef.None || Local == null || Local == this) return;
@@ -163,7 +195,7 @@ namespace TossZone.Combat
         public void ResetForRound()
         {
             if (!HasStateAuthority) return;
-            Health = MaxLives;
+            Health = MaxHealth;
             Money = 0;
             OwnedMask = 0;
             EquippedIndex = 0;
@@ -177,13 +209,16 @@ namespace TossZone.Combat
             Bill.Events.Fire(new WeaponResetEvent());
         }
 
-        /// <summary>Authority: refill lives only (mid-round respawn) — wallet and owned weapons persist.</summary>
+        /// <summary>Authority: refill health (mid-round respawn) — wallet and owned weapons persist.
+        /// 1.3.2: respawn ARMS spawn protection (instead of clearing it) so claims raced across the
+        /// death/respawn window reject as SpawnProtected in the HitValidator (§7). Dummies stay
+        /// unprotected (IsPlayer gate, same as RPC_TakeHit) so the shooting range keeps flowing.</summary>
         public void RestoreLives()
         {
             if (!HasStateAuthority) return;
-            Health = MaxLives;
+            Health = MaxHealth;
             FrozenTimer = default;
-            InvulnTimer = default;
+            InvulnTimer = IsPlayer ? TickTimer.CreateFromSeconds(Runner, InvulnSeconds) : default;
         }
 
         /// <summary>Authority: buy a BuyOnce weapon slot — deducts cost, sets ownership bit.</summary>
@@ -230,7 +265,7 @@ namespace TossZone.Combat
 
         /// <summary>T17 cheat-console support — full heal without the round reset ResetForRound would drag in
         /// (money/weapons kept). Testing only.</summary>
-        public void HealCheat() { if (HasStateAuthority) Health = MaxLives; }
+        public void HealCheat() { if (HasStateAuthority) Health = MaxHealth; }
 #endif
 
         /// <summary>Authority: consume 1 ammo unit of a slot. Returns false if out of ammo.</summary>

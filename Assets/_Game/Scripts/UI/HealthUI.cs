@@ -27,7 +27,7 @@ namespace TossZone.UI
         public void Bind(PlayerCombat combat)
         {
             _combat = combat;
-            Refresh(PlayerCombat.MaxLives);
+            Refresh(PlayerCombat.MaxHealth);
         }
 
         private void LateUpdate()
@@ -44,13 +44,16 @@ namespace TossZone.UI
         private void Refresh(int health)
         {
             _lastHealth = health;
-            if (_pipRenderers == null) return;
+            if (_pipRenderers == null || _pipRenderers.Length == 0) return;
+            // D3/1.3.2: Health is 100 HP, not pip count — each pip is one MaxHealth/pipCount slice,
+            // ceil so any surviving HP still lights a pip (the bar only goes dark when actually dead).
+            int pips = Mathf.CeilToInt(health * _pipRenderers.Length / (float)PlayerCombat.MaxHealth);
             for (int i = 0; i < _pipRenderers.Length; i++)
             {
                 Renderer r = _pipRenderers[i];
                 if (r == null) continue;
                 r.GetPropertyBlock(_block);
-                _block.SetColor(_colorId, i < health ? _activeColor : _inactiveColor);
+                _block.SetColor(_colorId, i < pips ? _activeColor : _inactiveColor);
                 r.SetPropertyBlock(_block);
             }
         }

@@ -48,7 +48,7 @@ namespace TossZone.Guns
             // 1.3.1: every client registers every sync — the shooter routes claims to the victim's NB and
             // the validator resolves the shooter from this same registry.
             Registry[Object.InputAuthority.PlayerId] = this;
-            _combat = GetComponent<PlayerCombat>() ?? GetComponentInChildren<PlayerCombat>(true);   // READ-ONLY in 1.3.1
+            _combat = GetComponent<PlayerCombat>() ?? GetComponentInChildren<PlayerCombat>(true);   // 1.3.2: validated-damage write target
 
             // Owner seeds the initial snapshot. Proxies deliberately do NOTHING here: [Networked] state of
             // other NBs isn't safely readable in Spawned (order not guaranteed — Gotchas), so all proxy
@@ -198,9 +198,9 @@ namespace TossZone.Guns
         //
         // Reliable, validated damage path — deliberately separate from the unreliable cosmetic relay above.
         // The shooter submits a CLAIM (never a damage number — Option A); the victim's State Authority
-        // re-validates it and resolves damage from its OWN GunCatalog. 1.3.1 scope: validate + emit
-        // ClaimAccepted/ClaimRejected telemetry ONLY. Absolutely NO Health/death/respawn/score write here —
-        // that is 1.3.2, currently D3-blocked. HealthBefore == HealthAfter by construction.
+        // re-validates it and resolves damage from its OWN GunCatalog. 1.3.1 built validate + telemetry;
+        // 1.3.2 (D3 locked 2026-07-15: 100 HP) connects accepted claims to the single Health write in
+        // PlayerCombat.ApplyValidatedDamage. Score/kill attribution stays out until 1.3.3.
 
         private const float OriginToleranceMeters = 3f;   // proxy-wrist interp/extrap slack (§7 validator table)
         private const float RangeMarginFactor = 1.1f;     // claimed origin→hit distance may exceed range by 10%
@@ -221,7 +221,7 @@ namespace TossZone.Guns
         private readonly Queue<long> _seenClaimOrder = new Queue<long>();     // FIFO eviction for the set
         private readonly Dictionary<int, Queue<double>> _acceptTimes =
             new Dictionary<int, Queue<double>>();                             // per-shooter accept timestamps
-        private PlayerCombat _combat;                                         // READ-ONLY in 1.3.1
+        private PlayerCombat _combat;                                         // 1.3.2: ApplyValidatedDamage sink
 
         /// <summary>Shooter-side (owner only): turn one locally-accepted player hit into one reliable claim
         /// aimed at the victim's State Authority. Fires `claim_sent` on the local bus (contract §3.4).</summary>
@@ -290,18 +290,26 @@ namespace TossZone.Guns
             NoteAccepted(shooter.PlayerId);
             bool isHead = hitPart == (byte)HitPart.Head;
             int damage = GunCatalog.Default.ResolveDamage(weaponId, distance, isHead);   // victim-side resolve
-            int health = _combat != null ? _combat.Health : 0;   // OBSERVED only — 1.3.2 owns the write
+
+            // Task 1.3.2 — the ONE Health write of the gun path (D3: 100 HP). Victim authority applies its
+            // own catalog-resolved damage; the shooter never supplied a number. Death + respawn ride the
+            // existing seams unchanged: PlayerDiedEvent fires on the >0→0 transition inside PlayerCombat,
+            // NetworkAvatar.HandleRespawn arms on Health ≤ 0, and RestoreLives re-arms spawn protection so
+            // late claims reject as SpawnProtected/VictimDead in ValidateClaim above.
+            int healthBefore = _combat != null ? _combat.Health : 0;
+            if (_combat != null) _combat.ApplyValidatedDamage(damage, shooter, hitPoint);
+            int healthAfter = _combat != null ? _combat.Health : healthBefore;
 
             if (Bill.IsReady) Bill.Events.Fire(new ClaimAcceptedEvent
             {
                 Shooter = shooter, Victim = victim, ShotId = shotId, WeaponId = weaponId,
-                ResolvedDamage = damage, HealthBefore = health, HealthAfter = health,
+                ResolvedDamage = damage, HealthBefore = healthBefore, HealthAfter = healthAfter,
                 IsHead = isHead, FusionTick = Runner.Tick,
             });
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.Log($"[Telemetry] claim_accept shooter={shooter.PlayerId} victim={victim.PlayerId} " +
                       $"shot={shotId} weapon={weaponId} damage={damage} head={isHead} " +
-                      $"hb={health} ha={health} dist={distance:0.00} tick={Runner.Tick}");
+                      $"hb={healthBefore} ha={healthAfter} dist={distance:0.00} tick={Runner.Tick}");
 #endif
         }
 

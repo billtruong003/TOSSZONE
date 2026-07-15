@@ -11,10 +11,10 @@
   {
    "id": "0.1.2",
    "verify": "Review written D3 decision and HP→death→respawn state-transition table.",
-   "evidence": "",
-   "verifiedAt": "",
-   "result": "",
-   "notes": "Blocked: user has not yet approved the recommended 100 HP model."
+   "evidence": "TOSSZONE_TaskBreakdown.md §0.1 (owner decision recorded inline, 2026-07-15)",
+   "verifiedAt": "2026-07-15",
+   "result": "Pass (owner locked D3: 100 HP, death at HP <= 0, respawn resets to 100 HP)",
+   "notes": "Mapping: PlayerCombat.Health (lives meaning) -> HP int max 100, spawn/respawn 100. Regression scope: PlayerCombat, ArenaManager, any UI/log reading Health as lives. State-transition table ships with 1.3.2 evidence."
   },
   {
    "id": "0.2.1",
@@ -83,10 +83,10 @@
   {
    "id": "1.3.2",
    "verify": "Two-client body/head damage table, simultaneous lethal claims and delayed pre-respawn claim; verify synchronized state.",
-   "evidence": "",
-   "verifiedAt": "",
-   "result": "",
-   "notes": "Blocked by D3 health model."
+   "evidence": "Verification/P0_1_3_2_DAMAGE_RESPAWN_2026-07-15.md",
+   "verifiedAt": "2026-07-15",
+   "result": "Pass (two-client body=16, head=32; HP clamp/death/respawn 100; exactly one death+respawn; VictimDead and SpawnProtected rejection)",
+   "notes": "In progress since 2026-07-15 — D3 locked (100 HP / death <= 0 / respawn 100). Run GitNexus impact before symbol edits; warn before HIGH/CRITICAL blast radius."
   },
   {
    "id": "1.3.3",

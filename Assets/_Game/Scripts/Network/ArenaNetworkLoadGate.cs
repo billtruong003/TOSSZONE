@@ -75,6 +75,28 @@ namespace TossZone.Network
             _loadRequested = true;
             Debug.Log("[ArenaNetworkLoadGate] Scene objects still dormant after settle — issuing Fusion LoadScene(" +
                       buildIndex + ") so the master attaches them.");
+
+            // The local avatar (spawned on connect, same frame as PlayerJoined) may already be alive. Fusion's
+            // single-mode reload sweeps live NetworkObjects through RegisterSceneObjects and asserts
+            // "already owned" on them (observed: NetworkAvatar(Clone) → DisconnectedByPluginLogic, runner
+            // destroyed). NOTE: runtime spawns do NOT necessarily live in this scene — Fusion parks them with
+            // the runner (DontDestroyOnLoad), so a scene-root scan misses them (verified: no despawn log, then
+            // the assert). Scan every loaded NetworkObject instead; in the dormant state IsValid is only ever
+            // true for runtime spawns (pre-placed scene objects are exactly what's still dormant, Id=None).
+            // PlayerSpawnManager respawns the avatar after the load (FusionSceneLoadDoneEvent + retry-poll; its
+            // pending record treats a despawned result as stale, so the respawn is not blocked).
+            foreach (NetworkObject no in FindObjectsByType<NetworkObject>(
+                         FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (no.IsValid)
+                {
+                    Debug.Log("[ArenaNetworkLoadGate] Despawning runtime-spawned '" + no.name +
+                              "' (scene '" + no.gameObject.scene.name +
+                              "') before the Fusion reload so RegisterSceneObjects does not re-attach it.");
+                    net.Despawn(no);
+                }
+            }
+
             net.LoadScene(buildIndex); // reloads this scene through Fusion; this gate instance is replaced afterwards
         }
     }

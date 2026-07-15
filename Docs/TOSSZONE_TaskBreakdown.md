@@ -19,7 +19,7 @@
   - Evidence: `GameDesign/TOSSZONE-Playable-Ready-Roadmap.md`, `Gun_System_Architecture.md`.
   - Decision/Assumption: Option A chỉ áp dụng cho v0.3 Ready casual/small-room.
 
-- [!] Lock D3 health model for v0.3-P0
+- [x] Lock D3 health model for v0.3-P0
   - Outcome: xác định rõ `Health` là 100 HP hay tiếp tục mang nghĩa lives trước khi nối damage.
   - Scope: max HP, damage semantics, death threshold, respawn reset và ranh giới round/lives.
   - Out of scope: armor, healing, economy lives, revive.
@@ -27,8 +27,8 @@
   - Risk: triển khai trên model lives hiện tại sẽ làm TTK, UI và death lifecycle sai nghĩa.
   - Acceptance criteria: một quyết định bằng văn bản; mapping state cũ→mới; regression scope cho PlayerCombat/ArenaManager.
   - Verify recipe: review decision record và một state-transition table HP→death→respawn.
-  - Evidence: để trống tới khi D3 được chốt.
-  - Decision/Assumption: recommendation hiện tại là 100 HP, chưa tự coi là user approval.
+  - Evidence: OWNER DECISION 2026-07-15 (recorded in-session, verbatim intent): v0.3-P0 dùng 100 HP; death khi HP ≤ 0; respawn reset về 100 HP. Mapping cũ→mới: `PlayerCombat.Health` (nghĩa lives) → HP int, max 100, spawn/respawn = 100, death threshold HP ≤ 0 thay cho lives==0. Regression scope: `PlayerCombat` (Health semantics + death lifecycle), `ArenaManager` (death/round hooks), mọi UI/log/telemetry đang đọc Health theo nghĩa lives. State-transition table HP→death→respawn ship cùng evidence của 1.3.2.
+  - Decision/Assumption: user chốt D3 = 100 HP ngày 2026-07-15; armor/heal/economy lives vẫn out of scope tới v0.3-P1.
 
 ### 0.2 — Establish repeatable proof harness
 
@@ -128,16 +128,16 @@
   - Evidence: `Verification/P0_1_3_1_SHOTCLAIM_2026-07-14.md` — solo injection matrix pass (11 case §4: valid ×1 accept, Duplicate kể cả replay-of-rejected, InvalidWeapon/OutOfRange/InvalidOrigin/InvalidHitPart/InvalidShooter/SpawnProtected, fire-rate 15=ceil(600/60×1.5) rồi FireRate); hpStart=hpEnd=5 → zero Health write. Two-client transport PASS 2026-07-14 (cùng doc): claim cho shot 424242 đi qua `RPC_SubmitShotClaim` wire thật, shooter identity resolve từ `info.Source`=player 1 (không spoof được từ payload), ClaimAccepted trên victim clone, hpStart==hpEnd. Còn nợ môi trường (không blocker): EquippedMismatch (catalog mới có 1 gun), VictimDead trực tiếp (solo precedence, cần death path 1.3.2), CombatClosed (scene chưa có ArenaManager).
   - Decision/Assumption: victim không rewind/re-raycast lịch sử trong v0.3 Ready.
 
-- [!] Integrate catalog-derived damage with HP, death and respawn
+- [x] Integrate catalog-derived damage with HP, death and respawn
   - Outcome: accepted ShotClaim tạo damage→death→respawn nhất quán trên hai client.
   - Scope: victim tra damage/falloff/headshot từ GunCatalog; Health write; death transition; respawn reset/protection.
   - Out of scope: armor/heal/revive/economy lives.
-  - Dependencies: D3 health model chưa chốt; ShotClaim validator; GitNexus impact trước edit.
+  - Dependencies: D3 chốt 2026-07-15 (100 HP, death HP ≤ 0, respawn reset 100); ShotClaim validator (1.3.1 Done); GitNexus impact trước edit.
   - Risk: PlayerCombat hiện dùng Health theo nghĩa lives, có blast radius sang ArenaManager/UI.
   - Acceptance criteria: damage không do shooter cung cấp; Health không âm; death/respawn đúng một lần; protection reject late claim.
   - Verify recipe: two-client body/head damage table + lethal simultaneous claims + delayed pre-respawn claim.
-  - Evidence: synchronized state log/video.
-  - Decision/Assumption: blocked tới khi user chốt D3.
+  - Evidence: `Verification/P0_1_3_2_DAMAGE_RESPAWN_2026-07-15.md` — two-client PASS: body 16, head 32, HP clamped at 0, simultaneous second lethal claim rejected `VictimDead`, clean marker observed exactly one death and one respawn, respawn restored 100 HP, late claim rejected `SpawnProtected`.
+  - Decision/Assumption: D3 locked (100 HP / death ≤ 0 / respawn 100, owner 2026-07-15); killer/score attribution KHÔNG thuộc task này (1.3.3).
 
 - [ ] Award kill and score exactly once from confirmed victim death
   - Outcome: score chỉ tăng từ death đã được victim xác nhận, không từ shooter hit prediction.
