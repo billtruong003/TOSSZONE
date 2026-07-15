@@ -873,15 +873,10 @@ MonoBehaviour:
   - {fileID: 792190721}
   - {fileID: 797874383}
   - {fileID: 1298288767}
-  _ringButtons:
-  - {fileID: 293797609}
-  - {fileID: 1046993861}
-  - {fileID: 1144313684}
-  - {fileID: 834514983}
-  - {fileID: 1577986185}
-  _ringBurstButton: {fileID: 1548017069}
-  _ringSpawnerPrefab: {fileID: 8368110906400547820, guid: 5557e0214f5bbe548acb81a449728658, type: 3}
-  _ringSpawnerAnchor: {fileID: 1201753306}
+  _ringButtons: []
+  _ringBurstButton: {fileID: 0}
+  _ringSpawnerPrefab: {fileID: 0}
+  _ringSpawnerAnchor: {fileID: 0}
   _ringTier: 3
   _burstCount: 8
   _dummyPrefab: {fileID: 6867071015060229716, guid: 9090876a05f2bda469b62ef46b902207, type: 3}
@@ -1596,7 +1591,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &449423643
 MonoBehaviour:
   m_ObjectHideFlags: 0

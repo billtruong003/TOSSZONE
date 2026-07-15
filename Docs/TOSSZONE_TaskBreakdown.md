@@ -161,7 +161,7 @@
   - Evidence: `Verification/P0_LEGACY_PLAYER_INTERACTION_IMPACT_AUDIT_2026-07-15.md`.
   - Decision/Assumption: P0 target is gun-only combat; preserve generic VR hand/locomotion infrastructure.
 
-- [ ] Remove legacy player interactions from the P0 gun loop
+- [/] Remove legacy player interactions from the P0 gun loop
   - Outcome: grip no longer grabs a rock/old weapon, no ring/buff is required or spawned, and only validated AR ShotClaims can damage players.
   - Scope: disable legacy ThrowController/WeaponHolder/HandWeapon and legacy selector bindings in P0 scenes/prefab; disable RingSpawner/BuffRing/ProjectileBurst/BuffZone producers; retire held-ball proxy state; isolate legacy `RPC_TakeHit` callers from P0 player input.
   - Out of scope: deleting AutoHand, removing locomotion, deleting reusable legacy assets, score/killer attribution, P1 content.
@@ -169,7 +169,7 @@
   - Risk: CRITICAL — incorrect removal can break PlayerRig hands, respawn, arena phase, gun feedback pools or scene loading.
   - Acceptance criteria: no automatic rock/legacy grab; AR fires without rings; no legacy projectile/ring/hazard spawn; no legacy damage from player input; locomotion, AR reload, proxy, death/respawn and late join remain working.
   - Verify recipe: execute the six-case two-client matrix in the audit doc on Main plus P0 arena/FPS map; inspect hierarchy and correlated telemetry/console.
-  - Evidence: `Verification/P0_LEGACY_PLAYER_INTERACTION_CLEANUP_<date>.md` plus hierarchy/log captures.
+  - Evidence: `Verification/P0_LEGACY_PLAYER_INTERACTION_CLEANUP_2026-07-15.md` — serialized cleanup complete; solo and two-client runtime paths passed before the final hub ring unbind; fresh final matrix pending because both Unity MCP command queues closed/timed out.
   - Decision/Assumption: disable/unbind first; preserve reusable code/assets until the gun proof passes and deletion safety is separately proven.
 
 ### 1.4 — Test Round 1 gate
